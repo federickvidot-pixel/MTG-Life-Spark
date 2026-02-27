@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 35.6 33.6">
+  <!-- Generator: Adobe Illustrator 30.4.0, SVG Export Plug-In . SVG Version: 2.1.3 Build 42)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: none;
+        stroke: #000;
+      }
+    </style>
+  </defs>
+  <path class="st0" d="M17.8,1.3c8.6,0,15.5,6.9,15.5,15.5s-6.9,15.5-15.5,15.5S2.3,25.4,2.3,16.8,9.3,1.3,17.8,1.3Z"/>
+  <g>
+    <path d="M18.5,15.6v10.8s9-4,8.4-7.5-.7-7.2,1.9-8.2h-6.5l-1.7,1.1s.7,3.6-2.2,3.8Z"/>
+    <path d="M17.1,15.6v10.8s-9-4-8.4-7.5.7-7.2-1.9-8.2h6.5s1.7,1.1,1.7,1.1c0,0-.7,3.6,2.2,3.8Z"/>
+  </g>
+</svg>

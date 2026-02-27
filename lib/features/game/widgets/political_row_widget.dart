@@ -1,0 +1,335 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/game/game_providers.dart';
+import '../../../core/game/game_state.dart';
+import '../../../core/game/player_game_state.dart';
+import '../../../shared/theme/theme_provider.dart';
+import '../../../shared/theme/app_theme.dart';
+
+class PoliticalRowWidget extends ConsumerWidget {
+  final GameState game;
+
+  const PoliticalRowWidget({super.key, required this.game});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(gameProvider.notifier);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          // Monarch
+          Expanded(
+            child: _PoliticalBadge(
+              icon: '👑',
+              label: 'Monarch',
+              holderId: game.monarchPlayerId,
+              players: game.players,
+              canAssign: game.isHost,
+              onTap: game.isHost
+                  ? () => _showAssignPicker(
+                        context,
+                        ref,
+                        'Assign Monarch',
+                        game.monarchPlayerId,
+                        (pid) => notifier.setMonarch(pid),
+                      )
+                  : null,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Initiative
+          Expanded(
+            child: _PoliticalBadge(
+              icon: '⚔️',
+              label: 'Initiative',
+              holderId: game.initiativePlayerId,
+              players: game.players,
+              canAssign: game.isHost,
+              onTap: game.isHost
+                  ? () => _showAssignPicker(
+                        context,
+                        ref,
+                        'Assign Initiative',
+                        game.initiativePlayerId,
+                        (pid) => notifier.setInitiative(pid),
+                      )
+                  : null,
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Day / Night (host only) — also syncs app theme
+          _DayNightToggle(
+            dayNight: game.dayNight,
+            isHost: game.isHost,
+            onTap: game.isHost
+                ? () {
+                    final next = _nextDayNight(game.dayNight);
+                    notifier.setDayNight(next);
+                    // Sync theme with Day/Night
+                    if (next == DayNightState.day || next == DayNightState.night) {
+                      ref.read(themePreferenceProvider.notifier).setUseDarkTheme(
+                            next == DayNightState.night,
+                          );
+                    }
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  DayNightState _nextDayNight(DayNightState current) {
+    switch (current) {
+      case DayNightState.none:
+        return DayNightState.day;
+      case DayNightState.day:
+        return DayNightState.night;
+      case DayNightState.night:
+        return DayNightState.none;
+    }
+  }
+
+  void _showAssignPicker(
+    BuildContext context,
+    WidgetRef ref,
+    String title,
+    String? currentHolderId,
+    void Function(String? pid) onAssign,
+  ) {
+    final game = ref.read(gameProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _PlayerPickerSheet(
+        title: title,
+        players: game.players.where((p) => !p.isEliminated).toList(),
+        currentHolderId: currentHolderId,
+        onSelected: (pid) {
+          Navigator.pop(context);
+          onAssign(pid);
+        },
+      ),
+    );
+  }
+}
+
+class _PoliticalBadge extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String? holderId;
+  final List<PlayerGameState> players;
+  final bool canAssign;
+  final VoidCallback? onTap;
+
+  const _PoliticalBadge({
+    required this.icon,
+    required this.label,
+    required this.holderId,
+    required this.players,
+    required this.canAssign,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final holder = holderId != null
+        ? players.where((p) => p.playerId == holderId).firstOrNull
+        : null;
+
+    return GestureDetector(
+      onTap: canAssign ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.card,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: holder != null
+                ? AppTheme.accentGold.withValues(alpha: 0.5)
+                : AppTheme.surface,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 9,
+                    ),
+                  ),
+                  Text(
+                    holder?.username ?? 'None',
+                    style: TextStyle(
+                      color: holder != null
+                          ? AppTheme.accentGold
+                          : AppTheme.textSecondary,
+                      fontSize: 11,
+                      fontWeight: holder != null
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (canAssign)
+              Icon(
+                Icons.edit,
+                size: 12,
+                color: AppTheme.textSecondary.withValues(alpha: 0.5),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DayNightToggle extends StatelessWidget {
+  final DayNightState dayNight;
+  final bool isHost;
+  final VoidCallback? onTap;
+
+  const _DayNightToggle({
+    required this.dayNight,
+    required this.isHost,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, label, color) = switch (dayNight) {
+      DayNightState.none => ('🌓', 'Day/Night', AppTheme.textSecondary),
+      DayNightState.day => ('☀️', 'Day', AppTheme.accentGold),
+      DayNightState.night => ('🌙', 'Night', AppTheme.accent),
+    };
+
+    return GestureDetector(
+      onTap: isHost ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.card,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: dayNight != DayNightState.none
+                ? color.withValues(alpha: 0.5)
+                : AppTheme.surface,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 18)),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 9),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerPickerSheet extends StatelessWidget {
+  final String title;
+  final List<PlayerGameState> players;
+  final String? currentHolderId;
+  final void Function(String? pid) onSelected;
+
+  const _PlayerPickerSheet({
+    required this.title,
+    required this.players,
+    required this.currentHolderId,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // None option
+          ListTile(
+            tileColor: currentHolderId == null
+                ? AppTheme.accent.withValues(alpha: 0.1)
+                : AppTheme.surface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            title: const Text('None',
+                style: TextStyle(color: AppTheme.textSecondary)),
+            onTap: () => onSelected(null),
+          ),
+          const SizedBox(height: 6),
+          ...players.map((p) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: ListTile(
+                  tileColor: p.playerId == currentHolderId
+                      ? p.playerColor.withValues(alpha: 0.15)
+                      : AppTheme.surface,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  leading: CircleAvatar(
+                    backgroundColor: p.playerColor,
+                    radius: 14,
+                    child: Text(
+                      p.username.isNotEmpty
+                          ? p.username[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  title: Text(p.username,
+                      style: const TextStyle(color: AppTheme.textPrimary)),
+                  trailing: p.playerId == currentHolderId
+                      ? const Icon(Icons.check_circle,
+                          color: AppTheme.success, size: 18)
+                      : null,
+                  onTap: () => onSelected(p.playerId),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+}
