@@ -146,18 +146,14 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
                         dislikePlayerIds: _dislikePlayerIds,
                         mvpPlayerId: _mvpPlayerId,
                         teamPlayerId: _teamPlayerId,
-                        onLike: (pid) {
-                          setState(() {
-                            _dislikePlayerIds.remove(pid);
-                            _likePlayerIds.add(pid);
-                          });
-                        },
-                        onDislike: (pid) {
-                          setState(() {
-                            _likePlayerIds.remove(pid);
-                            _dislikePlayerIds.add(pid);
-                          });
-                        },
+                        onLike: (pid) => setState(() {
+                          _dislikePlayerIds.remove(pid);
+                          _likePlayerIds.add(pid);
+                        }),
+                        onDislike: (pid) => setState(() {
+                          _likePlayerIds.remove(pid);
+                          _dislikePlayerIds.add(pid);
+                        }),
                         onMvpChanged: (pid) =>
                             setState(() => _mvpPlayerId = pid),
                         onTeamPlayerChanged: (pid) =>
@@ -543,7 +539,6 @@ class _FeedbackCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: LayoutTokens.gr2),
-          // Like / Dislike per player
           if (others.isNotEmpty) ...[
             ...others.map((p) => _PlayerFeedbackRow(
                   player: p,

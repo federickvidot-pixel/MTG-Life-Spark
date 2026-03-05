@@ -7,8 +7,6 @@ import '../../features/profile/profile_setup_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/profile_avatar_picker_screen.dart';
-import '../../features/history/match_history_screen.dart';
-import '../../features/achievements/achievements_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/feedback/feedback_screen.dart';
 import '../../features/lobby/lobby_screen.dart';
@@ -27,8 +25,6 @@ class AppRoutes {
   static const lobbyHost = '/lobby/host';
   static const lobbyJoin = '/lobby/join';
   static const settings = '/settings';
-  static const history = '/home/history';
-  static const achievements = '/home/achievements';
   static const profileAvatar = '/home/avatar';
   static const feedback = '/settings/feedback';
   static const commanderSelect = '/commander-select';
@@ -59,14 +55,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.home,
                 builder: (context, state) => const ProfileScreen(),
                 routes: [
-                  GoRoute(
-                    path: 'history',
-                    builder: (context, state) => const MatchHistoryScreen(),
-                  ),
-                  GoRoute(
-                    path: 'achievements',
-                    builder: (context, state) => const AchievementsScreen(),
-                  ),
                   GoRoute(
                     path: 'avatar',
                     builder: (context, state) =>

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +28,6 @@ import '../widgets/phase_bar_widget.dart';
 import '../widgets/political_row_widget.dart';
 import '../widgets/turn_order_widget.dart';
 import '../widgets/team_panel_widget.dart';
-import '../widgets/turn_controls_widget.dart';
 import '../../../shared/widgets/game_icon.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
@@ -110,19 +108,20 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           : AppTheme.primary,
       body: Stack(
         children: [
-          SafeArea(
-            child: _showOverview
-                ? _OverviewView(
-                    game: game,
-                    onClose: () => setState(() => _showOverview = false),
-                  )
-                : _PersonalView(
-                    game: game,
-                    local: local,
-                    onToggleOverview: () =>
-                        setState(() => _showOverview = true),
-                  ),
-          ),
+          if (_showOverview)
+            _OverviewView(
+              game: game,
+              onClose: () => setState(() => _showOverview = false),
+            )
+          else
+            SafeArea(
+              child: _PersonalView(
+                game: game,
+                local: local,
+                onToggleOverview: () =>
+                    setState(() => _showOverview = true),
+              ),
+            ),
           if (game.timeoutActive)
             _TimeoutOverlay(
               startTime: game.timeoutStartTime,
@@ -552,7 +551,7 @@ class _BottomBar extends ConsumerWidget {
           _BarButton(
             icon: Icons.skip_next,
             label: 'End Turn',
-            enabled: game.isHost && game.isLocalPlayersTurn && !game.priorityHeld && !game.timeoutActive,
+            enabled: game.isHost && game.isLocalPlayersTurn && !game.timeoutActive,
             onTap: () => notifier.endTurn(),
           ),
 
@@ -651,8 +650,11 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
       builder: (context, ref, _) => AlertDialog(
         backgroundColor: AppTheme.card,
         contentPadding: EdgeInsets.zero,
-        content: SizedBox(
-          width: 320,
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.95,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -660,7 +662,10 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
               children: [
                 // Title + X
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 8, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+                    20, 8, 0,
+                  ),
                   child: Row(
                     children: [
                       const Expanded(
@@ -682,19 +687,25 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(24, 8, 24, 0),
-                  child: Text(
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+                    8,
+                    MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+                    0,
+                  ),
+                  child: const Text(
                     'This will remove you from the game. Rate your opponents before leaving.',
                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Like / Dislike
                 if (others.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Text('Rate opponents',
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+                    ),
+                    child: const Text('Rate opponents',
                         style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 13,
@@ -736,7 +747,12 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
                 const SizedBox(height: 20),
                 // Concede button
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  padding: EdgeInsets.fromLTRB(
+                    MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+                    0,
+                    MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+                    24,
+                  ),
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.textSecondary,
@@ -774,7 +790,10 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+        vertical: 2,
+      ),
       child: Row(
         children: [
           Container(
@@ -794,6 +813,7 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           IconButton(
@@ -804,7 +824,8 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
               backgroundColor: isLiked
                   ? AppTheme.success.withValues(alpha: 0.2)
                   : Colors.transparent,
-              minimumSize: const Size(36, 36),
+              minimumSize: const Size(44, 44),
+              padding: EdgeInsets.zero,
             ),
           ),
           IconButton(
@@ -815,7 +836,8 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
               backgroundColor: isDisliked
                   ? AppTheme.accent.withValues(alpha: 0.2)
                   : Colors.transparent,
-              minimumSize: const Size(36, 36),
+              minimumSize: const Size(44, 44),
+              padding: EdgeInsets.zero,
             ),
           ),
         ],
@@ -842,7 +864,9 @@ class _ConcedeVoteDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.sizeOf(context).width < 360 ? 16 : 24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -894,10 +918,16 @@ class _ConcedeVoteDropdown extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(p.username,
+                        Expanded(
+                          child: Text(
+                            p.username,
                             style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 13)),
+                              color: AppTheme.textPrimary,
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   )),
@@ -925,11 +955,13 @@ class _BarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = MediaQuery.sizeOf(context).width < 380;
-    final iconSize = isCompact ? 22.0 : 28.0;
-    final fontSize = isCompact ? 10.0 : 13.0;
-    final hPad = isCompact ? 8.0 : 14.0;
-    final vPad = isCompact ? 8.0 : 12.0;
+    final w = MediaQuery.sizeOf(context).width;
+    final isVeryNarrow = w < 340;
+    final iconOnly = w < 300;
+    final iconSize = isVeryNarrow ? 20.0 : 24.0;
+    final fontSize = isVeryNarrow ? 9.0 : 11.0;
+    final hPad = iconOnly ? 4.0 : (isVeryNarrow ? 6.0 : 10.0);
+    final vPad = isVeryNarrow ? 6.0 : 8.0;
 
     final c = enabled ? AppTheme.textSecondary : AppTheme.textSecondary.withValues(alpha: 0.4);
     return Material(
@@ -937,15 +969,20 @@ class _BarButton extends StatelessWidget {
       child: InkWell(
         onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(_g(_gBase)),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: iconSize, color: c),
-              SizedBox(height: isCompact ? 4 : 6),
-              Text(label, style: TextStyle(color: c, fontSize: fontSize, fontWeight: FontWeight.w600)),
-            ],
+        child: Tooltip(
+          message: label,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: iconSize, color: c),
+                if (!iconOnly) ...[
+                  SizedBox(height: isVeryNarrow ? 2 : 4),
+                  Text(label, style: TextStyle(color: c, fontSize: fontSize, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis, maxLines: 1),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1067,22 +1104,41 @@ class _AllianceProposalBanner extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () =>
-                    ref.read(gameProvider.notifier).respondToAlliance(local.playerId, true),
-                child: const Text('Accept',
-                    style: TextStyle(color: AppTheme.success)),
-              ),
-              TextButton(
-                onPressed: () =>
-                    ref.read(gameProvider.notifier).respondToAlliance(local.playerId, false),
-                child: const Text('Decline',
-                    style: TextStyle(color: AppTheme.textSecondary)),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 280;
+              return Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: narrow ? 12 : 16,
+                      ),
+                    ),
+                    onPressed: () =>
+                        ref.read(gameProvider.notifier).respondToAlliance(local.playerId, true),
+                    child: const Text('Accept',
+                        style: TextStyle(color: AppTheme.success, fontSize: 13)),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: narrow ? 12 : 16,
+                      ),
+                    ),
+                    onPressed: () =>
+                        ref.read(gameProvider.notifier).respondToAlliance(local.playerId, false),
+                    child: const Text('Decline',
+                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1459,44 +1515,6 @@ class _TurnDurationBannerState extends State<_TurnDurationBanner> {
 
 // ── Overview View ─────────────────────────────────────────────────────────
 
-/// Circular commander avatar for the overview status row.
-class _OverviewCommanderAvatar extends StatelessWidget {
-  final PlayerGameState? player;
-
-  const _OverviewCommanderAvatar({this.player});
-
-  @override
-  Widget build(BuildContext context) {
-    const size = 32.0;
-    if (player == null) {
-      return _circlePlaceholder(size, AppTheme.accent);
-    }
-    final url = player!.commanderImageUrl;
-    if (url != null && url.isNotEmpty) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: ClipOval(
-          child: CachedNetworkImage(
-            imageUrl: url,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => _circlePlaceholder(size, player!.playerColor),
-          ),
-        ),
-      );
-    }
-    return _circlePlaceholder(size, player!.playerColor);
-  }
-
-  Widget _circlePlaceholder(double size, Color color) => CircleAvatar(
-        radius: size / 2,
-        backgroundColor: color.withValues(alpha: 0.25),
-        child: Icon(Icons.style, color: color, size: size * 0.5),
-      );
-}
-
 class _OverviewView extends ConsumerWidget {
   final GameState game;
   final VoidCallback onClose;
@@ -1506,141 +1524,87 @@ class _OverviewView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(gameProvider.notifier);
-    final activeColor =
-        game.playerById(game.activePlayerId)?.playerColor ?? AppTheme.accent;
-    final activePlayer = game.playerById(game.activePlayerId);
-    final nextIndex = (game.activePlayerIndex + 1) % game.turnOrder.length;
-    final nextPlayerId = game.turnOrder.isNotEmpty ? game.turnOrder[nextIndex] : null;
-    final nextPlayer = nextPlayerId != null ? game.playerById(nextPlayerId) : null;
-    final isLocalTurn = game.isLocalPlayersTurn;
-    final waitingNames = <String>[];
-    for (var i = 2; i < game.turnOrder.length; i++) {
-      final idx = (game.activePlayerIndex + i) % game.turnOrder.length;
-      final p = game.playerById(game.turnOrder[idx]);
-      if (p != null && !p.isEliminated) waitingNames.add(p.username);
-    }
 
     return SizedBox.expand(
-      child: Column(
-        children: [
-          // App bar
-          AppBar(
+      child: CustomScrollView(
+        slivers: [
+          // Header: [X] ROUND 1 [End]
+          SliverAppBar(
+            pinned: true,
             backgroundColor: AppTheme.primary,
+            toolbarHeight: 48,
             title: Text(
-              'Round ${game.roundNumber}  •  ${game.currentPhase.displayName}',
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+              'ROUND ${game.roundNumber}',
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
+            centerTitle: true,
             leading: IconButton(
-              icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+              icon: const Icon(Icons.close, color: AppTheme.textSecondary, size: 22),
               onPressed: onClose,
+              style: IconButton.styleFrom(
+                padding: const EdgeInsets.all(8),
+                minimumSize: const Size(40, 40),
+              ),
             ),
-            elevation: 0,
             actions: [
-              if (game.isHost)
-                IconButton(
-                  icon: const Icon(Icons.skip_next, color: AppTheme.accent),
-                  tooltip: 'Advance Phase',
-                  onPressed: () => notifier.advancePhase(),
+              Padding(
+                padding: const EdgeInsets.only(right: 8, top: 6, bottom: 6),
+                child: TextButton(
+                  onPressed: game.isHost &&
+                          game.isLocalPlayersTurn &&
+                          !game.timeoutActive
+                      ? () => notifier.endTurn()
+                      : null,
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+                    foregroundColor: AppTheme.accent,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('End', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
+              ),
             ],
           ),
 
-          // Phase + whose turn / who's waiting
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: AppTheme.surface.withValues(alpha: 0.5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _OverviewCommanderAvatar(player: activePlayer),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        isLocalTurn
-                            ? "Your turn — ${game.currentPhase.displayName}"
-                            : "${activePlayer?.username ?? 'Unknown'}'s turn — ${game.currentPhase.displayName}",
-                        style: TextStyle(
-                          color: isLocalTurn ? AppTheme.accent : AppTheme.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (game.players.length > 1) ...[
-                  const SizedBox(height: 4),
-                  if (nextPlayer != null)
-                    Text(
-                      "Next: ${nextPlayer.username}",
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
-                  if (waitingNames.isNotEmpty)
-                    Text(
-                      "Waiting: ${waitingNames.join(', ')}",
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
-                ],
-              ],
+          // Monarch / Day-Night row (compact, white borders)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+              child: PoliticalRowWidget(game: game, overviewStyle: true),
             ),
           ),
 
-          // Turn order
-          TurnOrderWidget(game: game),
-          const SizedBox(height: 6),
+          // Timeout banner
+          if (game.timeoutActive)
+            SliverToBoxAdapter(
+              child: _TimeoutBanner(
+                startTime: game.timeoutStartTime,
+                durationSeconds: game.timeoutDurationSeconds,
+              ),
+            ),
 
-          // Phase bar
-          PhaseBarWidget(
-          currentPhase: game.currentPhase,
-          activeColor: activeColor,
-          isHost: game.isHost,
-          onAdvancePhase: game.isHost ? () => notifier.advancePhase() : null,
-          canSetPhase: game.isLocalPlayersTurn,
-          onPhaseTap: game.isLocalPlayersTurn
-              ? (phase) => notifier.setPhase(phase)
-              : null,
-        ),
-
-        // Turn controls
-        TurnControlsWidget(game: game),
-
-        // Timeout banner
-        if (game.timeoutActive)
-          _TimeoutBanner(
-            startTime: game.timeoutStartTime,
-            durationSeconds: game.timeoutDurationSeconds,
+          // Player cards list
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 12),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                ...game.players.map((p) => _OverviewPlayerCard(
+                      p: p,
+                      game: game,
+                    )),
+              ]),
+            ),
           ),
-
-        // Player cards list
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            children: [
-              // Political row (Monarch / Initiative / Day-Night)
-              PoliticalRowWidget(game: game),
-              const SizedBox(height: 8),
-
-              // Player cards
-              ...game.players.map((p) => _OverviewPlayerCard(
-                    p: p,
-                    game: game,
-                  )),
-
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ],
-    ),
+        ],
+      ),
     );
   }
 }
@@ -1655,182 +1619,120 @@ class _OverviewPlayerCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isActive = p.playerId == game.activePlayerId;
     final isLocal = p.playerId == game.localPlayerId;
-    final isMonarch = game.monarchPlayerId == p.playerId;
-    final hasInitiative = game.initiativePlayerId == p.playerId;
-    final allianceFor = game.allianceFor(p.playerId);
     final teamIdx = game.teamAssignments[p.playerId] ?? 0;
 
-    final totalCmdDmg = p.totalCommanderDamageReceived;
     final borderColor = teamIdx > 0
         ? teamColor(teamIdx)
         : p.playerColor;
     final borderColorResolved =
         isActive ? borderColor : borderColor.withValues(alpha: 0.25);
 
+    final actionLabel = isActive
+        ? game.currentPhase.displayName
+        : 'Waiting';
+
     final card = AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: p.isEliminated
             ? AppTheme.surface.withValues(alpha: 0.5)
             : isLocal
                 ? AppTheme.card.withValues(alpha: 0.9)
                 : AppTheme.card,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: borderColorResolved,
           width: isActive ? 2 : 1,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
           children: [
-            // Top row: color dot, name, badges, life
-            Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color:
-                        p.isEliminated ? AppTheme.textSecondary : p.playerColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Text(
-                        p.username,
-                        style: TextStyle(
-                          color: p.isEliminated
-                              ? AppTheme.textSecondary
-                              : AppTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (isLocal) ...[
-                        const SizedBox(width: 4),
-                        const Text('(you)',
-                            style: TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 10)),
-                      ],
-                      if (isActive) ...[
-                        const SizedBox(width: 6),
-                        _MiniTag(
-                            label: 'Active', color: p.playerColor),
-                      ],
-                      if (teamIdx > 0) ...[
-                        const SizedBox(width: 4),
-                        TeamBadge(teamIndex: teamIdx),
-                      ],
-                      if (isMonarch) ...[
-                        const SizedBox(width: 4),
-                        Tooltip(
-                          message: 'Monarch',
-                          child: Text('👑', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                      if (hasInitiative) ...[
-                        const SizedBox(width: 4),
-                        Tooltip(
-                          message: 'Initiative',
-                          child: Text('⚔️', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                // Life
-                Text(
-                  p.isEliminated ? 'OUT' : '${p.life}',
-                  style: TextStyle(
-                    color: p.isEliminated
-                        ? AppTheme.textSecondary
-                        : p.life <= 10
-                            ? AppTheme.textSecondary
-                            : AppTheme.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
-                ),
-                const Text(' ❤',
-                    style: TextStyle(fontSize: 14)),
-              ],
-            ),
-
-            // Bottom row: counters, political markers, alliance
-            if (!p.isEliminated) ...[
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  if (p.poison > 0)
-                    _StatChip(
-                      label: '${p.poison}',
-                      iconWidget: GameIcon.poison(size: 12, color: AppTheme.success),
-                      color: AppTheme.success,
-                      danger: p.poison >= 7,
-                    ),
-                  if (p.energy > 0)
-                    _StatChip(
-                      label: '${p.energy}',
-                      iconWidget: GameIcon.energy(size: 12, color: Colors.amber),
-                      color: Colors.amber,
-                    ),
-                  if (p.experience > 0)
-                    _StatChip(label: '${p.experience} ✨', color: Colors.teal),
-                  if (p.rad > 0)
-                    _StatChip(
-                      label: '${p.rad}',
-                      iconWidget: GameIcon.radiation(size: 12, color: Colors.orange),
-                      color: Colors.orange,
-                    ),
-                  if (totalCmdDmg > 0)
-                    _StatChip(
-                      label: '$totalCmdDmg ⚔',
-                      color: AppTheme.textSecondary,
-                      danger: false,
-                    ),
-                  if (isMonarch)
-                    const _StatChip(
-                        label: '👑 Monarch', color: AppTheme.accentGold),
-                  if (hasInitiative)
-                    const _StatChip(
-                        label: '⚔️ Initiative', color: AppTheme.accent),
-                  if (allianceFor != null)
-                    Tooltip(
-                      message: 'In an alliance',
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentGold.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.handshake,
-                          size: 16,
-                          color: AppTheme.accentGold,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ] else ...[
-              const SizedBox(height: 4),
-              Text(
-                p.eliminationReason != null
-                    ? 'Eliminated — ${p.eliminationReason}'
-                    : 'Eliminated',
+            // Avatar
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: p.isEliminated
+                  ? AppTheme.textSecondary.withValues(alpha: 0.4)
+                  : p.playerColor,
+              child: Text(
+                p.username.isNotEmpty
+                    ? p.username[0].toUpperCase()
+                    : '?',
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 10),
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ],
+            ),
+            const SizedBox(width: 10),
+            // Player name
+            Expanded(
+              child: Text(
+                p.username + (isLocal ? ' (you)' : ''),
+                style: TextStyle(
+                  color: p.isEliminated
+                      ? AppTheme.textSecondary
+                      : AppTheme.textPrimary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Action chip (Untap / phase name / Waiting)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? borderColor.withValues(alpha: 0.2)
+                    : AppTheme.surface.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isActive
+                      ? borderColor.withValues(alpha: 0.5)
+                      : AppTheme.textSecondary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Text(
+                p.isEliminated ? 'OUT' : actionLabel,
+                style: TextStyle(
+                  color: p.isEliminated
+                      ? AppTheme.textSecondary
+                      : isActive
+                          ? borderColor
+                          : AppTheme.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Life total box
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.surface.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppTheme.textSecondary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Text(
+                p.isEliminated ? 'OUT' : '${p.life}',
+                style: TextStyle(
+                  color: p.isEliminated
+                      ? AppTheme.textSecondary
+                      : p.life <= 10
+                          ? AppTheme.textSecondary
+                          : AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
           ],
         ),
       ),

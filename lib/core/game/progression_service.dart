@@ -14,8 +14,7 @@ import 'lobby_state.dart';
 const int kXpParticipate = 50;
 const int kXpWin = 100;
 const int kXpFirstWin = 75;
-const int kXpStreak3 = 25;
-const int kXpStreak5 = 50;
+const int kXpPerLike = 5;
 
 class ProgressResult {
   final String matchId;
@@ -80,8 +79,6 @@ class ProgressionService {
     if (won) {
       xp += kXpWin;
       if (profile.totalWins == 0) xp += kXpFirstWin;
-      if (profile.currentWinStreak >= 2) xp += kXpStreak3;
-      if (profile.currentWinStreak >= 4) xp += kXpStreak5;
     }
 
     // ── Save match record ─────────────────────────────────────────────────
@@ -133,6 +130,11 @@ class ProgressionService {
   /// Saves feedback for a match. Call after recordMatch.
   Future<void> saveFeedback(GameFeedback feedback) async {
     await _feedbackRepo.saveFeedback(feedback);
+    // Award small XP for giving likes
+    final likesCount = feedback.likePlayerIds.length;
+    if (likesCount > 0) {
+      await _profileRepo.addXp(likesCount * kXpPerLike);
+    }
   }
 
   Future<List<String>> _checkAchievements(
@@ -152,8 +154,6 @@ class ProgressionService {
 
     if (won) {
       await tryUnlock('first_win');
-      if (profile.currentWinStreak >= 3) await tryUnlock('win_streak_3');
-      if (profile.currentWinStreak >= 5) await tryUnlock('win_streak_5');
     }
 
     if (profile.totalGamesPlayed >= 10) await tryUnlock('games_10');

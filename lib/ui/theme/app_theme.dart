@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../tokens/color_tokens.dart';
 import '../tokens/radius_tokens.dart';
 import '../tokens/spacing_tokens.dart';
+import 'app_color_tokens.dart';
 
 /// Duolingo-bold + Discord-gamer dark theme.
 /// Uses Material 3 and design tokens.
@@ -148,6 +149,7 @@ class AppTheme {
       ),
       dividerColor: ColorTokens.borderSubtle,
       useMaterial3: true,
+      extensions: const [AppColorTokens.dark],
     );
   }
 
@@ -272,6 +274,7 @@ class AppTheme {
       ),
       dividerColor: const Color(0xFFE8ECED),
       useMaterial3: true,
+      extensions: const [AppColorTokens.light],
     );
   }
 }

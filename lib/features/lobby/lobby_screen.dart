@@ -10,8 +10,10 @@ import '../../core/models/player_slot.dart';
 import '../../core/network/local_ip.dart';
 import '../../core/network/ws_host_service.dart';
 import '../../core/persistence/providers.dart';
-import '../../shared/theme/app_theme.dart';
 import '../../shared/utils/app_router.dart';
+import '../../ui/theme/app_color_tokens.dart';
+import '../../ui/tokens/color_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 
 class LobbyScreen extends ConsumerStatefulWidget {
@@ -52,9 +54,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   @override
   Widget build(BuildContext context) {
     final lobby = ref.watch(lobbyProvider);
+    final colors = AppColorTokens.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: colors.backgroundPrimary,
       appBar: AppBar(
         title: const Text('Host Lobby'),
         leading: IconButton(
@@ -65,9 +68,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           },
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.symmetric(horizontal: LayoutTokens.gr4),
-        children: [
+      body: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            LayoutTokens.gr3,
+            LayoutTokens.gr2,
+            LayoutTokens.gr3,
+            LayoutTokens.gr5 + MediaQuery.paddingOf(context).bottom,
+          ),
+          children: [
           _QrHeader(qrData: _qrData, playerCount: lobby.players.length),
           SizedBox(height: LayoutTokens.gr4),
           ...lobby.players.map((slot) => _PlayerSlotCard(slot: slot)),
@@ -88,6 +97,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
           SizedBox(height: LayoutTokens.gr5),
         ],
+        ),
       ),
     );
   }
@@ -102,22 +112,31 @@ class _QrHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final w = MediaQuery.sizeOf(context).width;
+    final compact = w < 360;
+    final qrSize = compact ? 140.0 : 160.0;
+    final pad = compact ? LayoutTokens.gr3 : LayoutTokens.gr4;
+
     return Container(
       width: double.infinity,
-      color: AppTheme.surface,
-      padding: EdgeInsets.symmetric(vertical: LayoutTokens.gr4, horizontal: LayoutTokens.gr4),
+      color: colors.backgroundSecondary,
+      padding: EdgeInsets.symmetric(vertical: pad, horizontal: pad),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.qr_code, color: AppTheme.accent, size: 18),
+              Icon(Icons.qr_code, color: colors.primaryAccent, size: compact ? 16 : 18),
               SizedBox(width: LayoutTokens.gr1),
               Flexible(
                 child: Text(
                   'Players joined: $playerCount  •  Scan QR to join',
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: compact ? 12 : 13,
+                  ),
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
@@ -126,30 +145,30 @@ class _QrHeader extends StatelessWidget {
           ),
           SizedBox(height: LayoutTokens.gr3),
           if (qrData == null)
-            const SizedBox(
-              height: 160,
+            SizedBox(
+              height: qrSize,
               child: Center(
-                child: CircularProgressIndicator(color: AppTheme.accent),
+                child: CircularProgressIndicator(color: colors.primaryAccent),
               ),
             )
           else
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.accent.withValues(alpha: 0.15),
-                    blurRadius: 20,
+                    color: colors.primaryAccent.withValues(alpha: 0.15),
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(compact ? 10 : 12),
               child: QrImageView(
                 data: qrData!,
                 version: QrVersions.auto,
-                size: 160,
+                size: qrSize,
                 backgroundColor: Colors.white,
               ),
             ),
@@ -158,8 +177,13 @@ class _QrHeader extends StatelessWidget {
               padding: EdgeInsets.only(top: LayoutTokens.gr1),
               child: Text(
                 qrData!.replaceFirst('mgtlifespark://', ''),
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 10),
+                style: TextStyle(
+                  color: colors.textSecondary,
+                  fontSize: compact ? 9 : 10,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.center,
               ),
             ),
         ],
@@ -176,20 +200,23 @@ class _PlayerSlotCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorTokens.of(context);
     final isLocalHost = ref.watch(
       profileRepositoryProvider.select((r) => r.getProfile()?.username),
     );
     final isMe = slot.playerId == isLocalHost;
 
     final borderColor = isMe
-        ? (slot.isReady ? AppTheme.success : AppTheme.accent)
+        ? (slot.isReady ? ColorTokens.success : colors.primaryAccent)
         : slot.playerColor.withValues(alpha: 0.25);
+
+    final compact = MediaQuery.sizeOf(context).width < 360;
 
     return Container(
       margin: EdgeInsets.only(bottom: LayoutTokens.gr2),
-      padding: EdgeInsets.all(LayoutTokens.gr3),
+      padding: EdgeInsets.all(compact ? LayoutTokens.gr2 : LayoutTokens.gr3),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: borderColor,
@@ -206,7 +233,7 @@ class _PlayerSlotCard extends ConsumerWidget {
       child: Row(
         children: [
           // Commander avatar / color dot
-          _CommanderAvatar(slot: slot),
+          _CommanderAvatar(slot: slot, compact: compact),
           SizedBox(width: LayoutTokens.gr2),
           // Player info
           Expanded(
@@ -227,19 +254,14 @@ class _PlayerSlotCard extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         slot.username,
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
+                        style: TextStyle(
+                          color: colors.textPrimary,
                           fontWeight: FontWeight.w600,
-                          fontSize: 15,
+                          fontSize: FontTokens.title,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (slot.isHost) ...[
-                      SizedBox(width: LayoutTokens.gr1),
-                      const Icon(Icons.star,
-                          size: 13, color: AppTheme.accentGold),
-                    ],
                   ],
                 ),
                 SizedBox(height: LayoutTokens.gr1),
@@ -249,76 +271,141 @@ class _PlayerSlotCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: slot.commanderName != null
-                        ? AppTheme.textSecondary
-                        : AppTheme.accent,
-                    fontSize: 12,
+                        ? colors.textSecondary
+                        : colors.primaryAccent,
+                    fontSize: FontTokens.caption,
                   ),
                 ),
                 if (slot.hasPartner && slot.partnerCommanderName != null)
                   Text(
                     '+ ${slot.partnerCommanderName}',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 11),
+                    style: TextStyle(
+                        color: colors.textSecondary, fontSize: FontTokens.sm),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),
           ),
           // Controls (for own slot: host and clients)
           if (isMe)
-            Wrap(
-                  spacing: LayoutTokens.gr2,
-                  runSpacing: LayoutTokens.gr2,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    _PartnerChip(slot: slot),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(95, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    backgroundColor: slot.commanderName != null
-                        ? AppTheme.accent
-                        : Colors.transparent,
-                    foregroundColor: slot.commanderName != null
-                        ? Colors.white
-                        : AppTheme.textSecondary,
-                    side: BorderSide(
-                      color: slot.commanderName != null
-                          ? AppTheme.accent
-                          : AppTheme.textSecondary,
+            Flexible(
+              fit: FlexFit.loose,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 280;
+                  final btnH = 44.0; // Min touch target
+                  final btnPadH = isNarrow ? 10.0 : 16.0;
+                  final readyButton = IconButton(
+                    style: IconButton.styleFrom(
+                      minimumSize: Size(btnH, btnH),
+                      backgroundColor: slot.isReady
+                          ? ColorTokens.success.withValues(alpha: 0.2)
+                          : colors.surface,
+                      foregroundColor: slot.isReady
+                          ? ColorTokens.success
+                          : colors.textSecondary,
+                      side: BorderSide(
+                        color: slot.isReady
+                            ? ColorTokens.success
+                            : colors.textSecondary,
+                      ),
                     ),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  onPressed: () => context.push(
-                    AppRoutes.commanderSelect,
-                    extra: {
-                      'playerId': slot.playerId,
-                      'hasPartner': slot.hasPartner,
+                    onPressed: () {
+                      final notifier = ref.read(lobbyProvider.notifier);
+                      notifier.setReady(slot.playerId, ready: !slot.isReady);
                     },
-                  ),
-                  child: const Text('Commander'),
-                ),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(95, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    foregroundColor: slot.isReady
-                        ? AppTheme.success
-                        : AppTheme.textSecondary,
-                    side: BorderSide(
-                      color: slot.isReady
-                          ? AppTheme.success
-                          : AppTheme.textSecondary,
+                    icon: Icon(
+                      slot.isReady ? Icons.check : Icons.check,
+                      size: 24,
                     ),
-                    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  onPressed: () {
-                    final notifier = ref.read(lobbyProvider.notifier);
-                    notifier.setReady(slot.playerId, ready: !slot.isReady);
-                  },
-                  child: Text(slot.isReady ? 'Ready' : 'Ready?'),
-                ),
-                  ],
-                ),
+                  );
+                  if (isNarrow) {
+                    // Narrow: Partner above Commander (same width), checkmark centered to the box
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _PartnerChip(slot: slot, compact: true),
+                              SizedBox(height: LayoutTokens.gr2),
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: Size(0, btnH),
+                                  padding: EdgeInsets.symmetric(horizontal: btnPadH),
+                                  backgroundColor: slot.commanderName != null
+                                      ? colors.primaryAccent
+                                      : Colors.transparent,
+                                  foregroundColor: slot.commanderName != null
+                                      ? Colors.white
+                                      : colors.textSecondary,
+                                  side: BorderSide(
+                                    color: slot.commanderName != null
+                                        ? colors.primaryAccent
+                                        : colors.textSecondary,
+                                  ),
+                                  textStyle: TextStyle(fontSize: FontTokens.body, fontWeight: FontWeight.w600),
+                                ),
+                                onPressed: () => context.push(
+                                  AppRoutes.commanderSelect,
+                                  extra: {
+                                    'playerId': slot.playerId,
+                                    'hasPartner': slot.hasPartner,
+                                  },
+                                ),
+                                child: const Text('Commander'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: LayoutTokens.gr2),
+                        readyButton,
+                      ],
+                    );
+                  }
+                  // Wide: all three in a row
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _PartnerChip(slot: slot, compact: false),
+                      SizedBox(width: LayoutTokens.gr2),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: Size(80, btnH),
+                          padding: EdgeInsets.symmetric(horizontal: btnPadH),
+                          backgroundColor: slot.commanderName != null
+                              ? colors.primaryAccent
+                              : Colors.transparent,
+                          foregroundColor: slot.commanderName != null
+                              ? Colors.white
+                              : colors.textSecondary,
+                          side: BorderSide(
+                            color: slot.commanderName != null
+                                ? colors.primaryAccent
+                                : colors.textSecondary,
+                          ),
+                          textStyle: TextStyle(fontSize: FontTokens.body, fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () => context.push(
+                          AppRoutes.commanderSelect,
+                          extra: {
+                            'playerId': slot.playerId,
+                            'hasPartner': slot.hasPartner,
+                          },
+                        ),
+                        child: const Text('Commander'),
+                      ),
+                      SizedBox(width: LayoutTokens.gr2),
+                      readyButton,
+                    ],
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -327,67 +414,72 @@ class _PlayerSlotCard extends ConsumerWidget {
 
 class _CommanderAvatar extends StatelessWidget {
   final PlayerSlot slot;
-  const _CommanderAvatar({required this.slot});
+  final bool compact;
+  const _CommanderAvatar({required this.slot, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
+    final size = compact ? 44.0 : 50.0;
     if (slot.commanderImageUrl != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: CachedNetworkImage(
           imageUrl: slot.commanderImageUrl!,
-          width: 50,
-          height: 50,
+          width: size,
+          height: size,
           fit: BoxFit.cover,
-          errorWidget: (_, __, ___) => _ColorDot(color: slot.playerColor),
+          errorWidget: (_, __, ___) => _ColorDot(color: slot.playerColor, size: size),
         ),
       );
     }
-    return _ColorDot(color: slot.playerColor);
+    return _ColorDot(color: slot.playerColor, size: size);
   }
 }
 
 class _ColorDot extends StatelessWidget {
   final Color color;
-  const _ColorDot({required this.color});
+  final double size;
+  const _ColorDot({required this.color, this.size = 50});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 50,
-      height: 50,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color, width: 2),
       ),
-      child: Icon(Icons.person, color: color, size: 28),
+      child: Icon(Icons.person, color: color, size: size * 0.56),
     );
   }
 }
 
 class _PartnerChip extends ConsumerWidget {
   final PlayerSlot slot;
-  const _PartnerChip({required this.slot});
+  final bool compact;
+  const _PartnerChip({required this.slot, this.compact = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorTokens.of(context);
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(95, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        minimumSize: Size(compact ? 60 : 80, 44),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
         backgroundColor: slot.hasPartner
-            ? AppTheme.accentGold.withValues(alpha: 0.15)
+            ? ColorTokens.accentGold.withValues(alpha: 0.15)
             : Colors.transparent,
         foregroundColor: slot.hasPartner
-            ? AppTheme.accentGold
-            : AppTheme.textSecondary,
+            ? ColorTokens.accentGold
+            : colors.textSecondary,
         side: BorderSide(
           color: slot.hasPartner
-              ? AppTheme.accentGold
-              : AppTheme.textSecondary.withValues(alpha: 0.4),
+              ? ColorTokens.accentGold
+              : colors.textSecondary.withValues(alpha: 0.4),
         ),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: TextStyle(fontSize: compact ? 12 : 14, fontWeight: FontWeight.w600),
       ),
       onPressed: () => ref.read(lobbyProvider.notifier).togglePartner(slot.playerId),
       child: const Text('Partner'),
@@ -403,22 +495,28 @@ class _EmptySlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Container(
       margin: EdgeInsets.only(bottom: LayoutTokens.gr2),
       padding: EdgeInsets.symmetric(vertical: LayoutTokens.gr4),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: colors.backgroundSecondary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: AppTheme.textSecondary.withValues(alpha: 0.2),
+          color: colors.textSecondary.withValues(alpha: 0.2),
           style: BorderStyle.solid,
         ),
       ),
-      child: Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: LayoutTokens.gr2),
         child: Text(
           '$remaining open slot${remaining == 1 ? '' : 's'} — share your device to let friends join',
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: MediaQuery.sizeOf(context).width < 360 ? 12 : 13,
+          ),
           textAlign: TextAlign.center,
+          maxLines: 2,
         ),
       ),
     );
@@ -433,21 +531,24 @@ class _ConfigSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorTokens.of(context);
     final notifier = ref.read(lobbyProvider.notifier);
 
+    final compact = MediaQuery.sizeOf(context).width < 360;
+
     return Container(
-      padding: EdgeInsets.all(LayoutTokens.gr4),
+      padding: EdgeInsets.all(compact ? LayoutTokens.gr3 : LayoutTokens.gr4),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Game Settings',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -455,10 +556,14 @@ class _ConfigSection extends ConsumerWidget {
           SizedBox(height: LayoutTokens.gr3),
           // Format
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text('Format',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-              const Spacer(),
+              SizedBox(
+                width: 100,
+                child:                   Text('Format',
+                      style: TextStyle(color: colors.textSecondary, fontSize: FontTokens.label)),
+              ),
+              SizedBox(width: LayoutTokens.gr2),
               Expanded(
                 child: _FormatToggle(
                   current: config.format,
@@ -476,10 +581,10 @@ class _ConfigSection extends ConsumerWidget {
           ),
           SizedBox(height: LayoutTokens.gr4),
           // Gameplay settings
-          const Text(
+          Text(
             'Gameplay',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: colors.textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -505,73 +610,71 @@ class _FormatToggle extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Material(
-            color: current == GameFormat.commander
-                ? AppTheme.accent
-                : AppTheme.card,
-            borderRadius: BorderRadius.circular(_radius),
-            child: InkWell(
-              onTap: () => onChanged(GameFormat.commander),
-              borderRadius: BorderRadius.circular(_radius),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(_radius),
-                  border: Border.all(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.4),
-                    width: 1,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Commander',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: current == GameFormat.commander
-                        ? Colors.white
-                        : AppTheme.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+          child: _FormatButton(
+            label: 'Commander',
+            selected: current == GameFormat.commander,
+            onTap: () => onChanged(GameFormat.commander),
           ),
         ),
         SizedBox(width: LayoutTokens.gr2),
         Expanded(
-          child: Material(
-            color: current == GameFormat.standard
-                ? AppTheme.accent
-                : AppTheme.card,
-            borderRadius: BorderRadius.circular(_radius),
-            child: InkWell(
-              onTap: () => onChanged(GameFormat.standard),
-              borderRadius: BorderRadius.circular(_radius),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(_radius),
-                  border: Border.all(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.4),
-                    width: 1,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Standard',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: current == GameFormat.standard
-                        ? Colors.white
-                        : AppTheme.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+          child: _FormatButton(
+            label: 'Standard',
+            selected: current == GameFormat.standard,
+            onTap: () => onChanged(GameFormat.standard),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FormatButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FormatButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static const _radius = 999.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    return Material(
+      color: selected ? colors.primaryAccent : colors.surface,
+      borderRadius: BorderRadius.circular(_radius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_radius),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_radius),
+            border: Border.all(
+              color: colors.textSecondary.withValues(alpha: 0.4),
+              width: 1,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: FontTokens.label,
+              color: selected ? Colors.white : colors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -583,37 +686,65 @@ class _StartingLifeRow extends StatelessWidget {
   final void Function(int) onChanged;
   const _StartingLifeRow({required this.value, required this.onChanged});
 
-  static const _presets = [20, 25, 30, 40, 60];
+  static const _presets = [20, 30, 40];
+
+  List<Widget> _buildChips(BuildContext context) => [
+    ..._presets.map((v) => _LifeChip(
+          value: v,
+          selected: value == v,
+          onTap: () => onChanged(v),
+        )),
+    _LifeChip(
+      value: value,
+      selected: !_presets.contains(value),
+      isCustom: true,
+      onTap: () => _showCustomDialog(context),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Text('Starting Life',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-        const Spacer(),
-        Expanded(
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            spacing: LayoutTokens.gr2,
-            runSpacing: LayoutTokens.gr2,
-            children: [
-              ..._presets.map((v) => _LifeChip(
-                    value: v,
-                    selected: value == v,
-                    onTap: () => onChanged(v),
-                  )),
-              _LifeChip(
-                value: value,
-                selected: !_presets.contains(value),
-                isCustom: true,
-                onTap: () => _showCustomDialog(context),
-              ),
-            ],
-          ),
-        ),
-      ],
+    final colors = AppColorTokens.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stackVertical = constraints.maxWidth < 280;
+        final chips = Wrap(
+          spacing: LayoutTokens.gr2,
+          runSpacing: LayoutTokens.gr2,
+          alignment: WrapAlignment.end,
+          children: _buildChips(context),
+        );
+        return stackVertical
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Starting Life',
+                      style: TextStyle(color: colors.textSecondary, fontSize: FontTokens.label)),
+                  SizedBox(height: LayoutTokens.gr2),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: chips,
+                  ),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 100,
+                    child: Text('Starting Life',
+                        style: TextStyle(color: colors.textSecondary, fontSize: 13)),
+                  ),
+                  SizedBox(width: LayoutTokens.gr2),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: chips,
+                    ),
+                  ),
+                ],
+              );
+      },
     );
   }
 
@@ -621,19 +752,21 @@ class _StartingLifeRow extends StatelessWidget {
     final controller = TextEditingController(text: value.toString());
     showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.card,
-        title: const Text('Custom Starting Life',
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          style: const TextStyle(color: AppTheme.textPrimary),
-          decoration: const InputDecoration(
-            hintText: 'Enter life total (1–999)',
-            hintStyle: TextStyle(color: AppTheme.textSecondary),
-          ),
+      builder: (ctx) {
+        final colors = AppColorTokens.of(ctx);
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          title: Text('Custom Starting Life',
+              style: TextStyle(color: colors.textPrimary)),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            style: TextStyle(color: colors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter life total (1–999)',
+              hintStyle: TextStyle(color: colors.textSecondary),
+            ),
           onSubmitted: (s) {
             final v = int.tryParse(s);
             if (v != null && v >= 1 && v <= 999) {
@@ -645,8 +778,8 @@ class _StartingLifeRow extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: colors.textSecondary)),
           ),
           FilledButton(
             onPressed: () {
@@ -659,7 +792,8 @@ class _StartingLifeRow extends StatelessWidget {
             child: const Text('OK'),
           ),
         ],
-      ),
+        );
+      },
     );
   }
 }
@@ -679,38 +813,38 @@ class _LifeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCustomIcon = isCustom && !selected;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: isCustomIcon ? 10 : 14,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.accent : AppTheme.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.textSecondary.withValues(alpha: 0.4),
+    final colors = AppColorTokens.of(context);
+    final label = isCustom ? '+' : '$value';
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Material(
+        color: selected ? colors.primaryAccent : colors.surface,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: selected
+                    ? colors.primaryAccent
+                    : colors.textSecondary.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isCustom ? FontTokens.headline : FontTokens.sm,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : (isCustom ? colors.textSecondary : colors.textPrimary),
+              ),
+            ),
           ),
         ),
-        child: isCustomIcon
-            ? Text(
-                'Custom',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              )
-            : Text(
-                isCustom ? '$value' : '$value',
-                style: TextStyle(
-                  color: selected ? Colors.white : AppTheme.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
       ),
     );
   }
@@ -799,32 +933,43 @@ class _GameplaySwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 360;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: compact ? 8 : 12),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: SwitchListTile(
         title: Text(
           title,
-          style: const TextStyle(
-            color: AppTheme.textPrimary,
-            fontSize: 15,
+          style: TextStyle(
+            color: colors.textPrimary,
+            fontSize: compact ? FontTokens.body : FontTokens.title,
             fontWeight: FontWeight.w500,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 12,
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: FontTokens.caption,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppTheme.accent,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        activeTrackColor: colors.primaryAccent.withValues(alpha: 0.5),
+        activeThumbColor: colors.primaryAccent,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: compact ? 12 : 16,
+          vertical: 8,
+        ),
       ),
     );
   }
@@ -845,11 +990,12 @@ class _TimerChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return SizedBox(
       width: 40,
       height: 40,
       child: Material(
-        color: selected ? AppTheme.accent : AppTheme.card,
+        color: selected ? colors.primaryAccent : colors.surface,
         shape: const CircleBorder(),
         child: InkWell(
           onTap: onTap,
@@ -859,8 +1005,8 @@ class _TimerChip extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(
                 color: selected
-                    ? AppTheme.accent
-                    : AppTheme.textSecondary.withValues(alpha: 0.4),
+                    ? colors.primaryAccent
+                    : colors.textSecondary.withValues(alpha: 0.4),
                 width: 1,
               ),
             ),
@@ -868,9 +1014,9 @@ class _TimerChip extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: FontTokens.sm,
                 fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : AppTheme.textSecondary,
+                color: selected ? Colors.white : colors.textSecondary,
               ),
             ),
           ),
@@ -888,41 +1034,27 @@ class _TurnTimeLimitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     final limit = config.turnTimeLimitSeconds;
+    final compact = MediaQuery.sizeOf(context).width < 360;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      margin: EdgeInsets.only(bottom: compact ? 8 : 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 12 : 16,
+        vertical: compact ? 12 : 16,
+      ),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Turn time limit',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  limit != null ? '${limit ~/ 60}m per turn' : 'No limit',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackVertical = constraints.maxWidth < 320;
+          final chips = Wrap(
+            spacing: LayoutTokens.gr1,
+            runSpacing: LayoutTokens.gr1,
+            alignment: WrapAlignment.end,
             children: [
               _TimerChip(
                 label: 'Off',
@@ -931,33 +1063,75 @@ class _TurnTimeLimitTile extends StatelessWidget {
                 onTap: () => notifier.updateConfig(
                     config.copyWith(turnTimeLimitSeconds: null)),
               ),
-              SizedBox(width: LayoutTokens.gr1),
               _TimerChip(
-                label: '1m',
+                label: '30s',
+                value: 30,
+                selected: limit == 30,
+                onTap: () => notifier.updateConfig(
+                    config.copyWith(turnTimeLimitSeconds: 30)),
+              ),
+              _TimerChip(
+                label: '60s',
                 value: 60,
                 selected: limit == 60,
                 onTap: () => notifier.updateConfig(
                     config.copyWith(turnTimeLimitSeconds: 60)),
               ),
-              SizedBox(width: LayoutTokens.gr1),
-              _TimerChip(
-                label: '2m',
-                value: 120,
-                selected: limit == 120,
-                onTap: () => notifier.updateConfig(
-                    config.copyWith(turnTimeLimitSeconds: 120)),
-              ),
-              SizedBox(width: LayoutTokens.gr1),
-              _TimerChip(
-                label: '5m',
-                value: 300,
-                selected: limit == 300,
-                onTap: () => notifier.updateConfig(
-                    config.copyWith(turnTimeLimitSeconds: 300)),
-              ),
             ],
-          ),
-        ],
+          );
+          return stackVertical
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Turn time limit',
+                      style: TextStyle(
+                        color: colors.textPrimary,
+                        fontSize: FontTokens.title,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      limit != null ? '${limit}s per turn' : 'No timer',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: FontTokens.caption,
+                      ),
+                    ),
+                    SizedBox(height: LayoutTokens.gr2),
+                    chips,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Turn time limit',
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            limit != null ? '${limit}s per turn' : 'No timer',
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    chips,
+                  ],
+                );
+        },
       ),
     );
   }
@@ -965,30 +1139,59 @@ class _TurnTimeLimitTile extends StatelessWidget {
 
 // ── Start game button ─────────────────────────────────────────────────────
 
-class _StartGameButton extends ConsumerWidget {
+class _StartGameButton extends ConsumerStatefulWidget {
   final bool canStart;
   final String hint;
   const _StartGameButton({required this.canStart, required this.hint});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StartGameButton> createState() => _StartGameButtonState();
+}
+
+class _StartGameButtonState extends ConsumerState<_StartGameButton> {
+  bool _isStarting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final canStart = widget.canStart && !_isStarting;
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: canStart ? AppTheme.success : AppTheme.textSecondary,
-        disabledBackgroundColor: AppTheme.textSecondary.withValues(alpha: 0.3),
-        minimumSize: const Size(double.infinity, 56),
+        backgroundColor: canStart ? ColorTokens.success : colors.textSecondary,
+        disabledBackgroundColor: colors.textSecondary.withValues(alpha: 0.3),
+        minimumSize: const Size(double.infinity, 52),
+        padding: const EdgeInsets.symmetric(vertical: 14),
       ),
       onPressed: canStart
           ? () async {
-              await ref.read(lobbyProvider.notifier).broadcastGameStart();
-              if (context.mounted) context.go(AppRoutes.game);
+              setState(() => _isStarting = true);
+              try {
+                await ref.read(lobbyProvider.notifier).broadcastGameStart();
+                if (context.mounted) context.go(AppRoutes.game);
+              } finally {
+                if (mounted) setState(() => _isStarting = false);
+              }
             }
           : null,
-      child: Text(
-        canStart ? 'Start Game' : hint,
-        style: const TextStyle(
-            fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-      ),
+      child: _isStarting
+          ? const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Text(
+              widget.canStart ? 'Start Game' : widget.hint,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: MediaQuery.sizeOf(context).width < 360 ? FontTokens.title : FontTokens.bodyLg,
+                color: Colors.white,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
     );
   }
 }

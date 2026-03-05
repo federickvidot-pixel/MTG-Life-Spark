@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../ui/tokens/color_tokens.dart';
+import '../../ui/theme/app_color_tokens.dart';
 import 'main_bottom_nav.dart';
 
 /// Shell scaffold with persistent bottom navigation.
@@ -16,8 +16,9 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
-      backgroundColor: ColorTokens.backgroundPrimary,
+      backgroundColor: colors.backgroundPrimary,
       body: navigationShell,
       bottomNavigationBar: MainBottomNav(
         currentIndex: navigationShell.currentIndex,

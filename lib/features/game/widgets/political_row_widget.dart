@@ -9,8 +9,9 @@ import '../../../shared/theme/app_theme.dart';
 
 class PoliticalRowWidget extends ConsumerWidget {
   final GameState game;
+  final bool overviewStyle;
 
-  const PoliticalRowWidget({super.key, required this.game});
+  const PoliticalRowWidget({super.key, required this.game, this.overviewStyle = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,7 +20,7 @@ class PoliticalRowWidget extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: overviewStyle ? Colors.transparent : AppTheme.surface,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -32,6 +33,7 @@ class PoliticalRowWidget extends ConsumerWidget {
               holderId: game.monarchPlayerId,
               players: game.players,
               canAssign: game.isHost,
+              overviewStyle: overviewStyle,
               onTap: game.isHost
                   ? () => _showAssignPicker(
                         context,
@@ -54,6 +56,7 @@ class PoliticalRowWidget extends ConsumerWidget {
               holderId: game.initiativePlayerId,
               players: game.players,
               canAssign: game.isHost,
+              overviewStyle: overviewStyle,
               onTap: game.isHost
                   ? () => _showAssignPicker(
                         context,
@@ -72,6 +75,7 @@ class PoliticalRowWidget extends ConsumerWidget {
           _DayNightToggle(
             dayNight: game.dayNight,
             isHost: game.isHost,
+            overviewStyle: overviewStyle,
             onTap: game.isHost
                 ? () {
                     final next = _nextDayNight(game.dayNight);
@@ -134,6 +138,7 @@ class _PoliticalBadge extends StatelessWidget {
   final String? holderId;
   final List<PlayerGameState> players;
   final bool canAssign;
+  final bool overviewStyle;
   final VoidCallback? onTap;
 
   const _PoliticalBadge({
@@ -142,6 +147,7 @@ class _PoliticalBadge extends StatelessWidget {
     required this.holderId,
     required this.players,
     required this.canAssign,
+    this.overviewStyle = false,
     this.onTap,
   });
 
@@ -151,52 +157,67 @@ class _PoliticalBadge extends StatelessWidget {
         ? players.where((p) => p.playerId == holderId).firstOrNull
         : null;
 
-    return GestureDetector(
+    final borderColor = overviewStyle
+        ? AppTheme.textPrimary
+        : (holder != null
+            ? AppTheme.accentGold.withValues(alpha: 0.5)
+            : AppTheme.surface);
+    final textColor = overviewStyle ? AppTheme.textPrimary : AppTheme.textSecondary;
+    final holderColor = overviewStyle
+        ? AppTheme.textPrimary
+        : (holder != null ? AppTheme.accentGold : AppTheme.textSecondary);
+
+    final child = GestureDetector(
       onTap: canAssign ? onTap : null,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: AppTheme.card,
+          color: overviewStyle ? Colors.transparent : AppTheme.card,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: holder != null
-                ? AppTheme.accentGold.withValues(alpha: 0.5)
-                : AppTheme.surface,
-          ),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 14)),
+            Text(icon, style: TextStyle(fontSize: overviewStyle ? 12 : 14)),
             const SizedBox(width: 6),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 9,
+              child: overviewStyle
+                  ? Text(
+                      label,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 9,
+                          ),
+                        ),
+                        Text(
+                          holder?.username ?? 'None',
+                          style: TextStyle(
+                            color: holderColor,
+                            fontSize: 11,
+                            fontWeight: holder != null
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    holder?.username ?? 'None',
-                    style: TextStyle(
-                      color: holder != null
-                          ? AppTheme.accentGold
-                          : AppTheme.textSecondary,
-                      fontSize: 11,
-                      fontWeight: holder != null
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
             ),
-            if (canAssign)
+            if (canAssign && !overviewStyle)
               Icon(
                 Icons.edit,
                 size: 12,
@@ -206,17 +227,23 @@ class _PoliticalBadge extends StatelessWidget {
         ),
       ),
     );
+    return IgnorePointer(
+      ignoring: !canAssign,
+      child: child,
+    );
   }
 }
 
 class _DayNightToggle extends StatelessWidget {
   final DayNightState dayNight;
   final bool isHost;
+  final bool overviewStyle;
   final VoidCallback? onTap;
 
   const _DayNightToggle({
     required this.dayNight,
     required this.isHost,
+    this.overviewStyle = false,
     this.onTap,
   });
 
@@ -228,30 +255,50 @@ class _DayNightToggle extends StatelessWidget {
       DayNightState.night => ('🌙', 'Night', AppTheme.accent),
     };
 
-    return GestureDetector(
+    final borderColor = overviewStyle
+        ? AppTheme.textPrimary
+        : (dayNight != DayNightState.none
+            ? color.withValues(alpha: 0.5)
+            : AppTheme.surface);
+    final textColor = overviewStyle ? AppTheme.textPrimary : color;
+
+    final child = GestureDetector(
       onTap: isHost ? onTap : null,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: AppTheme.card,
+          color: overviewStyle ? Colors.transparent : AppTheme.card,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: dayNight != DayNightState.none
-                ? color.withValues(alpha: 0.5)
-                : AppTheme.surface,
-          ),
+          border: Border.all(color: borderColor),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 18)),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 9),
-            ),
-          ],
-        ),
+        child: overviewStyle
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(icon, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 4),
+                  Text(
+                    label,
+                    style: TextStyle(color: textColor, fontSize: 11),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(icon, style: const TextStyle(fontSize: 18)),
+                  Text(
+                    label,
+                    style: TextStyle(color: color, fontSize: 9),
+                  ),
+                ],
+              ),
       ),
+    );
+    return IgnorePointer(
+      ignoring: !isHost,
+      child: child,
     );
   }
 }

@@ -25,6 +25,7 @@ class PhaseBarWidget extends StatefulWidget {
   final VoidCallback? onAdvancePhase;
   final bool canSetPhase;
   final void Function(GamePhase)? onPhaseTap;
+  final bool compact;
 
   const PhaseBarWidget({
     super.key,
@@ -34,6 +35,7 @@ class PhaseBarWidget extends StatefulWidget {
     this.onAdvancePhase,
     this.canSetPhase = false,
     this.onPhaseTap,
+    this.compact = false,
   });
 
   @override
@@ -122,7 +124,7 @@ class _PhaseBarWidgetState extends State<PhaseBarWidget> {
         final padding = (viewportWidth - itemExtent) / 2;
 
         return Container(
-          height: 64,
+          height: widget.compact ? 40 : 56,
           color: Colors.transparent,
           child: NotificationListener<ScrollNotification>(
             onNotification: (n) {
@@ -163,6 +165,7 @@ class _PhaseBarWidgetState extends State<PhaseBarWidget> {
                     opacity: opacity,
                     scale: scale,
                     isCentered: isCentered,
+                    compact: widget.compact,
                   ),
                 );
               },
@@ -181,6 +184,7 @@ class _PhaseCarouselItem extends StatelessWidget {
   final double opacity;
   final double scale;
   final bool isCentered;
+  final bool compact;
 
   const _PhaseCarouselItem({
     required this.phase,
@@ -188,15 +192,17 @@ class _PhaseCarouselItem extends StatelessWidget {
     required this.opacity,
     required this.scale,
     required this.isCentered,
+    this.compact = false,
   });
 
   static const _base = 6.0;
 
   @override
   Widget build(BuildContext context) {
-    final margin = (_base * LayoutTokens.goldenRatioInverse).roundToDouble();
-    final pad = (_base * LayoutTokens.goldenRatio).roundToDouble();
-    final fontSizeInactive = (_base * LayoutTokens.goldenRatio).roundToDouble();
+    final base = compact ? 4.0 : _base;
+    final margin = (base * LayoutTokens.goldenRatioInverse).roundToDouble();
+    final pad = (base * LayoutTokens.goldenRatio).roundToDouble();
+    final fontSizeInactive = (base * LayoutTokens.goldenRatio).roundToDouble();
     final fontSizeActive = (fontSizeInactive * LayoutTokens.goldenRatio).roundToDouble();
 
     return AnimatedOpacity(

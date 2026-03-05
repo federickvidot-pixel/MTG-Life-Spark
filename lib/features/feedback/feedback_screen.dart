@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../ui/components/ui_app_bar.dart';
 import '../../ui/components/ui_button.dart';
 import '../../ui/components/ui_text_field.dart';
-import '../../ui/tokens/color_tokens.dart';
+import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/spacing_tokens.dart';
 
@@ -59,9 +59,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
       appBar: const UiAppBar(title: 'Feedback'),
-      backgroundColor: ColorTokens.backgroundPrimary,
+      backgroundColor: colors.backgroundPrimary,
       body: ListView(
         padding: EdgeInsets.all(LayoutTokens.gr4),
         children: [
@@ -72,7 +73,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           Text(
             'Help us improve',
             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: 26,
+                  fontSize: MediaQuery.sizeOf(context).width < 360 ? 22 : 26,
                   fontWeight: FontWeight.w800,
                 ),
             textAlign: TextAlign.center,
@@ -101,12 +102,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           SizedBox(height: LayoutTokens.gr5),
           Row(
             children: [
-              const Expanded(child: Divider(color: ColorTokens.borderSubtle)),
+              Expanded(child: Divider(color: colors.borderSubtle)),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: LayoutTokens.gr2),
                 child: Text('or', style: Theme.of(context).textTheme.bodyMedium),
               ),
-              const Expanded(child: Divider(color: ColorTokens.borderSubtle)),
+              Expanded(child: Divider(color: colors.borderSubtle)),
             ],
           ),
           SizedBox(height: LayoutTokens.gr4),

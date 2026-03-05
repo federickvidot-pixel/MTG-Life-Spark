@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../tokens/color_tokens.dart';
+import '../theme/app_color_tokens.dart';
 
 /// App bar using design tokens.
 class UiAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -20,9 +20,10 @@ class UiAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return AppBar(
-      backgroundColor: ColorTokens.backgroundPrimary,
-      foregroundColor: ColorTokens.textPrimary,
+      backgroundColor: colors.backgroundPrimary,
+      foregroundColor: colors.textPrimary,
       elevation: 0,
       centerTitle: true,
       leading: leading,

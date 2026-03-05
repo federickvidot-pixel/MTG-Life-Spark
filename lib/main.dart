@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -12,11 +15,60 @@ import 'shared/theme/theme_provider.dart';
 import 'shared/utils/app_router.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  await _initHive();
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint('FlutterError: ${details.exception}');
+      debugPrint('Stack: ${details.stack}');
+    };
 
-  runApp(const ProviderScope(child: MgtLifeSparkApp()));
+    try {
+      await _initHive();
+      runApp(const ProviderScope(child: MgtLifeSparkApp()));
+    } catch (e, st) {
+      debugPrint('Init error: $e');
+      debugPrint('Stack: $st');
+      runApp(_ErrorApp(message: e.toString(), stack: st.toString()));
+    }
+  }, (error, stack) {
+    debugPrint('Zone error: $error');
+    debugPrint('Stack: $stack');
+  });
+}
+
+class _ErrorApp extends StatelessWidget {
+  final String message;
+  final String stack;
+
+  const _ErrorApp({required this.message, required this.stack});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.grey[900],
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Startup Error', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red[300])),
+                const SizedBox(height: 16),
+                Text(message, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                const SizedBox(height: 24),
+                Text('Stack trace:', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                const SizedBox(height: 8),
+                SelectableText(stack, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Future<void> _initHive() async {

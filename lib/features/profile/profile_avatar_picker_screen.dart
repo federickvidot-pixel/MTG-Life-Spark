@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/game/scryfall_service.dart';
 import '../../core/persistence/providers.dart';
 import '../../ui/components/ui_app_bar.dart';
+import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
 
 /// Screen to pick an MTG card image as profile avatar.
@@ -89,6 +90,7 @@ class _ProfileAvatarPickerScreenState
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
       appBar: UiAppBar(
         title: 'Profile Picture',
@@ -105,7 +107,7 @@ class _ProfileAvatarPickerScreenState
           ),
         ],
       ),
-      backgroundColor: ColorTokens.backgroundPrimary,
+      backgroundColor: colors.backgroundPrimary,
       body: Column(
         children: [
           Padding(
@@ -115,15 +117,15 @@ class _ProfileAvatarPickerScreenState
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Search MTG cards…',
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search,
-                  color: ColorTokens.textSecondary,
+                  color: colors.textSecondary,
                 ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.clear,
-                          color: ColorTokens.textSecondary,
+                          color: colors.textSecondary,
                         ),
                         onPressed: () {
                           _searchController.clear();
@@ -135,20 +137,21 @@ class _ProfileAvatarPickerScreenState
                       )
                     : null,
               ),
-              style: const TextStyle(color: ColorTokens.textPrimary),
+              style: TextStyle(color: colors.textPrimary),
               onChanged: _onSearchChanged,
             ),
           ),
-          Expanded(child: _buildResults()),
+          Expanded(child: _buildResults(context)),
         ],
       ),
     );
   }
 
-  Widget _buildResults() {
+  Widget _buildResults(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: ColorTokens.primaryAccent),
+      return Center(
+        child: CircularProgressIndicator(color: colors.primaryAccent),
       );
     }
     if (_error != null) {
@@ -157,34 +160,38 @@ class _ProfileAvatarPickerScreenState
           padding: const EdgeInsets.all(24),
           child: Text(
             _error!,
-            style: const TextStyle(color: ColorTokens.textSecondary),
+            style: TextStyle(color: colors.textSecondary),
             textAlign: TextAlign.center,
           ),
         ),
       );
     }
     if (_results.isEmpty && _searchController.text.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
             'Search for an MTG card to use as your profile picture.',
-            style: TextStyle(color: ColorTokens.textSecondary),
+            style: TextStyle(color: colors.textSecondary),
             textAlign: TextAlign.center,
           ),
         ),
       );
     }
+    final w = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = w < 320 ? 1 : 2;
+    final aspectRatio = w < 320 ? 0.75 : (w < 360 ? 0.68 : 0.72);
+
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.72,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+      padding: EdgeInsets.fromLTRB(w < 360 ? 12 : 16, 0, w < 360 ? 12 : 16, 24),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        childAspectRatio: aspectRatio,
+        crossAxisSpacing: w < 360 ? 8 : 10,
+        mainAxisSpacing: w < 360 ? 8 : 10,
       ),
       itemCount: _results.length,
-      itemBuilder: (_, i) {
+      itemBuilder: (context, i) {
         final card = _results[i];
         return _AvatarCard(
           card: card,
@@ -203,6 +210,7 @@ class _AvatarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -210,10 +218,10 @@ class _AvatarCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           decoration: BoxDecoration(
-            color: ColorTokens.surface,
+            color: colors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: ColorTokens.borderSubtle.withValues(alpha: 0.5),
+              color: colors.borderSubtle.withValues(alpha: 0.5),
             ),
           ),
           child: Column(
@@ -228,18 +236,18 @@ class _AvatarCard extends StatelessWidget {
                       ? CachedNetworkImage(
                           imageUrl: card.imageUrl!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _placeholder(),
+                          errorWidget: (_, __, ___) => _placeholder(context),
                         )
-                      : _placeholder(),
+                      : _placeholder(context),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 360 ? 6 : 8),
                 child: Text(
                   card.name,
-                  style: const TextStyle(
-                    color: ColorTokens.textSecondary,
-                    fontSize: 12,
+                  style: TextStyle(
+                    color: colors.textSecondary,
+                    fontSize: MediaQuery.sizeOf(context).width < 360 ? 11 : 12,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
@@ -253,10 +261,13 @@ class _AvatarCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-        color: ColorTokens.backgroundSecondary,
-        child: const Center(
-          child: Icon(Icons.style, color: ColorTokens.textMuted, size: 32),
-        ),
-      );
+  Widget _placeholder(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    return Container(
+      color: colors.backgroundSecondary,
+      child: Center(
+        child: Icon(Icons.style, color: colors.textMuted, size: 32),
+      ),
+    );
+  }
 }

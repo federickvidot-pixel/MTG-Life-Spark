@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../tokens/color_tokens.dart';
+import '../theme/app_color_tokens.dart';
+import '../tokens/font_tokens.dart';
 import '../tokens/radius_tokens.dart';
 import '../tokens/spacing_tokens.dart';
 
@@ -27,22 +28,23 @@ class UiTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return TextField(
       controller: controller,
       maxLines: maxLines,
       maxLength: maxLength,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
-      style: const TextStyle(
-        color: ColorTokens.textPrimary,
-        fontSize: 16,
+      style: TextStyle(
+        color: colors.textPrimary,
+        fontSize: FontTokens.bodyLg,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
         filled: true,
-        fillColor: ColorTokens.surface,
+        fillColor: colors.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: SpacingTokens.md,
           vertical: SpacingTokens.md,
@@ -53,19 +55,19 @@ class UiTextField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(
-            color: ColorTokens.primaryAccent,
+          borderSide: BorderSide(
+            color: colors.primaryAccent,
             width: 2,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
           borderSide: BorderSide(
-            color: ColorTokens.borderSubtle.withValues(alpha: 0.5),
+            color: colors.borderSubtle.withValues(alpha: 0.5),
           ),
         ),
-        labelStyle: const TextStyle(color: ColorTokens.textSecondary),
-        hintStyle: const TextStyle(color: ColorTokens.textMuted),
+        labelStyle: TextStyle(color: colors.textSecondary),
+        hintStyle: TextStyle(color: colors.textMuted),
       ),
     );
   }

@@ -14,7 +14,9 @@ import '../../ui/bento/bento_grid.dart';
 import '../../ui/bento/bento_tile.dart';
 import '../../ui/components/ui_app_bar.dart';
 import '../../ui/components/ui_surface.dart';
+import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
 import '../../ui/tokens/spacing_tokens.dart';
@@ -34,54 +36,32 @@ class ProfileScreen extends ConsumerWidget {
       );
     }
 
-    final recentMatches = matchRepo.getAllMatches().take(5).toList();
+    final allMatches = matchRepo.getAllMatches().toList();
 
+    final colors = AppColorTokens.of(context);
     return Scaffold(
-      appBar: UiAppBar(
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.emoji_events_outlined),
-            iconSize: 28,
-            style: IconButton.styleFrom(
-              padding: const EdgeInsets.all(12),
-              minimumSize: const Size(48, 48),
-            ),
-            tooltip: 'Achievements',
-            onPressed: () => context.push(AppRoutes.achievements),
-          ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            iconSize: 28,
-            style: IconButton.styleFrom(
-              padding: const EdgeInsets.all(12),
-              minimumSize: const Size(48, 48),
-            ),
-            tooltip: 'Match History',
-            onPressed: () => context.push(AppRoutes.history),
-          ),
-        ],
-      ),
-      backgroundColor: ColorTokens.backgroundPrimary,
+      appBar: const UiAppBar(),
+      backgroundColor: colors.backgroundPrimary,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrow = MediaQuery.sizeOf(context).width < 360;
           return ListView(
         padding: EdgeInsets.all(isNarrow ? LayoutTokens.gr3 : LayoutTokens.gr4),
         children: [
-          _ProfileHeader(profile: profile),
+          _ProfileHeader(profile: profile, colors: colors),
           SizedBox(height: LayoutTokens.gr4),
-          _XpProgressModule(profile: profile),
+          _XpProgressModule(profile: profile, colors: colors),
           SizedBox(height: LayoutTokens.gr4),
           BentoGrid(
             padding: EdgeInsets.zero,
             crossAxisCount: isNarrow ? 1 : 2,
-            tileAspectRatio: 2.8,
+            tileAspectRatio: isNarrow ? 3.2 : 2.8,
             mainAxisSpacing: LayoutTokens.gr2,
             crossAxisSpacing: LayoutTokens.gr2,
-            children: _buildStatsGrid(profile, feedbackRepo),
+            children: _buildStatsGrid(context, profile, feedbackRepo),
           ),
           SizedBox(height: LayoutTokens.gr4),
-          _RecentGamesModule(matches: recentMatches),
+          _RecentGamesModule(matches: allMatches, colors: colors),
           SizedBox(height: LayoutTokens.gr5),
         ],
       );
@@ -93,7 +73,8 @@ class ProfileScreen extends ConsumerWidget {
 
 class _ProfileHeader extends StatelessWidget {
   final PlayerProfile profile;
-  const _ProfileHeader({required this.profile});
+  final AppColorTokens colors;
+  const _ProfileHeader({required this.profile, required this.colors});
 
   void _onAvatarTap(BuildContext context) {
     context.push(AppRoutes.profileAvatar);
@@ -129,13 +110,13 @@ class _ProfileHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: ColorTokens.primaryAccent.withValues(alpha: 0.5),
+                    color: colors.primaryAccent.withValues(alpha: 0.5),
                     width: 2,
                   ),
                 ),
                 child: CircleAvatar(
               radius: avatarRadius,
-              backgroundColor: ColorTokens.surface,
+              backgroundColor: colors.surface,
               backgroundImage: profile.profileAvatarImageUrl != null &&
                       profile.profileAvatarImageUrl!.isNotEmpty
                   ? CachedNetworkImageProvider(profile.profileAvatarImageUrl!)
@@ -147,7 +128,7 @@ class _ProfileHeader extends StatelessWidget {
                       _initials,
                       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: ColorTokens.textPrimary,
+                            color: colors.textPrimary,
                           ),
                     ),
                 ),
@@ -158,10 +139,10 @@ class _ProfileHeader extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.all(LayoutTokens.gr1),
                   decoration: BoxDecoration(
-                    color: ColorTokens.primaryAccent,
+                    color: colors.primaryAccent,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: ColorTokens.backgroundPrimary,
+                      color: colors.backgroundPrimary,
                       width: 2,
                     ),
                   ),
@@ -180,9 +161,12 @@ class _ProfileHeader extends StatelessWidget {
           profile.username,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: ColorTokens.textPrimary,
+                color: colors.textPrimary,
+                fontSize: MediaQuery.sizeOf(context).width < 360 ? 20 : null,
               ),
           textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
         SizedBox(height: LayoutTokens.gr1),
         Row(
@@ -193,7 +177,7 @@ class _ProfileHeader extends StatelessWidget {
             Text(
               'Level ${profile.level}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: ColorTokens.textSecondary,
+                    color: colors.textSecondary,
                   ),
             ),
           ],
@@ -205,7 +189,8 @@ class _ProfileHeader extends StatelessWidget {
 
 class _XpProgressModule extends StatelessWidget {
   final PlayerProfile profile;
-  const _XpProgressModule({required this.profile});
+  final AppColorTokens colors;
+  const _XpProgressModule({required this.profile, required this.colors});
 
   int _xpForCurrentLevel(int level) {
     const thresholds = [(10, 500), (25, 1000), (50, 2000), (75, 3500), (100, 5000)];
@@ -231,7 +216,7 @@ class _XpProgressModule extends StatelessWidget {
             'XP Progress',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: ColorTokens.textPrimary,
+                  color: colors.textPrimary,
                 ),
           ),
           SizedBox(height: LayoutTokens.gr2),
@@ -240,16 +225,18 @@ class _XpProgressModule extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
-              backgroundColor: ColorTokens.backgroundSecondary,
-              valueColor: const AlwaysStoppedAnimation<Color>(ColorTokens.primaryAccent),
+              backgroundColor: colors.backgroundSecondary,
+              valueColor: AlwaysStoppedAnimation<Color>(colors.primaryAccent),
             ),
           ),
           SizedBox(height: LayoutTokens.gr1),
           Text(
             '$xpInLevel / $xpNeeded XP',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: ColorTokens.textSecondary,
+                  color: colors.textSecondary,
+                  fontSize: MediaQuery.sizeOf(context).width < 360 ? 12 : null,
                 ),
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -258,69 +245,60 @@ class _XpProgressModule extends StatelessWidget {
 }
 
 List<BentoTile> _buildStatsGrid(
-    PlayerProfile profile, FeedbackRepository feedbackRepo) {
-  final totalTies = (profile.totalGamesPlayed - profile.totalWins - profile.totalLosses)
-      .clamp(0, 1 << 31);
-
+    BuildContext context,
+    PlayerProfile profile,
+    FeedbackRepository feedbackRepo) {
+  final colors = AppColorTokens.of(context);
   return [
     BentoTile(
       title: '${profile.totalWins}',
       subtitle: 'Wins',
-      icon: Icon(Icons.emoji_events, size: 14, color: ColorTokens.success.withValues(alpha: 0.8)),
       columnSpan: 1,
       compact: true,
     ),
     BentoTile(
       title: '${profile.totalLosses}',
       subtitle: 'Losses',
-      icon: Icon(Icons.close, size: 14, color: ColorTokens.primaryAccent.withValues(alpha: 0.8)),
-      columnSpan: 1,
-      compact: true,
-    ),
-    BentoTile(
-      title: '$totalTies',
-      subtitle: 'Ties',
-      icon: Icon(Icons.remove, size: 14, color: ColorTokens.textSecondary),
-      columnSpan: 1,
-      compact: true,
-    ),
-    BentoTile(
-      title: '${profile.currentWinStreak}',
-      subtitle: 'Win Streak',
-      icon: Icon(Icons.local_fire_department, size: 14, color: ColorTokens.primaryAccent.withValues(alpha: 0.8)),
-      columnSpan: 1,
-      compact: true,
-    ),
-    BentoTile(
-      title: '${feedbackRepo.totalLikesGiven}',
-      subtitle: 'Likes Given',
-      icon: Icon(Icons.thumb_up, size: 14, color: ColorTokens.success.withValues(alpha: 0.8)),
       columnSpan: 1,
       compact: true,
     ),
     BentoTile(
       title: '${feedbackRepo.totalMvpVotesGiven}',
       subtitle: 'MVP Votes',
-      icon: Icon(Icons.star, size: 14, color: ColorTokens.primaryAccent.withValues(alpha: 0.8)),
       columnSpan: 1,
       compact: true,
     ),
     BentoTile(
       title: '${feedbackRepo.totalTeamPlayerVotesGiven}',
       subtitle: 'Team Player',
-      icon: Icon(Icons.groups, size: 14, color: ColorTokens.primaryAccent.withValues(alpha: 0.8)),
       columnSpan: 1,
       compact: true,
     ),
   ];
 }
 
-class _RecentGamesModule extends StatelessWidget {
+class _RecentGamesModule extends StatefulWidget {
   final List<MatchRecord> matches;
-  const _RecentGamesModule({required this.matches});
+  final AppColorTokens colors;
+  const _RecentGamesModule({required this.matches, required this.colors});
+
+  @override
+  State<_RecentGamesModule> createState() => _RecentGamesModuleState();
+}
+
+class _RecentGamesModuleState extends State<_RecentGamesModule> {
+  bool _expanded = false;
+
+  static const int _initialCount = 5;
 
   @override
   Widget build(BuildContext context) {
+    final matches = widget.matches;
+    final hasMore = matches.length > _initialCount;
+    final displayed = _expanded
+        ? matches
+        : matches.take(_initialCount).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -328,25 +306,43 @@ class _RecentGamesModule extends StatelessWidget {
           'Recent Games',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: ColorTokens.textPrimary,
+                color: widget.colors.textPrimary,
               ),
         ),
         SizedBox(height: LayoutTokens.gr2),
         if (matches.isEmpty)
           UiSurface(
-            padding: EdgeInsets.all(LayoutTokens.gr4),
+            padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 360 ? LayoutTokens.gr3 : LayoutTokens.gr4),
             borderRadius: RadiusTokens.radiusMd,
             child: Center(
               child: Text(
                 'No recent matches.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: ColorTokens.textSecondary,
+                      color: widget.colors.textSecondary,
                     ),
               ),
             ),
           )
-        else
-          ...matches.map((m) => _RecentMatchRow(match: m)),
+        else ...[
+          ...displayed.map((m) => _RecentMatchRow(match: m, colors: widget.colors)),
+          if (hasMore)
+            Padding(
+              padding: EdgeInsets.only(top: LayoutTokens.gr2),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => setState(() => _expanded = true),
+                  child: Text(
+                    _expanded ? 'See less' : 'See more',
+                    style: TextStyle(
+                      color: widget.colors.primaryAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -354,11 +350,12 @@ class _RecentGamesModule extends StatelessWidget {
 
 class _RecentMatchRow extends StatelessWidget {
   final MatchRecord match;
-  const _RecentMatchRow({required this.match});
+  final AppColorTokens colors;
+  const _RecentMatchRow({required this.match, required this.colors});
 
   Color get _resultColor {
     if (match.result == 'win') return ColorTokens.success;
-    return ColorTokens.primaryAccent;
+    return colors.primaryAccent;
   }
 
   String get _resultLabel {
@@ -382,7 +379,7 @@ class _RecentMatchRow extends StatelessWidget {
       padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
       child: UiSurface(
         padding: EdgeInsets.symmetric(
-          horizontal: LayoutTokens.gr3,
+          horizontal: MediaQuery.sizeOf(context).width < 360 ? LayoutTokens.gr2 : LayoutTokens.gr3,
           vertical: LayoutTokens.gr2,
         ),
         borderRadius: RadiusTokens.radiusMd,
@@ -390,31 +387,38 @@ class _RecentMatchRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   Text(
                     _opponentLabel,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
+                          fontSize: MediaQuery.sizeOf(context).width < 360 ? 14 : null,
                         ),
                     overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
                   SizedBox(height: LayoutTokens.gr0),
                   Text(
                     fmt.format(match.date),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: ColorTokens.textSecondary,
-                          fontSize: 12,
+                          color: colors.textSecondary,
+                          fontSize: FontTokens.sm,
                         ),
                   ),
                 ],
+                ),
               ),
             ),
+            SizedBox(width: LayoutTokens.gr2),
             Container(
               padding: EdgeInsets.symmetric(
                 horizontal: LayoutTokens.gr2,
-                vertical: LayoutTokens.gr0,
+                vertical: LayoutTokens.gr1,
               ),
               decoration: BoxDecoration(
                 color: _resultColor.withValues(alpha: 0.15),
@@ -425,8 +429,10 @@ class _RecentMatchRow extends StatelessWidget {
                 style: TextStyle(
                   color: _resultColor,
                   fontWeight: FontWeight.w700,
-                  fontSize: 12,
+                  fontSize: MediaQuery.sizeOf(context).width < 360 ? FontTokens.sm : FontTokens.caption,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],

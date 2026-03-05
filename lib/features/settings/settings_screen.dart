@@ -9,7 +9,9 @@ import '../../shared/utils/app_router.dart';
 import '../../ui/components/ui_app_bar.dart';
 import '../../ui/components/ui_dialog.dart';
 import '../../ui/components/ui_surface.dart';
+import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
 import '../../ui/tokens/spacing_tokens.dart';
@@ -32,14 +34,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _save() async {
     await ref.read(settingsRepositoryProvider).update(_settings);
+    if (!mounted) return;
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
       appBar: const UiAppBar(title: 'Settings'),
-      backgroundColor: ColorTokens.backgroundPrimary,
+      backgroundColor: colors.backgroundPrimary,
       body: ListView(
         padding: EdgeInsets.all(LayoutTokens.gr4),
         children: [
@@ -49,7 +53,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: _settings.defaultFormat,
             onTap: () async {
               final picked = await _pickFormat(context);
-              if (picked != null) {
+              if (picked != null && mounted) {
                 _settings.defaultFormat = picked;
                 await _save();
               }
@@ -60,7 +64,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: '${_settings.defaultStartingLife} life',
             onTap: () async {
               final picked = await _pickStartingLife(context);
-              if (picked != null) {
+              if (picked != null && mounted) {
                 _settings.defaultStartingLife = picked;
                 await _save();
               }
@@ -215,6 +219,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Padding(
       padding: EdgeInsets.only(
         top: LayoutTokens.gr4,
@@ -223,8 +228,8 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          color: ColorTokens.primaryAccent,
-          fontSize: 11,
+          color: colors.primaryAccent,
+          fontSize: FontTokens.sm,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
         ),
@@ -250,6 +255,7 @@ class _SwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
       child: UiSurface(
@@ -257,13 +263,14 @@ class _SwitchTile extends StatelessWidget {
         borderRadius: RadiusTokens.radiusMd,
         child: SwitchListTile(
         secondary: icon != null
-            ? Icon(icon, size: 22, color: ColorTokens.textSecondary)
+            ? Icon(icon, size: 22, color: colors.textSecondary)
             : null,
         title: Text(title, style: Theme.of(context).textTheme.bodyLarge, overflow: TextOverflow.ellipsis),
         subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodyMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
         value: value,
         onChanged: onChanged,
-        activeColor: ColorTokens.primaryAccent,
+        activeTrackColor: colors.primaryAccent.withValues(alpha: 0.5),
+        activeThumbColor: colors.primaryAccent,
         contentPadding: EdgeInsets.symmetric(
           horizontal: LayoutTokens.gr3,
           vertical: LayoutTokens.gr1,
@@ -289,7 +296,8 @@ class _SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? ColorTokens.danger : ColorTokens.textSecondary;
+    final colors = AppColorTokens.of(context);
+    final color = isDestructive ? ColorTokens.danger : colors.textSecondary;
     return Padding(
       padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
       child: UiSurface(

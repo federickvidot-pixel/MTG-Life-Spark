@@ -41,10 +41,8 @@ class ProfileRepository {
 
     if (won) {
       profile.totalWins += 1;
-      profile.currentWinStreak += 1;
     } else {
       profile.totalLosses += 1;
-      profile.currentWinStreak = 0;
     }
 
     profile.level = _calculateLevel(profile.xp);
@@ -66,6 +64,17 @@ class ProfileRepository {
     final profile = getProfile();
     if (profile == null) return;
     profile.lifetimePoisonDealt += amount;
+    await profile.save();
+  }
+
+  /// Add XP without affecting match stats (e.g. for giving likes).
+  Future<void> addXp(int amount) async {
+    if (amount <= 0) return;
+    final profile = getProfile();
+    if (profile == null) return;
+    profile.xp += amount;
+    profile.level = _calculateLevel(profile.xp);
+    profile.tier = _calculateTier(profile.level);
     await profile.save();
   }
 

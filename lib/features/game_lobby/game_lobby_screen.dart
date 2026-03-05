@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../shared/utils/app_router.dart';
-import '../../ui/tokens/color_tokens.dart';
+import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
 import '../../ui/tokens/spacing_tokens.dart';
@@ -13,8 +13,9 @@ class GameLobbyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
-      backgroundColor: ColorTokens.backgroundPrimary,
+      backgroundColor: colors.backgroundPrimary,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(LayoutTokens.gr4),
@@ -62,6 +63,7 @@ class _BigActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     final isCompact = MediaQuery.sizeOf(context).width < 360 ||
         MediaQuery.sizeOf(context).height < 600;
     final iconSize = isCompact ? 48.0 : 64.0;
@@ -77,14 +79,14 @@ class _BigActionButton extends StatelessWidget {
           width: double.infinity,
           padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
-            color: ColorTokens.surface,
+            color: colors.surface,
             borderRadius: RadiusTokens.radiusXl,
             border: Border.all(
-              color: ColorTokens.primaryAccent.withValues(alpha: 0.4),
+              color: colors.primaryAccent.withValues(alpha: 0.4),
             ),
             boxShadow: [
               BoxShadow(
-                color: ColorTokens.primaryAccent.withValues(alpha: 0.1),
+                color: colors.primaryAccent.withValues(alpha: 0.1),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -95,7 +97,7 @@ class _BigActionButton extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: ColorTokens.primaryAccent,
+                color: colors.primaryAccent,
                 size: iconSize,
               ),
               SizedBox(height: LayoutTokens.gr4),
@@ -106,12 +108,16 @@ class _BigActionButton extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
               SizedBox(height: LayoutTokens.gr1),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ],
           ),

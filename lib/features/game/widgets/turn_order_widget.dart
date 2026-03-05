@@ -28,7 +28,7 @@ class TurnOrderWidget extends StatelessWidget {
     if (playersInOrder.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       color: Colors.transparent,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -100,7 +100,8 @@ class _TurnOrderPlayerBoxState extends State<_TurnOrderPlayerBox> {
 
   @override
   Widget build(BuildContext context) {
-    const size = 88.0; // Square card
+    final w = MediaQuery.sizeOf(context).width;
+    final size = w < 360 ? 72.0 : 88.0; // Smaller on narrow screens
     final player = widget.player;
     final isActive = widget.isActive;
     final activeColor = widget.activeColor;
@@ -143,7 +144,7 @@ class _TurnOrderPlayerBoxState extends State<_TurnOrderPlayerBox> {
                 ),
                 // Name at top, status centered at bottom
                 Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(size < 80 ? 6 : 8),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -156,7 +157,7 @@ class _TurnOrderPlayerBoxState extends State<_TurnOrderPlayerBox> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: size < 80 ? 10 : 11,
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(

@@ -23,18 +23,6 @@ class AchievementDefinitions {
       description: 'Win your first game.',
       icon: '⚔️',
     ),
-    AchievementDef(
-      id: 'win_streak_3',
-      title: 'On a Roll',
-      description: 'Win 3 games in a row.',
-      icon: '🔥',
-    ),
-    AchievementDef(
-      id: 'win_streak_5',
-      title: 'Unstoppable',
-      description: 'Win 5 games in a row.',
-      icon: '🏆',
-    ),
     // Games played
     AchievementDef(
       id: 'games_10',

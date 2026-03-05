@@ -18,13 +18,12 @@ class TurnControlsWidget extends ConsumerWidget {
     final isMyTurn = game.isLocalPlayersTurn;
     final canEndTurn = game.isHost &&
         isMyTurn &&
-        !game.priorityHeld &&
         !game.timeoutActive;
 
     final activeColor = active?.playerColor ?? AppTheme.accent;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       color: AppTheme.card,
       child: Row(
         children: [
@@ -62,46 +61,6 @@ class TurnControlsWidget extends ConsumerWidget {
             ),
           ),
 
-          // Priority hold/release
-          if (isMyTurn && !game.timeoutActive) ...[
-            _ControlBtn(
-              label: game.priorityHeld ? 'Release' : 'Hold',
-              icon: game.priorityHeld ? Icons.lock_open : Icons.lock,
-              color: game.priorityHeld ? AppTheme.accentGold : AppTheme.textSecondary,
-              onTap: () {
-                if (game.priorityHeld) {
-                    notifier.releasePriority(game.localPlayerId);
-                  } else {
-                  notifier.holdPriority(game.localPlayerId);
-                }
-              },
-            ),
-            const SizedBox(width: 8),
-          ] else if (game.priorityHeld && !isMyTurn) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.accentGold.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                    color: AppTheme.accentGold.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.lock, size: 12, color: AppTheme.accentGold),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Priority held',
-                    style: const TextStyle(
-                        color: AppTheme.accentGold, fontSize: 10),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
           // End Turn
           _ControlBtn(
             label: 'End Turn',
@@ -134,8 +93,9 @@ class _ControlBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = enabled ? color : color.withValues(alpha: 0.3);
-    return GestureDetector(
+    final child = GestureDetector(
       onTap: enabled ? onTap : null,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -152,6 +112,10 @@ class _ControlBtn extends StatelessWidget {
           ],
         ),
       ),
+    );
+    return IgnorePointer(
+      ignoring: !enabled,
+      child: child,
     );
   }
 }

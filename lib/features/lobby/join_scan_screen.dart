@@ -13,8 +13,10 @@ import '../../core/game/lobby_state.dart';
 import '../../core/models/player_slot.dart';
 import '../../core/network/ws_client_service.dart';
 import '../../core/persistence/providers.dart';
-import '../../shared/theme/app_theme.dart';
 import '../../shared/utils/app_router.dart';
+import '../../ui/theme/app_color_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
+import '../../ui/tokens/color_tokens.dart';
 
 enum _JoinPhase { scanning, connecting, waitingRoom }
 
@@ -149,9 +151,10 @@ class _JoinScanScreenState extends ConsumerState<JoinScanScreen> {
 
   void _showSnackbar(String msg, {bool isError = false}) {
     if (!mounted) return;
+    final colors = AppColorTokens.of(context);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: isError ? AppTheme.danger : AppTheme.surface,
+      backgroundColor: isError ? ColorTokens.danger : colors.surface,
     ));
   }
 
@@ -159,8 +162,9 @@ class _JoinScanScreenState extends ConsumerState<JoinScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: colors.backgroundPrimary,
       appBar: AppBar(
         title: const Text('Join a Game'),
         leading: IconButton(
@@ -196,6 +200,7 @@ class _QrScanView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Stack(
       children: [
         MobileScanner(controller: controller, onDetect: onDetect),
@@ -205,7 +210,7 @@ class _QrScanView extends StatelessWidget {
             width: 240,
             height: 240,
             decoration: BoxDecoration(
-              border: Border.all(color: AppTheme.accent, width: 3),
+              border: Border.all(color: colors.primaryAccent, width: 3),
               borderRadius: BorderRadius.circular(16),
             ),
           ),
@@ -219,7 +224,7 @@ class _QrScanView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 14,
+              fontSize: FontTokens.body,
               shadows: [Shadow(blurRadius: 4, color: Colors.black)],
             ),
           ),
@@ -234,20 +239,21 @@ class _PermissionDeniedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.camera_alt_outlined,
-                size: 64, color: AppTheme.textSecondary),
+            Icon(Icons.camera_alt_outlined,
+                size: 64, color: colors.textSecondary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Camera permission denied.\nGo to Settings → App → Permissions to enable.',
               textAlign: TextAlign.center,
               style:
-                  TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                  TextStyle(color: colors.textSecondary, fontSize: FontTokens.body),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -268,15 +274,16 @@ class _ConnectingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final colors = AppColorTokens.of(context);
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: AppTheme.accent),
-          SizedBox(height: 20),
+          CircularProgressIndicator(color: colors.primaryAccent),
+          const SizedBox(height: 20),
           Text(
             'Connecting to host…',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            style: TextStyle(color: colors.textSecondary, fontSize: FontTokens.bodyLg),
           ),
         ],
       ),
@@ -306,16 +313,17 @@ class _WaitingRoomViewState extends ConsumerState<_WaitingRoomView> {
 
     final lobby = ref.watch(lobbyProvider);
 
+    final colors = AppColorTokens.of(context);
     return Column(
       children: [
         Expanded(
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(
+              Text(
                 'Waiting for host to start…',
                 style: TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13),
+                    color: colors.textSecondary, fontSize: FontTokens.label),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -340,11 +348,12 @@ class _WaitingRoomViewState extends ConsumerState<_WaitingRoomView> {
                 },
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
+              IconButton.filled(
+                style: IconButton.styleFrom(
                   backgroundColor:
-                      _isReady ? AppTheme.success : AppTheme.accent,
-                  minimumSize: const Size(double.infinity, 56),
+                      _isReady ? ColorTokens.success : colors.primaryAccent,
+                  minimumSize: const Size(56, 56),
+                  padding: const EdgeInsets.all(16),
                 ),
                 onPressed: () {
                   setState(() => _isReady = !_isReady);
@@ -352,12 +361,10 @@ class _WaitingRoomViewState extends ConsumerState<_WaitingRoomView> {
                       .read(lobbyProvider.notifier)
                       .sendReadyToHost(ready: _isReady);
                 },
-                child: Text(
-                  _isReady ? 'Ready! (tap to cancel)' : 'Mark as Ready',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white),
+                icon: Icon(
+                  Icons.check,
+                  size: 32,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -374,11 +381,12 @@ class _WaitingSlotRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -400,15 +408,27 @@ class _WaitingSlotRow extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(slot.username,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  slot.username,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
                 if (slot.commanderName != null)
-                  Text(slot.commanderName!,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12)),
+                  Text(
+                    slot.commanderName!,
+                    style: TextStyle(
+                      color: colors.textSecondary,
+                      fontSize: FontTokens.caption,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
               ],
             ),
           ),
@@ -417,21 +437,21 @@ class _WaitingSlotRow extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color:
-                  (slot.isReady ? AppTheme.success : AppTheme.textSecondary)
+                  (slot.isReady ? ColorTokens.success : colors.textSecondary)
                       .withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
                   color: slot.isReady
-                      ? AppTheme.success
-                      : AppTheme.textSecondary),
+                      ? ColorTokens.success
+                      : colors.textSecondary),
             ),
             child: Text(
               slot.isReady ? 'Ready' : 'Waiting',
               style: TextStyle(
                 color: slot.isReady
-                    ? AppTheme.success
-                    : AppTheme.textSecondary,
-                fontSize: 11,
+                    ? ColorTokens.success
+                    : colors.textSecondary,
+                fontSize: FontTokens.sm,
                 fontWeight: FontWeight.w600,
               ),
             ),

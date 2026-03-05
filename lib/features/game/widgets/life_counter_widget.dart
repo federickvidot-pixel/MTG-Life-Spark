@@ -79,10 +79,10 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
     if (widget.isEliminated) return;
     _holding = true;
     _holdTimer = Timer(const Duration(milliseconds: 500), () {
-      if (!_holding) return;
+      if (!_holding || !mounted) return;
       _change(direction * 5);
       _holdTimer = Timer.periodic(const Duration(milliseconds: 150), (_) {
-        if (!_holding) {
+        if (!_holding || !mounted) {
           _holdTimer?.cancel();
           return;
         }
@@ -103,7 +103,7 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
       context: context,
       builder: (_) => _LifeInputDialog(currentLife: widget.life),
     );
-    if (result != null) {
+    if (result != null && mounted) {
       final delta = result - widget.life;
       if (delta != 0) _change(delta);
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../tokens/color_tokens.dart';
+import '../theme/app_color_tokens.dart';
+import '../tokens/font_tokens.dart';
 import '../tokens/radius_tokens.dart';
 
 enum UiButtonVariant { primary, secondary, ghost }
@@ -26,6 +27,7 @@ class UiButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     final effectiveOnPressed = enabled && !loading ? onPressed : null;
 
     if (variant == UiButtonVariant.primary) {
@@ -44,17 +46,17 @@ class UiButton extends StatelessWidget {
                   ),
                 )
               : (icon ?? const SizedBox.shrink()),
-          label: loading ? const SizedBox.shrink() : Text(label),
+          label: loading ? const SizedBox.shrink() : Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
           style: ElevatedButton.styleFrom(
-            backgroundColor: ColorTokens.primaryAccent,
+            backgroundColor: colors.primaryAccent,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: ColorTokens.surface,
-            disabledForegroundColor: ColorTokens.textMuted,
+            disabledBackgroundColor: colors.surface,
+            disabledForegroundColor: colors.textMuted,
             shape: RoundedRectangleBorder(
               borderRadius: RadiusTokens.radiusLg,
             ),
             textStyle: const TextStyle(
-              fontSize: 16,
+              fontSize: FontTokens.bodyLg,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -75,15 +77,15 @@ class UiButton extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : (icon ?? const SizedBox.shrink()),
-          label: loading ? const SizedBox.shrink() : Text(label),
+          label: loading ? const SizedBox.shrink() : Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
           style: OutlinedButton.styleFrom(
-            foregroundColor: ColorTokens.textPrimary,
-            side: const BorderSide(color: ColorTokens.borderSubtle),
+            foregroundColor: colors.textPrimary,
+            side: BorderSide(color: colors.borderSubtle),
             shape: RoundedRectangleBorder(
               borderRadius: RadiusTokens.radiusLg,
             ),
             textStyle: const TextStyle(
-              fontSize: 16,
+              fontSize: FontTokens.bodyLg,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -104,11 +106,11 @@ class UiButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : (icon ?? const SizedBox.shrink()),
-        label: loading ? const SizedBox.shrink() : Text(label),
+        label: loading ? const SizedBox.shrink() : Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
         style: TextButton.styleFrom(
-          foregroundColor: ColorTokens.textPrimary,
+          foregroundColor: colors.textPrimary,
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: FontTokens.bodyLg,
             fontWeight: FontWeight.w700,
           ),
         ),

@@ -157,6 +157,9 @@ class _VariantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pad = (8 * LayoutTokens.goldenRatio).roundToDouble();
+    final narrow = MediaQuery.sizeOf(context).width < 360;
+    final thumbW = narrow ? 56.0 : 72.0;
+    final thumbH = narrow ? 78.0 : 100.0;
     return Container(
       margin: EdgeInsets.only(bottom: pad),
       decoration: BoxDecoration(
@@ -177,8 +180,8 @@ class _VariantTile extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: SizedBox(
-                    width: 72,
-                    height: 100,
+                    width: thumbW,
+                    height: thumbH,
                     child: card.imageUrl != null
                         ? CachedNetworkImage(
                             imageUrl: card.imageUrl!,
@@ -292,7 +295,7 @@ class _VariantTile extends StatelessWidget {
         expand: false,
         builder: (_, scrollController) => SingleChildScrollView(
           controller: scrollController,
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 360 ? 16 : 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -313,7 +316,7 @@ class _VariantTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     child: CachedNetworkImage(
                       imageUrl: card.imageUrl!,
-                      width: 280,
+                      width: (MediaQuery.sizeOf(context).width - 40).clamp(200.0, 280.0),
                       fit: BoxFit.contain,
                     ),
                   ),

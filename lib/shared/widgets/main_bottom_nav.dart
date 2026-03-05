@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../ui/tokens/color_tokens.dart';
+import '../../ui/theme/app_color_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 
 /// Persistent bottom navigation — three destinations: Home, Lobby, Settings.
@@ -24,10 +25,11 @@ class MainBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: ColorTokens.surfaceElevated,
+        color: colors.surfaceElevated,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -85,7 +87,8 @@ class _NavItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? ColorTokens.primaryAccent : ColorTokens.textMuted;
+    final colors = AppColorTokens.of(context);
+    final color = isSelected ? colors.primaryAccent : colors.textMuted;
 
     return Material(
       color: Colors.transparent,
@@ -111,7 +114,7 @@ class _NavItemTile extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontSize: 11,
+                      fontSize: FontTokens.sm,
                       fontWeight: FontWeight.w600,
                       color: color,
                     ),

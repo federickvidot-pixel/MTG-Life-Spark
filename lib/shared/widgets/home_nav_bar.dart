@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../utils/app_router.dart';
-import '../../ui/tokens/color_tokens.dart';
+import '../../ui/theme/app_color_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
 import '../../ui/tokens/spacing_tokens.dart';
 
@@ -19,10 +20,11 @@ class HomeNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Container(
       padding: const EdgeInsets.all(SpacingTokens.md),
-      decoration: const BoxDecoration(
-        color: ColorTokens.backgroundSecondary,
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
       ),
       child: SafeArea(
         top: false,
@@ -32,13 +34,13 @@ class HomeNavBar extends StatelessWidget {
             onPressed: () => showQuitConfirmation
                 ? _showQuitDialog(context)
                 : _goHome(context),
-            icon: const Icon(Icons.home_rounded, color: ColorTokens.primaryAccent),
-            label: const Text(
+            icon: Icon(Icons.home_rounded, color: colors.primaryAccent),
+            label: Text(
               'Home',
               style: TextStyle(
-                color: ColorTokens.primaryAccent,
+                color: colors.primaryAccent,
                 fontWeight: FontWeight.w700,
-                fontSize: 16,
+                fontSize: FontTokens.bodyLg,
               ),
             ),
           ),
@@ -50,31 +52,34 @@ class HomeNavBar extends StatelessWidget {
   static void _showQuitDialog(BuildContext context) {
     showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ColorTokens.surface,
-        shape: RoundedRectangleBorder(borderRadius: RadiusTokens.radiusXl),
-        title: const Text(
-          'Are you sure you want to quit?',
-          style: TextStyle(color: ColorTokens.textPrimary),
-        ),
-        content: const Text(
-          'You will return to the home page.',
-          style: TextStyle(color: ColorTokens.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('No', style: TextStyle(color: ColorTokens.textSecondary)),
+      builder: (ctx) {
+        final colors = AppColorTokens.of(ctx);
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(borderRadius: RadiusTokens.radiusXl),
+          title: Text(
+            'Are you sure you want to quit?',
+            style: TextStyle(color: colors.textPrimary),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: ColorTokens.primaryAccent,
+          content: Text(
+            'You will return to the home page.',
+            style: TextStyle(color: colors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('No', style: TextStyle(color: colors.textSecondary)),
             ),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.primaryAccent,
+              ),
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
     ).then((quit) {
       if (quit == true && context.mounted) {
         context.go(AppRoutes.home);

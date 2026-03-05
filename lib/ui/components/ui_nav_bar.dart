@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../tokens/color_tokens.dart';
+import '../theme/app_color_tokens.dart';
+import '../tokens/font_tokens.dart';
 import '../tokens/radius_tokens.dart';
 
 /// Discord-like dark bar with animated active state, rounded pill highlights.
@@ -18,10 +19,11 @@ class UiNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: const BoxDecoration(
-        color: ColorTokens.backgroundSecondary,
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -37,7 +39,7 @@ class UiNavBar extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? ColorTokens.primaryAccent.withValues(alpha: 0.2)
+                      ? colors.primaryAccent.withValues(alpha: 0.2)
                       : Colors.transparent,
                   borderRadius: RadiusTokens.radiusPill,
                 ),
@@ -48,18 +50,18 @@ class UiNavBar extends StatelessWidget {
                       item.icon,
                       size: 24,
                       color: isSelected
-                          ? ColorTokens.primaryAccent
-                          : ColorTokens.textSecondary,
+                          ? colors.primaryAccent
+                          : colors.textSecondary,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item.label,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: FontTokens.caption,
                         fontWeight: FontWeight.w600,
                         color: isSelected
-                            ? ColorTokens.primaryAccent
-                            : ColorTokens.textSecondary,
+                            ? colors.primaryAccent
+                            : colors.textSecondary,
                       ),
                     ),
                   ],

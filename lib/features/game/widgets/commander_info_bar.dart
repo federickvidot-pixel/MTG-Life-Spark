@@ -77,11 +77,17 @@ class CommanderInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = MediaQuery.sizeOf(context).width < 360;
+    final w = MediaQuery.sizeOf(context).width;
+    final isCompact = w < 360;
+    final isVeryNarrow = w < 320;
+    final avatarSize = isVeryNarrow ? 36.0 : (isCompact ? 40.0 : 48.0);
+    final partnerSize = isVeryNarrow ? 28.0 : 38.0;
+    final gap = isVeryNarrow ? 4.0 : (isCompact ? 6.0 : 14.0);
+
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 12 : 16,
-        vertical: isCompact ? 10 : 14,
+        horizontal: isVeryNarrow ? 8 : (isCompact ? 12 : 16),
+        vertical: isVeryNarrow ? 6 : (isCompact ? 10 : 14),
       ),
       child: Row(
         children: [
@@ -90,20 +96,21 @@ class CommanderInfoBar extends StatelessWidget {
             imageUrl: player.commanderImageUrl,
             name: player.commanderName,
             playerColor: player.playerColor,
+            size: avatarSize,
           ),
 
           // Partner avatar (if applicable)
           if (player.hasPartner && player.partnerCommanderName != null) ...[
-            const SizedBox(width: 6),
+            SizedBox(width: gap),
             _CommanderAvatar(
               imageUrl: player.partnerCommanderImageUrl,
               name: player.partnerCommanderName,
               playerColor: player.playerColor,
-              size: 38,
+              size: partnerSize,
             ),
           ],
 
-          const SizedBox(width: 14),
+          SizedBox(width: gap),
 
           // Name + tax info
           Expanded(
@@ -114,10 +121,10 @@ class CommanderInfoBar extends StatelessWidget {
                   player.commanderName ?? 'No Commander',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontSize: isVeryNarrow ? 12 : 14,
                   ),
                 ),
                 if (player.hasPartner && player.partnerCommanderName != null)

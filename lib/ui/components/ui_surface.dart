@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../tokens/color_tokens.dart';
+import '../theme/app_color_tokens.dart';
 import '../tokens/elevation_tokens.dart';
 import '../tokens/radius_tokens.dart';
 import '../tokens/spacing_tokens.dart';
@@ -29,11 +29,12 @@ class UiSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     final bgColor = color ??
         (glass
-            ? ColorTokens.surface.withValues(alpha: 0.6)
-            : ColorTokens.surface);
-    final border = borderColor ?? ColorTokens.borderSubtle.withValues(alpha: 0.5);
+            ? colors.surface.withValues(alpha: 0.6)
+            : colors.surface);
+    final border = borderColor ?? colors.borderSubtle.withValues(alpha: 0.5);
 
     return Container(
       padding: padding ?? const EdgeInsets.all(SpacingTokens.md),
