@@ -14,7 +14,6 @@ import '../../ui/tokens/color_tokens.dart';
 import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
-import '../../ui/tokens/spacing_tokens.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -111,15 +110,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: _settings.hapticEnabled,
             onChanged: (v) {
               _settings.hapticEnabled = v;
-              _save();
-            },
-          ),
-          _SwitchTile(
-            title: 'Sound Effects',
-            subtitle: 'Play sounds for events',
-            value: _settings.soundEnabled,
-            onChanged: (v) {
-              _settings.soundEnabled = v;
               _save();
             },
           ),

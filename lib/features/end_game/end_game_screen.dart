@@ -9,6 +9,7 @@ import '../../core/game/game_state.dart';
 import '../../core/game/lobby_state.dart';
 import '../../core/game/player_game_state.dart';
 import '../../core/game/progression_service.dart';
+import '../../core/persistence/providers.dart';
 import '../../core/models/game_feedback.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../shared/utils/achievement_definitions.dart';
@@ -69,6 +70,9 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
         ));
         ref.read(pendingFeedbackProvider.notifier).state = null;
       }
+
+      bumpProfileRevision(ref);
+      bumpDeckListRevision(ref);
 
       if (mounted) {
         setState(() {

@@ -32,25 +32,30 @@ class UiSurface extends StatelessWidget {
     final colors = AppColorTokens.of(context);
     final bgColor = color ??
         (glass
-            ? colors.surface.withValues(alpha: 0.6)
+            ? colors.surface.withValues(alpha: 0.72)
             : colors.surface);
-    final border = borderColor ?? colors.borderSubtle.withValues(alpha: 0.5);
+    final border = borderColor ?? colors.borderSubtle.withValues(alpha: 0.65);
 
     return Container(
       padding: padding ?? const EdgeInsets.all(SpacingTokens.md),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: borderRadius ?? RadiusTokens.radiusMd,
-        border: Border.all(color: border),
-        boxShadow: elevation > 0
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: elevation * 4,
-                  offset: Offset(0, elevation),
-                ),
-              ]
-            : null,
+        border: Border.all(color: border, width: 1),
+        boxShadow: [
+          if (elevation > 0)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: elevation * 4,
+              offset: Offset(0, elevation),
+            ),
+          BoxShadow(
+            color: colors.primaryAccent.withValues(alpha: 0.06),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: child,
     );

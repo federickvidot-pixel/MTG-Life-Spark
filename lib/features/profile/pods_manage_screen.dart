@@ -66,6 +66,7 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
       await repo.save(existing);
     }
 
+    bumpPodPresetsRevision(ref);
     _reload();
   }
 
@@ -89,6 +90,7 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
     );
     if (ok == true) {
       await repo.delete(pod.id);
+      bumpPodPresetsRevision(ref);
       _reload();
     }
   }

@@ -6,7 +6,6 @@ import '../../ui/components/ui_button.dart';
 import '../../ui/components/ui_text_field.dart';
 import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
-import '../../ui/tokens/spacing_tokens.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -33,7 +32,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
     final subject = Uri.encodeComponent('MGT Life Spark Feedback');
     final body = Uri.encodeComponent(msg);
-    final uri = Uri.parse('mailto:feedback@mgtlifespark.app?subject=$subject&body=$body');
+    final uri = Uri.parse(
+      'mailto:feedback@mgtlifespark.app?subject=$subject&body=$body',
+    );
 
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -66,16 +67,14 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       body: ListView(
         padding: EdgeInsets.all(LayoutTokens.gr4),
         children: [
-          const Center(
-            child: Text('🛡️', style: TextStyle(fontSize: 48)),
-          ),
+          const Center(child: Text('🛡️', style: TextStyle(fontSize: 48))),
           SizedBox(height: LayoutTokens.gr4),
           Text(
             'Help us improve',
             style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: MediaQuery.sizeOf(context).width < 360 ? 22 : 26,
-                  fontWeight: FontWeight.w800,
-                ),
+              fontSize: MediaQuery.sizeOf(context).width < 360 ? 22 : 26,
+              fontWeight: FontWeight.w800,
+            ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: LayoutTokens.gr1),
@@ -105,7 +104,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               Expanded(child: Divider(color: colors.borderSubtle)),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: LayoutTokens.gr2),
-                child: Text('or', style: Theme.of(context).textTheme.bodyMedium),
+                child: Text(
+                  'or',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
               Expanded(child: Divider(color: colors.borderSubtle)),
             ],

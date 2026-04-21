@@ -32,6 +32,13 @@ class PlayerDeck extends HiveObject {
   @HiveField(8)
   int gamesPlayed;
 
+  /// Scryfall-style mana cost, e.g. `{3}{W}{U}`.
+  @HiveField(9)
+  String? commanderManaCost;
+
+  @HiveField(10)
+  String? partnerManaCost;
+
   PlayerDeck({
     required this.id,
     required this.displayName,
@@ -42,6 +49,8 @@ class PlayerDeck extends HiveObject {
     this.wins = 0,
     this.losses = 0,
     this.gamesPlayed = 0,
+    this.commanderManaCost,
+    this.partnerManaCost,
   });
 
   bool get hasPartner =>
@@ -55,6 +64,8 @@ class PlayerDeck extends HiveObject {
     String? commanderImageUrl,
     String? partnerCommanderName,
     String? partnerCommanderImageUrl,
+    String? commanderManaCost,
+    String? partnerManaCost,
   }) =>
       PlayerDeck(
         id: const Uuid().v4(),
@@ -63,5 +74,7 @@ class PlayerDeck extends HiveObject {
         commanderImageUrl: commanderImageUrl,
         partnerCommanderName: partnerCommanderName,
         partnerCommanderImageUrl: partnerCommanderImageUrl,
+        commanderManaCost: commanderManaCost,
+        partnerManaCost: partnerManaCost,
       );
 }

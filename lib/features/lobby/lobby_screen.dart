@@ -107,10 +107,6 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 }
 
-final _lobbyPodPresetsProvider = Provider<List<PodPreset>>((ref) {
-  return ref.watch(podRepositoryProvider).getAll();
-});
-
 // ── Match pod (presets) ─────────────────────────────────────────────────
 
 class _PodSection extends ConsumerWidget {
@@ -119,7 +115,7 @@ class _PodSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lobby = ref.watch(lobbyProvider);
-    final pods = ref.watch(_lobbyPodPresetsProvider);
+    final pods = ref.watch(podPresetsListProvider);
     final repo = ref.read(podRepositoryProvider);
     final notifier = ref.read(lobbyProvider.notifier);
     final colors = AppColorTokens.of(context);
@@ -807,9 +803,6 @@ class _FormatToggle extends StatelessWidget {
   final GameFormat current;
   final void Function(GameFormat) onChanged;
   const _FormatToggle({required this.current, required this.onChanged});
-
-  /// 100% rounded (pill shape)
-  static const _radius = 999.0;
 
   @override
   Widget build(BuildContext context) {

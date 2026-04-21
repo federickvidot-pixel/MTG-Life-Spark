@@ -29,27 +29,27 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
   }
 
   static const AppColorTokens dark = AppColorTokens(
-    backgroundPrimary: Color(0xFF0F1117),
-    backgroundSecondary: Color(0xFF161A23),
-    surface: Color(0xFF1E232D),
-    surfaceElevated: Color(0xFF262B36),
-    borderSubtle: Color(0xFF2E3442),
-    textPrimary: Color(0xFFFFFFFF),
-    textSecondary: Color(0xFFB5BAC1),
-    textMuted: Color(0xFF7C818C),
-    primaryAccent: Color(0xFF5865F2),
+    backgroundPrimary: Color(0xFF080C18),
+    backgroundSecondary: Color(0xFF10192E),
+    surface: Color(0xFF162038),
+    surfaceElevated: Color(0xFF1E2A48),
+    borderSubtle: Color(0xFF3D4F78),
+    textPrimary: Color(0xFFF1F4FF),
+    textSecondary: Color(0xFFA8B8D8),
+    textMuted: Color(0xFF6B7FA3),
+    primaryAccent: Color(0xFF8B9CFF),
   );
 
   static const AppColorTokens light = AppColorTokens(
-    backgroundPrimary: Color(0xFFF9FBFB),
-    backgroundSecondary: Color(0xFFF0F3F5),
-    surface: Colors.white,
-    surfaceElevated: Color(0xFFF5F7F9),
-    borderSubtle: Color(0xFFE8ECED),
-    textPrimary: Color(0xFF0F1117),
-    textSecondary: Color(0xFF4E5A5B),
-    textMuted: Color(0xFF7C818C),
-    primaryAccent: Color(0xFF5865F2),
+    backgroundPrimary: Color(0xFFF5F7FF),
+    backgroundSecondary: Color(0xFFE8ECFA),
+    surface: Color(0xFFFFFFFF),
+    surfaceElevated: Color(0xFFF0F2FC),
+    borderSubtle: Color(0xFFD4DBF0),
+    textPrimary: Color(0xFF0D1224),
+    textSecondary: Color(0xFF3D4A6B),
+    textMuted: Color(0xFF6B7280),
+    primaryAccent: Color(0xFF6366F1),
   );
 
   @override

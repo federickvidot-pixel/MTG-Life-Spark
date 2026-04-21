@@ -22,13 +22,15 @@ class PlayerDeckAdapter extends TypeAdapter<PlayerDeck> {
       wins: (fields[6] as num?)?.toInt() ?? 0,
       losses: (fields[7] as num?)?.toInt() ?? 0,
       gamesPlayed: (fields[8] as num?)?.toInt() ?? 0,
+      commanderManaCost: fields[9] as String?,
+      partnerManaCost: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PlayerDeck obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -46,7 +48,11 @@ class PlayerDeckAdapter extends TypeAdapter<PlayerDeck> {
       ..writeByte(7)
       ..write(obj.losses)
       ..writeByte(8)
-      ..write(obj.gamesPlayed);
+      ..write(obj.gamesPlayed)
+      ..writeByte(9)
+      ..write(obj.commanderManaCost)
+      ..writeByte(10)
+      ..write(obj.partnerManaCost);
   }
 
   @override

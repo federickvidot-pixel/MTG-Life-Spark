@@ -5,7 +5,6 @@ import '../../shared/utils/app_router.dart';
 import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
-import '../../ui/tokens/spacing_tokens.dart';
 
 /// Game lobby access screen — Host and Join buttons, 50% each.
 class GameLobbyScreen extends StatelessWidget {
@@ -64,7 +63,8 @@ class _BigActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
-    final isCompact = MediaQuery.sizeOf(context).width < 360 ||
+    final isCompact =
+        MediaQuery.sizeOf(context).width < 360 ||
         MediaQuery.sizeOf(context).height < 600;
     final iconSize = isCompact ? 48.0 : 64.0;
     final padding = isCompact ? LayoutTokens.gr3 : LayoutTokens.gr5;
@@ -95,18 +95,14 @@ class _BigActionButton extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                icon,
-                color: colors.primaryAccent,
-                size: iconSize,
-              ),
+              Icon(icon, color: colors.primaryAccent, size: iconSize),
               SizedBox(height: LayoutTokens.gr4),
               Text(
                 label,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: titleSize,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w800,
+                ),
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,

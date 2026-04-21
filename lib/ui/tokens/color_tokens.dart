@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// Discord-inspired dark gamer color palette.
-/// Duolingo-bold + Discord-gamer theme.
+/// Cool dark fantasy palette — bluish / violet-tinted surfaces (no warm paper).
 class ColorTokens {
   ColorTokens._();
 
   // Background
-  static const Color backgroundPrimary = Color(0xFF0F1117);
-  static const Color backgroundSecondary = Color(0xFF161A23);
+  static const Color backgroundPrimary = Color(0xFF080C18);
+  static const Color backgroundSecondary = Color(0xFF10192E);
 
   // Surface
-  static const Color surface = Color(0xFF1E232D);
-  static const Color surfaceElevated = Color(0xFF262B36);
+  static const Color surface = Color(0xFF162038);
+  static const Color surfaceElevated = Color(0xFF1E2A48);
 
   // Border
-  static const Color borderSubtle = Color(0xFF2E3442);
+  static const Color borderSubtle = Color(0xFF3D4F78);
 
-  // Text
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB5BAC1);
-  static const Color textMuted = Color(0xFF7C818C);
+  // Text (cool grays, not warm)
+  static const Color textPrimary = Color(0xFFF1F4FF);
+  static const Color textSecondary = Color(0xFFA8B8D8);
+  static const Color textMuted = Color(0xFF6B7FA3);
 
   // Accent
-  static const Color primaryAccent = Color(0xFF5865F2); // Discord blurple
+  static const Color primaryAccent = Color(0xFF8B9CFF); // Periwinkle / arcane
   static const Color optionalAccent = Color(0xFF57F287); // Neon green
-  static const Color accentGold = Color(0xFFFBBF24); // Warm gold (Monarch, tiers)
+  /// Prestige / monarch / dice highlights — cool highlight (replaces warm gold).
+  static const Color accentGold = Color(0xFFA5B4FC);
 
   // Semantic
   static const Color success = Color(0xFF57F287);

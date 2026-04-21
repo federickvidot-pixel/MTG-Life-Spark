@@ -7,6 +7,7 @@ class AppSettings extends HiveObject {
   @HiveField(0)
   bool hapticEnabled;
 
+  /// Persisted for Hive compatibility; SFX not wired in app yet.
   @HiveField(1)
   bool soundEnabled;
 

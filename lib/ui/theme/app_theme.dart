@@ -6,8 +6,7 @@ import '../tokens/radius_tokens.dart';
 import '../tokens/spacing_tokens.dart';
 import 'app_color_tokens.dart';
 
-/// Duolingo-bold + Discord-gamer dark theme.
-/// Uses Material 3 and design tokens.
+/// Cool dark fantasy + modern sans body. Uses Material 3 and design tokens.
 class AppTheme {
   AppTheme._();
 
@@ -37,13 +36,13 @@ class AppTheme {
           ),
           headlineLarge: TextStyle(
             fontSize: 26,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             color: ColorTokens.textPrimary,
-            letterSpacing: 0.5,
+            letterSpacing: 0.4,
           ),
           headlineMedium: TextStyle(
             fontSize: 22,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             color: ColorTokens.textPrimary,
           ),
           bodyLarge: TextStyle(
@@ -67,17 +66,22 @@ class AppTheme {
         displayColor: ColorTokens.textPrimary,
         decoration: TextDecoration.none,
       ).copyWith(
-        displayLarge: GoogleFonts.roboto(
+        displayLarge: GoogleFonts.cormorantGaramond(
           fontSize: 32,
-          fontWeight: FontWeight.w900,
-          color: ColorTokens.textPrimary,
-          letterSpacing: 1.2,
-        ),
-        headlineLarge: GoogleFonts.roboto(
-          fontSize: 26,
-          fontWeight: FontWeight.w900,
+          fontWeight: FontWeight.w700,
           color: ColorTokens.textPrimary,
           letterSpacing: 1.0,
+        ),
+        headlineLarge: GoogleFonts.cormorantGaramond(
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          color: ColorTokens.textPrimary,
+          letterSpacing: 0.5,
+        ),
+        headlineMedium: GoogleFonts.cormorantGaramond(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: ColorTokens.textPrimary,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -135,17 +139,17 @@ class AppTheme {
         foregroundColor: ColorTokens.textPrimary,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.roboto(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
+        titleTextStyle: GoogleFonts.cormorantGaramond(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
           color: ColorTokens.textPrimary,
-          letterSpacing: 0.8,
+          letterSpacing: 0.6,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: ColorTokens.backgroundSecondary,
+        backgroundColor: ColorTokens.surfaceElevated,
         selectedItemColor: ColorTokens.primaryAccent,
-        unselectedItemColor: ColorTokens.textSecondary,
+        unselectedItemColor: ColorTokens.textMuted,
       ),
       dividerColor: ColorTokens.borderSubtle,
       useMaterial3: true,
@@ -156,15 +160,15 @@ class AppTheme {
   static ThemeData light() {
     return ThemeData(
       brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFF9FBFB),
+      scaffoldBackgroundColor: const Color(0xFFF5F7FF),
       colorScheme: const ColorScheme.light(
         primary: ColorTokens.primaryAccent,
         onPrimary: Colors.white,
         secondary: ColorTokens.optionalAccent,
-        onSecondary: Color(0xFF0F1117),
+        onSecondary: Color(0xFF0D1224),
         surface: Colors.white,
-        onSurface: Color(0xFF0F1117),
-        onSurfaceVariant: Color(0xFF4E5A5B),
+        onSurface: Color(0xFF0D1224),
+        onSurfaceVariant: Color(0xFF3D4A6B),
         error: ColorTokens.danger,
         onError: Colors.white,
       ),
@@ -173,36 +177,54 @@ class AppTheme {
         const TextTheme(
           displayLarge: TextStyle(
             fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF0F1117),
-            letterSpacing: 1.2,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0D1224),
+            letterSpacing: 1.0,
           ),
           headlineLarge: TextStyle(
             fontSize: 26,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF0F1117),
-            letterSpacing: 1.0,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0D1224),
+            letterSpacing: 0.5,
           ),
           headlineMedium: TextStyle(
             fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF0F1117),
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0D1224),
           ),
           bodyLarge: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF0F1117),
+            color: Color(0xFF0D1224),
           ),
           bodyMedium: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF4E5A5B),
+            color: Color(0xFF3D4A6B),
           ),
           labelLarge: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF0F1117),
+            color: Color(0xFF0D1224),
           ),
+        ),
+      ).copyWith(
+        displayLarge: GoogleFonts.cormorantGaramond(
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF0D1224),
+          letterSpacing: 0.8,
+        ),
+        headlineLarge: GoogleFonts.cormorantGaramond(
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF0D1224),
+          letterSpacing: 0.5,
+        ),
+        headlineMedium: GoogleFonts.cormorantGaramond(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF0D1224),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -222,8 +244,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: Color(0xFF0F1117),
-          side: const BorderSide(color: Color(0xFFE8ECED)),
+          foregroundColor: const Color(0xFF0D1224),
+          side: const BorderSide(color: Color(0xFFD4DBF0)),
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(
             borderRadius: RadiusTokens.radiusLg,
@@ -252,27 +274,27 @@ class AppTheme {
             width: 2,
           ),
         ),
-        labelStyle: const TextStyle(color: Color(0xFF4E5A5B)),
-        hintStyle: const TextStyle(color: Color(0xFF4E5A5B)),
+        labelStyle: const TextStyle(color: Color(0xFF3D4A6B)),
+        hintStyle: const TextStyle(color: Color(0xFF6B7280)),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFF9FBFB),
-        foregroundColor: const Color(0xFF0F1117),
+        backgroundColor: const Color(0xFFF5F7FF),
+        foregroundColor: const Color(0xFF0D1224),
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.roboto(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF0F1117),
-          letterSpacing: 0.8,
+        titleTextStyle: GoogleFonts.cormorantGaramond(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF0D1224),
+          letterSpacing: 0.6,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFF0F2FC),
         selectedItemColor: ColorTokens.primaryAccent,
-        unselectedItemColor: Color(0xFF4E5A5B),
+        unselectedItemColor: Color(0xFF6B7280),
       ),
-      dividerColor: const Color(0xFFE8ECED),
+      dividerColor: const Color(0xFFD4DBF0),
       useMaterial3: true,
       extensions: const [AppColorTokens.light],
     );

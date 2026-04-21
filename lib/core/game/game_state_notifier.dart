@@ -821,6 +821,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
     // Award commander kill credit for commander damage kills
     if (reason == 'commanderDamage') {
       _ref.read(profileRepositoryProvider).incrementCommanderKills();
+      bumpProfileRevisionRef(_ref);
     }
 
     // Remove from alliances

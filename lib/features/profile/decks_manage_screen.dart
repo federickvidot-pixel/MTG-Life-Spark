@@ -6,6 +6,8 @@ import '../../core/models/player_deck.dart';
 import '../../core/persistence/deck_repository.dart';
 import '../../core/persistence/providers.dart';
 import '../../shared/utils/app_router.dart';
+import '../../shared/widgets/deck_tile_visual.dart';
+import '../../shared/widgets/mana_cost_pips.dart';
 import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
@@ -15,6 +17,13 @@ class DecksManageScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<DecksManageScreen> createState() => _DecksManageScreenState();
+}
+
+bool _deckHasMana(PlayerDeck d) {
+  final c = d.commanderManaCost?.trim();
+  final p = d.partnerManaCost?.trim();
+  return (c != null && c.isNotEmpty) ||
+      (d.hasPartner && p != null && p.isNotEmpty);
 }
 
 class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
@@ -77,6 +86,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
         'newDeckDisplayName': name,
       },
     );
+    bumpDeckListRevision(ref);
     _reload();
   }
 
@@ -90,6 +100,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
         'editDeckId': deck.id,
       },
     );
+    bumpDeckListRevision(ref);
     _reload();
   }
 
@@ -127,6 +138,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
     if (name == null || !mounted) return;
     deck.displayName = name;
     await repo.save(deck);
+    bumpDeckListRevision(ref);
     _reload();
   }
 
@@ -152,6 +164,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
     );
     if (ok == true) {
       await repo.delete(deck.id);
+      bumpDeckListRevision(ref);
       _reload();
     }
   }
@@ -183,9 +196,6 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
             );
           }
           final deck = _decks[i - 1];
-          final wr = deck.gamesPlayed == 0
-              ? '—'
-              : '${(deck.winRate * 100).round()}%';
           return Card(
             color: colors.surface,
             margin: EdgeInsets.only(bottom: LayoutTokens.gr2),
@@ -201,6 +211,12 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      DeckCommanderAvatarCluster(
+                        deck: deck,
+                        colors: colors,
+                        size: 56,
+                      ),
+                      SizedBox(width: LayoutTokens.gr2),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,28 +239,28 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                                 fontSize: 13,
                               ),
                             ),
+                            if (_deckHasMana(deck)) ...[
+                              SizedBox(height: LayoutTokens.gr1),
+                              DeckManaCostRows(
+                                commanderManaCost: deck.commanderManaCost,
+                                partnerManaCost: deck.partnerManaCost,
+                                hasPartner: deck.hasPartner,
+                              ),
+                            ],
+                            SizedBox(height: LayoutTokens.gr2),
+                            DeckWinLossRatioBar(
+                              deck: deck,
+                              colors: colors,
+                              height: 8,
+                            ),
+                            SizedBox(height: LayoutTokens.gr2),
+                            DeckStatChips(
+                              deck: deck,
+                              colors: colors,
+                              compact: false,
+                            ),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            wr,
-                            style: TextStyle(
-                              color: colors.primaryAccent,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                            ),
-                          ),
-                          Text(
-                            '${deck.wins}W · ${deck.losses}L · ${deck.gamesPlayed} GP',
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),

@@ -32,6 +32,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
 
     final profile = PlayerProfile(username: _usernameController.text.trim());
     await ref.read(profileRepositoryProvider).saveProfile(profile);
+    bumpProfileRevision(ref);
 
     if (mounted) context.go(AppRoutes.onboarding);
   }
@@ -40,6 +41,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     setState(() => _saving = true);
     final profile = PlayerProfile(username: 'Planeswalker');
     await ref.read(profileRepositoryProvider).saveProfile(profile);
+    bumpProfileRevision(ref);
     if (mounted) context.go(AppRoutes.onboarding);
   }
 

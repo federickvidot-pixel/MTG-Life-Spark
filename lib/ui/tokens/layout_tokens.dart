@@ -11,9 +11,6 @@ class LayoutTokens {
   /// For portrait golden: aspectRatio = 1/goldenRatio gives height = width * φ.
   static const double goldenRatioInverse = 0.618;
 
-  /// Base unit for golden-ratio scale (4px).
-  static const double base = 4.0;
-
   /// Golden-ratio spacing scale: base × φ^n for n = 0,1,2,3,4,5,6.
   /// Use for consistent, harmonious spacing across all screens.
   static const double gr0 = 4;   // base
@@ -23,7 +20,4 @@ class LayoutTokens {
   static const double gr4 = 26;  // base × φ⁴
   static const double gr5 = 42; // base × φ⁵
   static const double gr6 = 68; // base × φ⁶
-
-  /// Returns golden-ratio scaled value: (n × goldenRatio).roundToDouble().
-  static double g(num n) => (n * goldenRatio).roundToDouble();
 }

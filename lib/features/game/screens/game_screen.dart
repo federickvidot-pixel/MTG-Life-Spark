@@ -28,7 +28,6 @@ import '../widgets/phase_bar_widget.dart';
 import '../widgets/political_row_widget.dart';
 import '../widgets/turn_order_widget.dart';
 import '../widgets/team_panel_widget.dart';
-import '../../../shared/widgets/game_icon.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
@@ -1841,67 +1840,6 @@ class _OverviewPlayerCard extends ConsumerWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MiniTag extends StatelessWidget {
-  final String label;
-  final Color color;
-
-  const _MiniTag({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child:
-          Text(label, style: TextStyle(color: color, fontSize: 9)),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  final String label;
-  final Widget? iconWidget;
-  final Color color;
-  final bool danger;
-
-  const _StatChip({
-    required this.label,
-    this.iconWidget,
-    required this.color,
-    this.danger = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(5),
-        border: danger
-            ? Border.all(color: color.withValues(alpha: 0.5))
-            : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (iconWidget != null) ...[
-            iconWidget!,
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
-          ),
-        ],
       ),
     );
   }

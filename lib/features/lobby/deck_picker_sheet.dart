@@ -67,16 +67,16 @@ Future<void> showDeckPickerSheet(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'No saved decks yet. Create one from the profile tab (My decks) and assign a commander.',
+                        'No saved decks yet. Create one from the Decks tab and assign a commander.',
                         style: TextStyle(color: colors.textSecondary, fontSize: 13),
                       ),
                       SizedBox(height: LayoutTokens.gr2),
                       TextButton(
                         onPressed: () {
                           Navigator.pop(ctx);
-                          context.push(AppRoutes.profileDecks);
+                          ctx.go(AppRoutes.decks);
                         },
-                        child: const Text('Open My decks'),
+                        child: const Text('Open Decks'),
                       ),
                     ],
                   ),
