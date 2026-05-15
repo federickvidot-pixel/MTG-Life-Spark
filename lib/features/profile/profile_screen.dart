@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -38,10 +37,25 @@ BorderRadius get _kBentoRadius =>
 /// Typical phones (≥360 logical width) use the side‑by‑side level/behaviour row to save height.
 const double _kProfileStatsRowBreakpoint = 360;
 
-/// Recent-games snap slot height for the vertical list inside the bento.
-const double _kRecentMatchSnapSlotExtent = 132;
+/// Clamped text scale (1.0 = default) for layout reserves and hero sizing.
+double _profileLayoutTextScale(BuildContext context) {
+  final t = MediaQuery.textScalerOf(context).scale(1.0);
+  if (!t.isFinite || t <= 0) return 1.0;
+  return t.clamp(1.0, 1.45);
+}
 
-/// Title row is painted in a [Stack] overlay; list [ListView] top padding = title + gap (kept in sync).
+/// Hero banner height from viewport and orientation; stays within [260, 380].
+double _profileHeroCardHeight(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  final padding = MediaQuery.paddingOf(context);
+  final availH = math.max(200.0, size.height - padding.vertical);
+  final portrait = size.height >= size.width;
+  final ts = _profileLayoutTextScale(context);
+  final frac = portrait ? 0.36 : 0.30;
+  return (availH * frac * (0.88 + 0.12 * (ts - 1.0))).clamp(260.0, 380.0);
+}
+
+/// Title row is painted in a [Stack] overlay; list content uses this top inset.
 const double _kRecentGamesOverlayTopInset = 38;
 
 /// Max width for listing rows (deck + recent games); narrower viewports use full width.
@@ -166,17 +180,19 @@ class ProfileScreen extends ConsumerWidget {
             final raw = constraints.maxWidth;
             final bodyW =
                 raw.isFinite && raw > 0 ? raw : screenW.clamp(320.0, 2000.0);
-            final isNarrow = bodyW < 360;
+            final isNarrow = bodyW < _kProfileStatsRowBreakpoint;
             final hPad = isNarrow ? LayoutTokens.gr2 : LayoutTokens.gr3;
 
             final maxH = constraints.maxHeight;
+            final layoutTs = _profileLayoutTextScale(context);
 
             final scroll = CustomScrollView(
               key: ValueKey(profileWatch.revision),
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
+                    // Match horizontal inset so the banner isn’t flush under SafeArea.
+                    padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 0),
                     child: _ProfileHeroCard(
                       profile: profile,
                       colors: colors,
@@ -197,16 +213,15 @@ class ProfileScreen extends ConsumerWidget {
                       _DeckPerformanceSection(
                         colors: colors,
                         listMaxHeight:
-                            (MediaQuery.sizeOf(context).height * 0.42)
+                            (MediaQuery.sizeOf(context).height *
+                                    0.42 *
+                                    (0.94 + 0.06 * (layoutTs - 1.0)))
                                 .clamp(280.0, 560.0),
                       ),
                       SizedBox(height: LayoutTokens.gr4),
                       _RecentGamesModule(
                         matches: allMatches,
                         colors: colors,
-                        listMaxHeight:
-                            (MediaQuery.sizeOf(context).height * 0.42)
-                                .clamp(280.0, 560.0),
                       ),
                       SizedBox(height: LayoutTokens.gr4),
                     ]),
@@ -242,11 +257,9 @@ class _ProfileHeroCard extends StatelessWidget {
   final PlayerProfile profile;
   final AppColorTokens colors;
 
-  static const double _defaultCardHeight = 340;
-
   @override
   Widget build(BuildContext context) {
-    const cardHeight = _defaultCardHeight;
+    final cardHeight = _profileHeroCardHeight(context);
     void onBanner() => context.push(AppRoutes.profileBanner);
 
     Widget background() {
@@ -302,36 +315,40 @@ class _ProfileHeroCard extends StatelessWidget {
             Positioned(
               top: 10,
               right: 10,
-              child: Material(
-                color: Colors.black.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(999),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: onBanner,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.wallpaper_outlined,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Banner',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(
+              child: Semantics(
+                button: true,
+                label: 'Change profile banner',
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(999),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: onBanner,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.wallpaper_outlined,
                             color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            'Banner',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -568,7 +585,7 @@ class _ProfileLevelBehaviourBentoRow extends StatelessWidget {
   final double bodyWidth;
 
   /// Height for the wide two-column row in the scroll layout.
-  static const double _kWideRowHeight = 268;
+  static const double _kWideRowHeight = 252;
 
   @override
   Widget build(BuildContext context) {
@@ -640,8 +657,45 @@ double _saltFraction(PlayerProfile profile) {
   return (profile.dislikesReceived / total).clamp(0.0, 1.0);
 }
 
-/// Gradient spectrum + thumb; [width] must be finite and positive for a visible bar.
-Widget _behaviourSpectrumBar({
+IconData _behaviourSmileyIcon(double salt) {
+  if (salt < 0.28) return Icons.sentiment_very_satisfied_rounded;
+  if (salt < 0.42) return Icons.sentiment_satisfied_alt_rounded;
+  if (salt < 0.58) return Icons.sentiment_neutral_rounded;
+  if (salt < 0.72) return Icons.sentiment_dissatisfied_rounded;
+  return Icons.sentiment_very_dissatisfied_rounded;
+}
+
+Color _behaviourSmileyColor(double salt, AppColorTokens colors) {
+  return Color.lerp(
+        ColorTokens.success,
+        colors.primaryAccent,
+        salt,
+      ) ??
+      colors.textPrimary;
+}
+
+/// Sentiment icon for the behaviour card (centered separately from the track).
+Widget _behaviourSmileyMark({
+  required PlayerProfile profile,
+  required AppColorTokens colors,
+}) {
+  final salt = _saltFraction(profile);
+  const double dp = 44.0;
+  return Icon(
+    _behaviourSmileyIcon(salt),
+    size: dp,
+    color: _behaviourSmileyColor(salt, colors),
+    shadows: [
+      Shadow(
+        color: colors.backgroundPrimary.withValues(alpha: 0.9),
+        blurRadius: 2,
+      ),
+    ],
+  );
+}
+
+/// Gradient spectrum track + thumb only; [width] must be finite and positive.
+Widget _behaviourSpectrumTrack({
   required PlayerProfile profile,
   required AppColorTokens colors,
   required double width,
@@ -649,38 +703,51 @@ Widget _behaviourSpectrumBar({
   final salt = _saltFraction(profile);
   final w =
       width.isFinite && width > 0 ? width : 280.0;
-  final thumbX = 16.0 + (w - 32.0) * salt;
+  const double sideInset = 16.0;
+  final double trackUsableW = math.max(0.0, w - 2 * sideInset);
+  final double knobCenterX = sideInset + trackUsableW * salt;
+  final double knobLeft = (knobCenterX - 9.0).clamp(4.0, w - 22.0);
+
+  const double thumbTop = 2.0;
+  const double barHeight = 14.0;
+  const double thumbSize = 18.0;
+  final double h = thumbTop + thumbSize;
+
   return SizedBox(
     width: w,
-    height: 22,
+    height: h,
     child: Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.centerLeft,
       children: [
-        Container(
-          width: w,
-          height: 14,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: colors.borderSubtle.withValues(alpha: 0.55),
-              width: 1,
-            ),
-            gradient: LinearGradient(
-              colors: [
-                ColorTokens.success,
-                colors.textSecondary,
-                colors.primaryAccent,
-              ],
+        Positioned(
+          left: 0,
+          top: 0,
+          child: Container(
+            width: w,
+            height: barHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: colors.borderSubtle.withValues(alpha: 0.55),
+                width: 1,
+              ),
+              gradient: LinearGradient(
+                colors: [
+                  ColorTokens.success,
+                  colors.textSecondary,
+                  colors.primaryAccent,
+                ],
+              ),
             ),
           ),
         ),
         Positioned(
-          left: thumbX.clamp(4.0, w - 12.0) - 7,
-          top: 2,
+          left: knobLeft,
+          top: thumbTop,
           child: Container(
-            width: 18,
-            height: 18,
+            width: thumbSize,
+            height: thumbSize,
             decoration: BoxDecoration(
               color: colors.textPrimary,
               shape: BoxShape.circle,
@@ -720,79 +787,79 @@ class _LevelDonutCard extends StatelessWidget {
   /// When true (wide side-by-side row), middle content expands to match sibling card height.
   final bool fillHeight;
 
-  /// Builds the donut + XP label block at a given [size].
-  /// strokeWidth scales proportionally, clamped to [6, 10].
-  Widget _donutBlock(BuildContext context, double size) {
+  /// Reserve for the `… / … XP` line at the bottom of the card (fill-height layout).
+  static const double _kBottomXpLabelReserveH = 24.0;
+
+  /// Donut + center (% + level) only; stroke scales with [size], clamped [6, 10].
+  Widget _donutGaugeOnly(BuildContext context, double size) {
     final stroke = (size / 112 * 10).clamp(6.0, 10.0);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Center(
-          child: _AnimatedDonutGauge(
-            targetProgress: xpProgress,
-            size: size,
-            strokeWidth: stroke,
-            trackColor: colors.backgroundSecondary.withValues(alpha: 0.95),
-            progressColor: colors.primaryAccent,
-            centerBuilder: (ctx, t) {
-              final pct = (t * 100).round().clamp(0, 100);
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$pct%',
-                    style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: colors.textPrimary,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                      fontSize: size < 90 ? 16 : null,
-                    ),
-                  ),
-                  Text(
-                    'Lv ${profile.level}',
-                    style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
-                      color: colors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+    return Center(
+      child: _AnimatedDonutGauge(
+        targetProgress: xpProgress,
+        size: size,
+        strokeWidth: stroke,
+        trackColor: colors.backgroundSecondary.withValues(alpha: 0.95),
+        progressColor: colors.primaryAccent,
+        centerBuilder: (ctx, t) {
+          final pct = (t * 100).round().clamp(0, 100);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$pct%',
+                style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontSize: size < 90 ? 16 : null,
+                ),
+              ),
+              Text(
+                'Lv ${profile.level}',
+                style: Theme.of(ctx).textTheme.labelMedium?.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _xpNumeralsLine(BuildContext context) {
+    return Center(
+      child: _AnimatedXpInLevelLabel(
+        targetXpInLevel: xpInLevel,
+        xpNeeded: xpNeeded,
+        level: profile.level,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: colors.textSecondary,
+          fontWeight: FontWeight.w600,
         ),
-        SizedBox(height: LayoutTokens.gr1),
-        Center(
-          child: _AnimatedXpInLevelLabel(
-            targetXpInLevel: xpInLevel,
-            xpNeeded: xpNeeded,
-            level: profile.level,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    const _kXpLabelH = 20.0; // label (~14px) + gr1 gap (6px)
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Text(
-                'Level progress',
+                'Level\nprogress',
+                maxLines: 2,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
                   color: colors.textPrimary,
+                  height: 1.05,
                 ),
               ),
             ),
@@ -809,22 +876,40 @@ class _LevelDonutCard extends StatelessWidget {
         ),
         SizedBox(height: LayoutTokens.gr2),
         if (fillHeight)
-          // LayoutBuilder sizes donut to fit; FittedBox scales down any remaining
-          // overflow (e.g. XP label at minimum donut size on very short cards).
           Expanded(
             child: LayoutBuilder(
               builder: (context, c) {
+                final layoutTs = _profileLayoutTextScale(context);
+                final bottomReserve = _kBottomXpLabelReserveH * layoutTs;
                 final donutSize =
-                    (c.maxHeight - _kXpLabelH).clamp(48.0, 112.0);
-                return FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: _donutBlock(context, donutSize),
+                    (c.maxHeight - bottomReserve).clamp(48.0, 112.0);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: _donutGaugeOnly(context, donutSize),
+                        ),
+                      ),
+                    ),
+                    _xpNumeralsLine(context),
+                  ],
                 );
               },
             ),
           )
         else
-          _donutBlock(context, 112),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _donutGaugeOnly(context, 112),
+              SizedBox(height: LayoutTokens.gr2),
+              _xpNumeralsLine(context),
+            ],
+          ),
       ],
     );
   }
@@ -842,14 +927,62 @@ class _BehaviourBarCard extends StatelessWidget {
   /// When true (wide row), spectrum block expands so the bento matches level progress height.
   final bool fillHeight;
 
+  /// Smiley (44) + spectrum track (20) + axis row + reaction line — remainder split evenly.
+  static const double _kFillBehaviourCoreH = 100.0;
+  static const int _kFillBehaviourBandGaps = 4;
+
+  static double _fillBehaviourBandGap(double maxHeight, double layoutTextScale) {
+    final core = _kFillBehaviourCoreH * layoutTextScale;
+    final slack = maxHeight - core;
+    final raw = slack / _kFillBehaviourBandGaps;
+    if (!raw.isFinite) return LayoutTokens.gr1;
+    return math.max(0.0, raw);
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget spectrumForConstraints(BoxConstraints c) {
-      final w = c.maxWidth.isFinite && c.maxWidth > 0 ? c.maxWidth : 280.0;
-      return _behaviourSpectrumBar(
-        profile: profile,
-        colors: colors,
-        width: w,
+    Widget axisRow() {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Good',
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: FontTokens.sm,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            'Neutral',
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: FontTokens.sm,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            'Salty',
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: FontTokens.sm,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget reactionsLine() {
+      return Text(
+        '${profile.likesReceived} likes · ${profile.dislikesReceived} dislikes',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: colors.textSecondary,
+          fontSize: FontTokens.caption,
+        ),
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
     }
 
@@ -880,110 +1013,65 @@ class _BehaviourBarCard extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: LayoutTokens.gr1),
+        SizedBox(height: LayoutTokens.gr2),
         if (fillHeight)
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      return Align(
-                        alignment: Alignment.center,
-                        child: spectrumForConstraints(c),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: LayoutTokens.gr0),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final w =
+                    c.maxWidth.isFinite && c.maxWidth > 0 ? c.maxWidth : 280.0;
+                final bandGap = _fillBehaviourBandGap(
+                  c.maxHeight,
+                  _profileLayoutTextScale(context),
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Good',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: FontTokens.sm,
-                        fontWeight: FontWeight.w500,
+                    SizedBox(height: bandGap),
+                    Center(
+                      child: _behaviourSmileyMark(
+                        profile: profile,
+                        colors: colors,
                       ),
                     ),
-                    Text(
-                      'Neutral',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: FontTokens.sm,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    SizedBox(height: bandGap),
+                    _behaviourSpectrumTrack(
+                      profile: profile,
+                      colors: colors,
+                      width: w,
                     ),
-                    Text(
-                      'Salty',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: FontTokens.sm,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    SizedBox(height: bandGap),
+                    axisRow(),
+                    SizedBox(height: bandGap),
+                    reactionsLine(),
                   ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${profile.likesReceived} likes · ${profile.dislikesReceived} dislikes',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.textSecondary,
-                    fontSize: FontTokens.caption,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                );
+              },
             ),
           )
         else ...[
-          LayoutBuilder(
-            builder: (context, c) => spectrumForConstraints(c),
-          ),
-          SizedBox(height: LayoutTokens.gr1),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Good',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: FontTokens.sm,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                'Neutral',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: FontTokens.sm,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                'Salty',
-                style: TextStyle(
-                  color: colors.textSecondary,
-                  fontSize: FontTokens.sm,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: LayoutTokens.gr1),
           Center(
-            child: Text(
-              '${profile.likesReceived} likes · ${profile.dislikesReceived} dislikes',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-              textAlign: TextAlign.center,
+            child: _behaviourSmileyMark(
+              profile: profile,
+              colors: colors,
             ),
           ),
+          SizedBox(height: LayoutTokens.gr1),
+          LayoutBuilder(
+            builder: (context, c) {
+              final w =
+                  c.maxWidth.isFinite && c.maxWidth > 0 ? c.maxWidth : 280.0;
+              return _behaviourSpectrumTrack(
+                profile: profile,
+                colors: colors,
+                width: w,
+              );
+            },
+          ),
+          SizedBox(height: LayoutTokens.gr1),
+          axisRow(),
+          SizedBox(height: LayoutTokens.gr1),
+          reactionsLine(),
         ],
       ],
     );
@@ -1125,271 +1213,20 @@ class _AnimatedDonutGaugeState extends State<_AnimatedDonutGauge>
   }
 }
 
-/// Snaps scroll to multiples of [itemExtent] on fling/release.
-class _SnapScrollPhysics extends ScrollPhysics {
-  const _SnapScrollPhysics({required this.itemExtent, super.parent});
-
-  final double itemExtent;
-
-  @override
-  _SnapScrollPhysics applyTo(ScrollPhysics? ancestor) =>
-      _SnapScrollPhysics(itemExtent: itemExtent, parent: buildParent(ancestor));
-
-  double _snapTarget(ScrollMetrics pos, double velocity, Tolerance tol) {
-    double item = pos.pixels / itemExtent;
-    if (velocity < -tol.velocity) {
-      item -= 0.5;
-    } else if (velocity > tol.velocity) {
-      item += 0.5;
-    }
-    return (item.roundToDouble() * itemExtent)
-        .clamp(pos.minScrollExtent, pos.maxScrollExtent);
-  }
-
-  @override
-  Simulation? createBallisticSimulation(ScrollMetrics pos, double velocity) {
-    if ((velocity <= 0.0 && pos.pixels <= pos.minScrollExtent) ||
-        (velocity >= 0.0 && pos.pixels >= pos.maxScrollExtent)) {
-      return super.createBallisticSimulation(pos, velocity);
-    }
-    final tol = toleranceFor(pos);
-    final target = _snapTarget(pos, velocity, tol);
-    if ((target - pos.pixels).abs() < tol.distance) return null;
-    return ScrollSpringSimulation(
-      spring,
-      pos.pixels,
-      target,
-      velocity,
-      tolerance: tol,
-    );
-  }
-
-  @override
-  bool get allowImplicitScrolling => false;
-}
-
-/// Scrollable list inside a bento with a fixed max height; auto-advances when idle.
-class _BentoAutoScrollList extends StatefulWidget {
-  const _BentoAutoScrollList({
-    this.maxHeight,
-    required this.itemCount,
-    required this.itemBuilder,
-    this.separator,
-    this.snapScroll = true,
-    this.snapItemExtent = _kRecentMatchSnapSlotExtent,
-    this.scrollableTopInset = 0,
-  });
-
-  /// When null, the list expands within a parent [Expanded] (bounded height).
-  final double? maxHeight;
-  final int itemCount;
-  final IndexedWidgetBuilder itemBuilder;
-  final Widget? separator;
-  /// When false, uses smooth [ClampingScrollPhysics]. Defaults to true (recent games).
-  final bool snapScroll;
-  /// Grid for snap physics and auto-advance when [snapScroll] is true.
-  final double snapItemExtent;
-  /// Space above the first list item (e.g. stacked section title overlay).
-  final double scrollableTopInset;
-
-  @override
-  State<_BentoAutoScrollList> createState() => _BentoAutoScrollListState();
-}
-
-class _BentoAutoScrollListState extends State<_BentoAutoScrollList> {
-  final ScrollController _controller = ScrollController();
-  Timer? _autoTimer;
-  Timer? _resumeTimer;
-  bool _programmatic = false;
-  bool _autoBusy = false;
-
-  static const _resumeAfterIdle = Duration(seconds: 5);
-  static const _autoTick = Duration(seconds: 4);
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleResume());
-  }
-
-  void _scheduleResume() {
-    _resumeTimer?.cancel();
-    _resumeTimer = Timer(_resumeAfterIdle, () {
-      if (!mounted) return;
-      _startAuto();
-    });
-  }
-
-  void _userInteracted() {
-    _autoTimer?.cancel();
-    _autoTimer = null;
-    _scheduleResume();
-  }
-
-  void _startAuto() {
-    if (!mounted || widget.itemCount <= 1) return;
-    _autoTimer?.cancel();
-    _autoTimer = Timer.periodic(_autoTick, (_) => _autoAdvance());
-  }
-
-  Future<void> _autoAdvance() async {
-    if (!mounted || _autoBusy) return;
-    if (!_controller.hasClients) return;
-    final pos = _controller.position;
-    if (!pos.hasContentDimensions) return;
-    final max = pos.maxScrollExtent;
-    if (max < 8) return;
-
-    final o = _controller.offset;
-    double target;
-    if (widget.snapScroll) {
-      final step = widget.snapItemExtent;
-      final nextSnap = ((o / step).floor() + 1) * step;
-      if (nextSnap >= max - 4) {
-        target = 0;
-      } else {
-        target = nextSnap.clamp(0.0, max);
-      }
-    } else {
-      final step = (pos.viewportDimension * 0.88).clamp(96.0, 520.0);
-      if (o + step >= max - 4) {
-        target = 0;
-      } else {
-        target = (o + step).clamp(0.0, max);
-      }
-    }
-
-    _autoBusy = true;
-    _programmatic = true;
-    try {
-      await _controller.animateTo(
-        target,
-        duration: Duration(
-          milliseconds: target == 0 && o > 8 ? 650 : 520,
-        ),
-        curve: Curves.easeInOut,
-      );
-    } finally {
-      if (mounted) _programmatic = false;
-      _autoBusy = false;
-    }
-  }
-
-  @override
-  void dispose() {
-    _autoTimer?.cancel();
-    _resumeTimer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(covariant _BentoAutoScrollList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.itemCount != widget.itemCount) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_controller.hasClients) _controller.jumpTo(0);
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.itemCount == 0) return const SizedBox.shrink();
-
-    final list = Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (_) => _userInteracted(),
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (ScrollNotification n) {
-          if (_programmatic) return false;
-          if (n is UserScrollNotification) {
-            _userInteracted();
-          }
-          return false;
-        },
-        child: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(
-            scrollbars: false,
-          ),
-          child:
-              widget.snapScroll
-                  ? ListView.builder(
-                      controller: _controller,
-                      primary: false,
-                      physics: _SnapScrollPhysics(
-                        itemExtent: widget.snapItemExtent,
-                      ),
-                      padding: EdgeInsets.only(
-                        top: widget.scrollableTopInset,
-                        bottom: LayoutTokens.gr2,
-                      ),
-                      cacheExtent: 400,
-                      itemCount: widget.itemCount,
-                      itemBuilder: (context, i) {
-                        return SizedBox(
-                          height: widget.snapItemExtent,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.center,
-                                  child: widget.itemBuilder(context, i),
-                                ),
-                              ),
-                              if (i < widget.itemCount - 1)
-                                widget.separator ??
-                                    SizedBox(height: LayoutTokens.gr2),
-                            ],
-                          ),
-                        );
-                      },
-                    )
-                  : ListView.separated(
-                      controller: _controller,
-                      primary: false,
-                      physics: const ClampingScrollPhysics(),
-                      padding: EdgeInsets.only(
-                        top: widget.scrollableTopInset,
-                        bottom: LayoutTokens.gr2,
-                      ),
-                      cacheExtent: 400,
-                      itemCount: widget.itemCount,
-                      separatorBuilder:
-                          (_, __) =>
-                              widget.separator ??
-                              SizedBox(height: LayoutTokens.gr2),
-                      itemBuilder: widget.itemBuilder,
-                    ),
-        ),
-      ),
-    );
-    final h = widget.maxHeight;
-    if (h != null) {
-      return SizedBox(height: h, child: list);
-    }
-    return list;
-  }
-}
-
 class _RecentGamesModule extends StatelessWidget {
   final List<MatchRecord> matches;
   final AppColorTokens colors;
-  /// When null, list uses remaining flex height (one-screen layout).
-  final double? listMaxHeight;
 
   const _RecentGamesModule({
     required this.matches,
     required this.colors,
-    this.listMaxHeight,
   });
 
   @override
   Widget build(BuildContext context) {
     final c = colors;
-    final listMaxHeight = this.listMaxHeight;
     const inset = _kRecentGamesOverlayTopInset;
+    final gap = LayoutTokens.gr2;
 
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize: 18,
@@ -1399,9 +1236,9 @@ class _RecentGamesModule extends StatelessWidget {
       shadows: _profileBentoTitleShadows(c),
     );
 
-    final emptyPlaceholder = Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: LayoutTokens.gr2),
+    final emptyPlaceholder = Padding(
+      padding: EdgeInsets.fromLTRB(0, inset + gap, 0, LayoutTokens.gr3),
+      child: Center(
         child: Text(
           'No recent matches.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1427,160 +1264,46 @@ class _RecentGamesModule extends StatelessWidget {
       ),
     );
 
-    final double bodyHeight = listMaxHeight ?? 320.0;
-    final Widget body = matches.isEmpty
-        ? emptyPlaceholder
-        : _RecentMatchListBody(
-            matches: matches,
-            colors: c,
-            viewportHeight: bodyHeight,
-            scrollableTopInset: inset,
-          );
+    if (matches.isEmpty) {
+      return _BentoCard(
+        gradientColors: [
+          Color.lerp(c.surfaceElevated, ColorTokens.success, 0.08)!,
+          c.surfaceElevated,
+        ],
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            emptyPlaceholder,
+            overlayHeader,
+          ],
+        ),
+      );
+    }
+
+    final listColumn = Padding(
+      padding: EdgeInsets.only(top: inset),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < matches.length; i++) ...[
+            if (i > 0) SizedBox(height: gap),
+            _RecentMatchRow(match: matches[i], colors: colors),
+          ],
+          SizedBox(height: LayoutTokens.gr2),
+        ],
+      ),
+    );
 
     return _BentoCard(
       gradientColors: [
         Color.lerp(c.surfaceElevated, ColorTokens.success, 0.08)!,
         c.surfaceElevated,
       ],
-      child: SizedBox(
-        height: bodyHeight,
-        child: Stack(
-          clipBehavior: Clip.hardEdge,
-          children: [
-            Positioned.fill(child: body),
-            overlayHeader,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// List area: equal-height rows when all rows fit; otherwise scroll + snap.
-class _RecentMatchListBody extends StatelessWidget {
-  const _RecentMatchListBody({
-    required this.matches,
-    required this.colors,
-    this.viewportHeight,
-    this.scrollableTopInset = 0,
-  });
-
-  final List<MatchRecord> matches;
-  final AppColorTokens colors;
-  /// When set, height is known without [LayoutBuilder] (scroll-layout bento).
-  final double? viewportHeight;
-  /// Matches [_kRecentGamesOverlayTopInset] when titles use a [Stack] overlay.
-  final double scrollableTopInset;
-
-  static const double _kMinRowForEqualSplit = 56.0;
-
-  bool _useEqualSlots(double h, int n, double gap) {
-    if (n <= 0 || h <= 0) return false;
-    if (n == 1) return true;
-    final need = n * _kMinRowForEqualSplit + (n - 1) * gap;
-    return need <= h;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final gap = LayoutTokens.gr2;
-    final n = matches.length;
-    final inset = scrollableTopInset;
-
-    Widget scrollList({double? maxH}) {
-      return _BentoAutoScrollList(
-        maxHeight: maxH ?? viewportHeight,
-        scrollableTopInset: inset,
-        snapScroll: true,
-        snapItemExtent: _kRecentMatchSnapSlotExtent,
-        separator: SizedBox(height: LayoutTokens.gr2),
-        itemCount: n,
-        itemBuilder: (context, i) {
-          return _RecentMatchRow(match: matches[i], colors: colors);
-        },
-      );
-    }
-
-    if (viewportHeight != null) {
-      final h = viewportHeight!;
-      final innerH = (h - inset).clamp(0.0, double.infinity);
-      if (_useEqualSlots(innerH, n, gap)) {
-        return Padding(
-          padding: EdgeInsets.only(top: inset),
-          child: SizedBox(
-            height: innerH,
-            child: _RecentGamesEqualSlots(
-              matches: matches,
-              colors: colors,
-              gap: gap,
-              viewportHeight: innerH,
-            ),
-          ),
-        );
-      }
-      return scrollList(maxH: h);
-    }
-
-    return LayoutBuilder(
-      builder: (context, c) {
-        final h = c.maxHeight;
-        final innerH = (h - inset).clamp(0.0, double.infinity);
-        if (_useEqualSlots(innerH, n, gap)) {
-          return Padding(
-            padding: EdgeInsets.only(top: inset),
-            child: SizedBox(
-              height: innerH,
-              child: _RecentGamesEqualSlots(
-                matches: matches,
-                colors: colors,
-                gap: gap,
-                viewportHeight: innerH,
-              ),
-            ),
-          );
-        }
-        return scrollList(maxH: h);
-      },
-    );
-  }
-}
-
-/// Fills [viewportHeight] with [n] equal vertical slots and even [gap] between rows.
-class _RecentGamesEqualSlots extends StatelessWidget {
-  const _RecentGamesEqualSlots({
-    required this.matches,
-    required this.colors,
-    required this.gap,
-    required this.viewportHeight,
-  });
-
-  final List<MatchRecord> matches;
-  final AppColorTokens colors;
-  final double gap;
-  final double viewportHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final n = matches.length;
-    return SizedBox(
-      height: viewportHeight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: [
-          for (int i = 0; i < n; i++) ...[
-            if (i > 0) SizedBox(height: gap),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, c) {
-                  return _RecentMatchRow(
-                    match: matches[i],
-                    colors: colors,
-                    slotHeight: c.maxHeight,
-                  );
-                },
-              ),
-            ),
-          ],
+          listColumn,
+          overlayHeader,
         ],
       ),
     );
@@ -1600,13 +1323,10 @@ String _formatDurationSeconds(int seconds) {
 class _RecentMatchRow extends ConsumerStatefulWidget {
   final MatchRecord match;
   final AppColorTokens colors;
-  /// When set (equal-slot recent games layout), row fills this height and scrolls if needed.
-  final double? slotHeight;
 
   const _RecentMatchRow({
     required this.match,
     required this.colors,
-    this.slotHeight,
   });
 
   @override
@@ -1654,10 +1374,6 @@ class _RecentMatchRowState extends ConsumerState<_RecentMatchRow> {
     final participants = m.participantSnapshots;
 
     final innerR = BorderRadius.circular(_kBentoRadiusPx - _kBentoCardPaddingPx);
-    final columnMainAxis =
-        widget.slotHeight != null && !_open
-            ? MainAxisAlignment.center
-            : MainAxisAlignment.start;
     final paddedColumn = Padding(
       padding: EdgeInsets.symmetric(
         horizontal: LayoutTokens.gr3,
@@ -1665,7 +1381,7 @@ class _RecentMatchRowState extends ConsumerState<_RecentMatchRow> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: columnMainAxis,
+        mainAxisAlignment: MainAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
@@ -1691,7 +1407,8 @@ class _RecentMatchRowState extends ConsumerState<_RecentMatchRow> {
                         ).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                           fontSize:
-                              MediaQuery.sizeOf(context).width < 360
+                              MediaQuery.sizeOf(context).width <
+                                      _kProfileStatsRowBreakpoint
                                   ? 14
                                   : null,
                         ),
@@ -1728,7 +1445,8 @@ class _RecentMatchRowState extends ConsumerState<_RecentMatchRow> {
                     color: _resultColor,
                     fontWeight: FontWeight.w700,
                     fontSize:
-                        MediaQuery.sizeOf(context).width < 360
+                        MediaQuery.sizeOf(context).width <
+                                _kProfileStatsRowBreakpoint
                             ? FontTokens.sm
                             : FontTokens.caption,
                   ),
@@ -1804,17 +1522,6 @@ class _RecentMatchRowState extends ConsumerState<_RecentMatchRow> {
       ),
     );
 
-    final inkChild =
-        widget.slotHeight != null
-            ? SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: widget.slotHeight!),
-                  child: paddedColumn,
-                ),
-              )
-            : paddedColumn;
-
     Widget card = Material(
       color: colors.backgroundSecondary.withValues(alpha: 0.42),
       elevation: 0,
@@ -1826,20 +1533,28 @@ class _RecentMatchRowState extends ConsumerState<_RecentMatchRow> {
       child: InkWell(
         onTap: () => setState(() => _open = !_open),
         borderRadius: innerR,
-        child: inkChild,
+        child: paddedColumn,
       ),
     );
-
-    if (widget.slotHeight != null) {
-      card = SizedBox(height: widget.slotHeight, child: card);
-    }
 
     return LayoutBuilder(
       builder: (context, c) {
         final w = math.min(_kBentoListingMaxContentWidth, c.maxWidth);
         return Align(
           alignment: Alignment.center,
-          child: SizedBox(width: w, child: card),
+          child: SizedBox(
+            width: w,
+            child: MergeSemantics(
+              child: Semantics(
+                expanded: _open,
+                label: 'Recent match, $_resultLabel',
+                value:
+                    '${m.matchTypeLabel}, ${m.format}, $_opponentLabel. ${fmt.format(m.date)} at ${timeFmt.format(m.date)}.',
+                hint: _open ? 'Collapse details' : 'Expand details',
+                child: card,
+              ),
+            ),
+          ),
         );
       },
     );
@@ -2046,6 +1761,14 @@ bool _deckHasManaForProfile(PlayerDeck d) {
       (d.hasPartner && p != null && p.isNotEmpty);
 }
 
+/// Lower bound for deck perf card height: tall commander portrait + partner
+/// line + dual mana rows + [DeckStatChips] wrapping at [_kDeckPerfCardWidth].
+double _deckPerfCardMinHeightPx(BuildContext context) {
+  final scale = MediaQuery.textScalerOf(context).scale(12) / 12.0;
+  const double atUnitScale = 388;
+  return (atUnitScale * scale.clamp(1.0, 1.45)).clamp(318.0, 480.0);
+}
+
 /// Sample rows for Deck performance when there are no saved decks yet.
 /// Mana strings use bundled `assets/mana/` symbols (WUBRG, hybrids, numbers).
 List<PlayerDeck> _previewPlaceholderDecks() {
@@ -2122,10 +1845,19 @@ class _DeckPerformanceSection extends ConsumerStatefulWidget {
 
 /// Horizontal card width — sized so 1.5 cards peek on a 360px-wide viewport
 /// (signals "more to scroll") and 2+ cards show on wider devices.
-const double _kDeckPerfCardWidth = 220;
+const double _kDeckPerfCardWidth = 236;
 
 /// Title row height (text + spacing) reserved inside the bento.
 const double _kDeckPerfTitleHeight = 44;
+
+/// Commander portrait in deck perf: scales inside [Expanded]; these clamp size.
+const double _kDeckPerfCommanderPortraitMin = 96;
+const double _kDeckPerfCommanderPortraitMax = 132;
+
+/// Horizontal deck tiles only need ~this much vertical space (avatar, text,
+/// mana, WR bar, chips). Parent passes a large [listMaxHeight] for other
+/// modules; without a cap each card stretches and shows empty deck surface.
+const double _kDeckPerfCardIdealHeight = 400;
 
 class _DeckPerformanceSectionState
     extends ConsumerState<_DeckPerformanceSection> {
@@ -2205,11 +1937,15 @@ class _DeckPerformanceSectionState
       ],
       child: LayoutBuilder(
         builder: (context, c) {
-          // Card height = remaining space below the title row when [lh] is set,
-          // otherwise a sensible default for scroll/fallback layouts.
-          final double cardHeight = (lh != null && lh.isFinite && lh > 0)
-              ? math.max(180.0, lh - _kDeckPerfTitleHeight)
+          // Never let [cardHeight] fall below content needs: capping with only
+          // listBudget caused overflow when budget < dense deck column height.
+          final double listBudget = (lh != null && lh.isFinite && lh > 0)
+              ? lh - _kDeckPerfTitleHeight
               : 240.0;
+          final double budget = math.max(180.0, listBudget);
+          final double need = _deckPerfCardMinHeightPx(context);
+          final double softCap = math.max(_kDeckPerfCardIdealHeight, need);
+          final double cardHeight = math.max(need, math.min(budget, softCap));
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -2260,17 +1996,34 @@ class _DeckPerfCard extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(LayoutTokens.gr2),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: DeckCommanderAvatarCluster(
-                  deck: deck,
-                  colors: colors,
-                  size: 76,
-                  portraitStyle: CommanderPortraitStyle.card,
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, c) {
+                    // Primary card height `size`; cluster width scales with partner overlap.
+                    final wRatio = deck.hasPartner
+                        ? (63 / 88) * (1 + 0.35 * 0.58)
+                        : (63 / 88);
+                    final maxByWidth = c.maxWidth / wRatio;
+                    final sz = math
+                        .min(c.maxHeight, maxByWidth)
+                        .clamp(
+                          _kDeckPerfCommanderPortraitMin,
+                          _kDeckPerfCommanderPortraitMax,
+                        );
+                    return Center(
+                      child: DeckCommanderAvatarCluster(
+                        deck: deck,
+                        colors: colors,
+                        size: sz,
+                        portraitStyle: CommanderPortraitStyle.card,
+                      ),
+                    );
+                  },
                 ),
               ),
-              SizedBox(height: LayoutTokens.gr2),
+              SizedBox(height: LayoutTokens.gr0),
               Text(
                 deck.displayName,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -2299,7 +2052,7 @@ class _DeckPerfCard extends StatelessWidget {
                   compact: true,
                 ),
               ],
-              const Spacer(),
+              SizedBox(height: LayoutTokens.gr2),
               DeckWinLossRatioBar(deck: deck, colors: colors, height: 6),
               SizedBox(height: LayoutTokens.gr1),
               DeckStatChips(deck: deck, colors: colors, compact: true),
