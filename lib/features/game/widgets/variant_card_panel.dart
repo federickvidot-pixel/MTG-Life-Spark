@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/game/game_providers.dart';
-import '../../../ui/tokens/layout_tokens.dart';
 import '../../../core/game/game_state.dart';
 import '../../../core/game/scryfall_service.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/game_icon.dart';
+import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/spacing_tokens.dart';
 
 /// Shows current Planechase plane, Archenemy scheme, or Bounty card with
 /// advance controls. Requires internet for deck data.
@@ -31,31 +32,36 @@ class VariantCardPanel extends ConsumerWidget {
         decks: decks,
         notifier: ref.read(gameProvider.notifier),
       ),
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      loading: () => Padding(
+        padding: SpacingTokens.horizontalMd.add(SpacingTokens.verticalXs),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              width: LayoutTokens.gr5 - LayoutTokens.gr0,
+              height: LayoutTokens.gr5 - LayoutTokens.gr0,
+              child: CircularProgressIndicator(
+                strokeWidth: LayoutTokens.gr0 / 2,
+              ),
             ),
-            SizedBox(width: 12),
+            SizedBox(width: LayoutTokens.gr2),
             Text(
               'Loading variant decks…',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: LayoutTokens.gr3,
+              ),
             ),
           ],
         ),
       ),
       error: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: SpacingTokens.horizontalMd.add(SpacingTokens.verticalXs),
         child: Text(
           'Could not load decks (internet required)',
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.textSecondary,
-            fontSize: 12,
+            fontSize: LayoutTokens.gr2,
           ),
         ),
       ),
@@ -128,7 +134,10 @@ class _VariantContent extends StatelessWidget {
     if (children.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: LayoutTokens.gr3,
+        vertical: LayoutTokens.gr2,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,

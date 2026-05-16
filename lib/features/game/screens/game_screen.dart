@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../../../debug/session_agent_log.dart';
 import '../../../core/game/game_log_entry.dart';
 import '../../../core/game/game_phase.dart';
 import '../../../core/game/commander_identity_colors.dart';
@@ -24,34 +23,12 @@ import '../../../ui/tokens/layout_tokens.dart';
 import '../../../shared/widgets/home_nav_bar.dart';
 import '../widgets/commander_damage_panel.dart';
 import '../widgets/commander_info_bar.dart';
+import '../widgets/game_ui_tokens.dart';
 import '../widgets/variant_card_panel.dart';
 import '../widgets/gameplay_dials_strip_widget.dart';
 import '../widgets/life_counter_widget.dart';
-import '../widgets/phase_bar_widget.dart';
 import '../widgets/political_row_widget.dart';
-import '../widgets/turn_order_widget.dart';
 import '../widgets/team_panel_widget.dart';
-
-// #region agent log
-void _agentDbgGameUi(
-  String hypothesisId,
-  String location,
-  String message,
-  Map<String, Object?> data,
-) {
-  appendSessionNdjson({
-    'sessionId': '02a8f6',
-    'hypothesisId': hypothesisId,
-    'location': location,
-    'message': message,
-    'data': data,
-    'timestamp': DateTime.now().millisecondsSinceEpoch,
-  });
-}
-// #endregion
-
-String? _dbgLastPersonalPlaySig;
-String? _dbgLastBarBtnSig;
 
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
@@ -348,7 +325,7 @@ class _FirstPlayerRollOverlayState extends State<_FirstPlayerRollOverlay>
 
 // ── Personal View ──────────────────────────────────────────────────────────
 
-class _PersonalView extends ConsumerWidget {
+class _PersonalView extends ConsumerStatefulWidget {
   final GameState game;
   final PlayerGameState local;
   final VoidCallback onToggleOverview;
@@ -360,241 +337,548 @@ class _PersonalView extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PersonalView> createState() => _PersonalViewState();
+}
+
+class _PersonalViewState extends ConsumerState<_PersonalView> {
+  /// 0 = Play, 1 = History
+  int _playOrHistory = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final game = widget.game;
+    final local = widget.local;
     final notifier = ref.read(gameProvider.notifier);
     final opponents =
         game.players.where((p) => p.playerId != local.playerId).toList();
 
-    final activeColor =
-        game.playerById(game.activePlayerId)?.playerColor ?? AppTheme.accent;
-
     final screenHeight = MediaQuery.sizeOf(context).height;
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final isCompact = screenHeight < 700 || screenWidth < 360;
+    final isCompact =
+        screenHeight < 704 || screenWidth < GameLayoutBreakpoints.compact;
+    final tightVertical =
+        screenHeight < GameLayoutBreakpoints.shortViewport;
     final horizontalInset = LayoutTokens.gr3;
-    final lifeBandMaxW = min(screenWidth - horizontalInset * 2, 400.0);
-    final lifeBandH = isCompact ? 152.0 : 192.0;
+    final rawMaxW = min(screenWidth - horizontalInset * 2, 400.0);
+    final lifeBandMaxW = rawMaxW - (rawMaxW % 4);
+    // 4dp grid: shrink height when vertical space is tight so Play fits without scroll.
+    final lifeBandH = tightVertical
+        ? (isCompact ? 136.0 : 160.0)
+        : (isCompact ? 160.0 : 192.0);
 
-    final sig =
-        '${screenWidth.toStringAsFixed(0)}_${lifeBandMaxW.toStringAsFixed(0)}_$isCompact';
-    if (_dbgLastPersonalPlaySig != sig) {
-      _dbgLastPersonalPlaySig = sig;
-      // #region agent log
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _agentDbgGameUi(
-          'H2',
-          'game_screen.dart:_PersonalView',
-          'play_tab_layout',
-          {
-            'screenW': screenWidth,
-            'screenH': screenHeight,
-            'horizontalInset': horizontalInset,
-            'lifeBandMaxW': lifeBandMaxW,
-            'lifeBandH': lifeBandH,
-            'isCompact': isCompact,
-          },
-        );
-      });
-      // #endregion
+    void adjustLife(int delta) {
+      if (delta == 0) return;
+      notifier.adjustLife(local.playerId, delta);
     }
 
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: CommanderInfoBar(
-                  player: local,
-                  onCastCommander:
-                      () => notifier.castCommanderFromZone(local.playerId),
-                  includeCastButton: false,
-                  roundNumber: game.roundNumber,
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalInset),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.card,
+              borderRadius: BorderRadius.circular(LayoutTokens.gr3),
+              border: Border.all(
+                color: AppTheme.textSecondary.withValues(alpha: 0.14),
               ),
-              Padding(
-                padding: EdgeInsets.only(right: LayoutTokens.gr3),
-                child: CastCommanderButton(
-                  player: local,
-                  onCastCommander:
-                      () => notifier.castCommanderFromZone(local.playerId),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: LayoutTokens.gr2,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-            ],
-          ),
-          TurnOrderWidget(game: game),
-          SizedBox(height: LayoutTokens.gr0),
-          TabBar(
-            labelColor: AppTheme.accent,
-            unselectedLabelColor: AppTheme.textSecondary.withValues(
-              alpha: 0.85,
+              ],
             ),
-            indicatorColor: AppTheme.accent,
-            tabs: const [Tab(text: 'Play'), Tab(text: 'History')],
-          ),
-          Expanded(
-            child: TabBarView(
+            child: Padding(
+              padding: EdgeInsets.all(
+                tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr2,
+              ),
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: horizontalInset,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(height: LayoutTokens.gr1),
-                            PhaseBarWidget(
-                              currentPhase: game.currentPhase,
-                              activeColor: activeColor,
-                              isHost: game.isHost,
-                              onAdvancePhase:
-                                  game.isHost
-                                      ? () => notifier.advancePhase()
-                                      : null,
-                              canSetPhase: game.isLocalPlayersTurn,
-                              onPhaseTap:
-                                  game.isLocalPlayersTurn
-                                      ? (phase) => notifier.setPhase(phase)
-                                      : null,
-                            ),
-                            SizedBox(height: LayoutTokens.gr2),
-                            const VariantCardPanel(),
-                            SizedBox(height: LayoutTokens.gr2),
-                            CommanderDamagePanel(
-                              localPlayer: local,
-                              opponents: opponents,
-                              onDamageChange:
-                                  ({
-                                    required String fromPlayerId,
-                                    required int partnerIndex,
-                                    required int delta,
-                                  }) => notifier.applyCommanderDamage(
-                                    fromPlayerId: fromPlayerId,
-                                    partnerIndex: partnerIndex,
-                                    toPlayerId: local.playerId,
-                                    delta: delta,
-                                  ),
-                            ),
-                            if (game.pendingProposalFor(local.playerId) != null)
-                              _AllianceProposalBanner(game: game, local: local),
-                            if (game.pendingProposalFor(local.playerId) != null)
-                              SizedBox(height: LayoutTokens.gr0),
-                            if (game.monarchPlayerId == local.playerId)
-                              _GameMarkerBanner(
-                                icon: '👑',
-                                label: 'You have the Monarch',
-                              ),
-                            if (game.initiativePlayerId == local.playerId)
-                              _GameMarkerBanner(
-                                icon: '⚔️',
-                                label: 'You have the Initiative',
-                              ),
-                            if ((game.trackTurnDuration ||
-                                    game.turnTimeLimitSeconds != null) &&
-                                game.turnStartTime != null)
-                              _TurnDurationBanner(
-                                turnStartTime: game.turnStartTime!,
-                                limitSeconds: game.turnTimeLimitSeconds,
-                                isActiveTurn: game.isLocalPlayersTurn,
-                              ),
-                            SizedBox(height: LayoutTokens.gr3),
-                          ],
-                        ),
-                      ),
+                Padding(
+                  padding: EdgeInsets.only(
+                    right:
+                        2 * (LayoutTokens.gr6 + LayoutTokens.gr1) +
+                        1 +
+                        LayoutTokens.gr2,
+                  ),
+                  child: CommanderInfoBar(
+                    player: local,
+                    onCastCommander:
+                        () => notifier.castCommanderFromZone(local.playerId),
+                    includeCastButton: false,
+                    embeddedInCard: true,
+                    roundNumber: game.roundNumber,
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: _PlayHistoryPillSwitch(
+                      selectedIndex: _playOrHistory,
+                      onChanged: (i) => setState(() => _playOrHistory = i),
                     ),
-                    Expanded(
-                      flex: 6,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: LayoutTokens.gr3,
-                        ),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: lifeBandMaxW),
-                            child: SizedBox(
-                              height: lifeBandH,
-                              width: double.infinity,
-                              child: LifeCounterWidget(
-                                life: local.life,
-                                playerColor: local.playerColor,
-                                commanderColorIdentity:
-                                    local.commanderColorIdentity,
-                                isEliminated: local.isEliminated,
-                                onLifeChange:
-                                    (delta) => notifier.adjustLife(
-                                      local.playerId,
-                                      delta,
+                  ),
+                ),
+              ],
+            ),
+            ),
+          ),
+        ),
+        SizedBox(height: tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr2),
+        Expanded(
+          child: IndexedStack(
+            index: _playOrHistory,
+            sizing: StackFit.expand,
+            children: [
+              LayoutBuilder(
+                builder: (context, playViewport) {
+                  return ClipRect(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: playViewport.maxWidth,
+                        height: playViewport.maxHeight,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalInset,
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, _) {
+                              final innerW = max(
+                                0.0,
+                                playViewport.maxWidth - 2 * horizontalInset,
+                              );
+                              final dialRows =
+                                  GameplayDialsStripWidget.wrapRowCountForWidth(
+                                    player: local,
+                                    rowContentWidth: innerW,
+                                  );
+                              final multiDialRows = dialRows >= 2;
+                              final phaseNavButtonStyle =
+                                  GameUiTokens.hostPhaseNavButton(
+                                    AppTheme.accent,
+                                  );
+
+                              return Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Center(
+                                    child: SizedBox(
+                                      width: innerW,
+                                      height: LayoutTokens.minTapTarget,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          if (game.isHost)
+                                            Expanded(
+                                              child: Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: Tooltip(
+                                                  message: 'Previous phase',
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    alignment:
+                                                        Alignment.centerRight,
+                                                    child: OutlinedButton(
+                                                      style:
+                                                          phaseNavButtonStyle,
+                                                      onPressed:
+                                                          game.timeoutActive
+                                                              ? null
+                                                              : () => notifier
+                                                                  .previousPhase(),
+                                                      child: const Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Icon(
+                                                            Icons
+                                                                .chevron_left_rounded,
+                                                            size: 24,
+                                                          ),
+                                                          SizedBox(
+                                                            width:
+                                                                LayoutTokens.gr0,
+                                                          ),
+                                                          Text('Back'),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          Expanded(
+                                            flex: game.isHost ? 2 : 1,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal:
+                                                        LayoutTokens.gr1,
+                                                  ),
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  game.currentPhase
+                                                      .displayName,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 16,
+                                                    letterSpacing: 0.2,
+                                                    color:
+                                                        game.isLocalPlayersTurn
+                                                            ? AppTheme.accent
+                                                            : AppTheme
+                                                                .textSecondary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          if (game.isHost)
+                                            Expanded(
+                                              child: Align(
+                                                alignment:
+                                                    Alignment.centerLeft,
+                                                child: Tooltip(
+                                                  message: 'Next phase',
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: OutlinedButton(
+                                                      style:
+                                                          phaseNavButtonStyle,
+                                                      onPressed:
+                                                          game.timeoutActive
+                                                              ? null
+                                                              : () => notifier
+                                                                  .advancePhase(),
+                                                      child: const Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          Text('Next'),
+                                                          SizedBox(
+                                                            width:
+                                                                LayoutTokens.gr0,
+                                                          ),
+                                                          Icon(
+                                                            Icons
+                                                                .chevron_right_rounded,
+                                                            size: 24,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                              ),
-                            ),
+                                  ),
+                                  SizedBox(
+                                    height:
+                                        tightVertical
+                                            ? LayoutTokens.gr1
+                                            : LayoutTokens.gr2,
+                                  ),
+                                  if (multiDialRows)
+                                    Center(
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: lifeBandMaxW,
+                                        ),
+                                        child: SizedBox(
+                                          height: lifeBandH,
+                                          width: double.infinity,
+                                          child: LifeCounterWidget(
+                                            life: local.life,
+                                            playerColor: local.playerColor,
+                                            commanderColorIdentity:
+                                                local.commanderColorIdentity,
+                                            isEliminated: local.isEliminated,
+                                            onLifeChange: adjustLife,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Expanded(
+                                      child: Center(
+                                        child: ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: lifeBandMaxW,
+                                          ),
+                                          child: SizedBox(
+                                            height: lifeBandH,
+                                            width: double.infinity,
+                                            child: LifeCounterWidget(
+                                              life: local.life,
+                                              playerColor: local.playerColor,
+                                              commanderColorIdentity:
+                                                  local.commanderColorIdentity,
+                                              isEliminated: local.isEliminated,
+                                              onLifeChange: adjustLife,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  SizedBox(
+                                    height:
+                                        tightVertical
+                                            ? LayoutTokens.gr2
+                                            : LayoutTokens.gr3,
+                                  ),
+                                  const VariantCardPanel(),
+                                  SizedBox(
+                                    height:
+                                        tightVertical
+                                            ? LayoutTokens.gr1
+                                            : LayoutTokens.gr2,
+                                  ),
+                                  CommanderDamagePanel(
+                                    localPlayer: local,
+                                    opponents: opponents,
+                                    onDamageChange:
+                                        ({
+                                          required String fromPlayerId,
+                                          required int partnerIndex,
+                                          required int delta,
+                                        }) => notifier.applyCommanderDamage(
+                                          fromPlayerId: fromPlayerId,
+                                          partnerIndex: partnerIndex,
+                                          toPlayerId: local.playerId,
+                                          delta: delta,
+                                        ),
+                                  ),
+                                  if (game.pendingProposalFor(
+                                        local.playerId,
+                                      ) !=
+                                      null)
+                                    _AllianceProposalBanner(
+                                      game: game,
+                                      local: local,
+                                    ),
+                                  if (game.pendingProposalFor(
+                                        local.playerId,
+                                      ) !=
+                                      null)
+                                    SizedBox(height: LayoutTokens.gr0),
+                                  if (game.monarchPlayerId == local.playerId)
+                                    _GameMarkerBanner(
+                                      icon: '👑',
+                                      label: 'You have the Monarch',
+                                    ),
+                                  if (game.initiativePlayerId == local.playerId)
+                                    _GameMarkerBanner(
+                                      icon: '⚔️',
+                                      label: 'You have the Initiative',
+                                    ),
+                                  if ((game.trackTurnDuration ||
+                                          game.turnTimeLimitSeconds != null) &&
+                                      game.turnStartTime != null)
+                                    _TurnDurationBanner(
+                                      turnStartTime: game.turnStartTime!,
+                                      limitSeconds: game.turnTimeLimitSeconds,
+                                      isActiveTurn: game.isLocalPlayersTurn,
+                                    ),
+                                  SizedBox(
+                                    height:
+                                        tightVertical
+                                            ? LayoutTokens.gr2
+                                            : LayoutTokens.gr3,
+                                  ),
+                                  GameplayDialsStripWidget(
+                                    player: local,
+                                    isEliminated: local.isEliminated,
+                                    onAdjustCounter:
+                                        (field, delta) =>
+                                            notifier.adjustCounter(
+                                              local.playerId,
+                                              field,
+                                              delta,
+                                            ),
+                                    onSetCounterAbsolute:
+                                        (field, v) =>
+                                            notifier.setGameplayDialAbsolute(
+                                              local.playerId,
+                                              field,
+                                              v,
+                                            ),
+                                    onProliferate:
+                                        () => notifier.proliferate(
+                                          local.playerId,
+                                        ),
+                                    onRegisterCustomDial:
+                                        (key, label) =>
+                                            notifier.registerCustomGameplayDial(
+                                              local.playerId,
+                                              key,
+                                              label,
+                                            ),
+                                    onAddDialToStrip:
+                                        (field) =>
+                                            notifier.addGameplayDialToStrip(
+                                              local.playerId,
+                                              field,
+                                            ),
+                                    onRemoveDialFromStrip:
+                                        (field) =>
+                                            notifier.removeGameplayDialFromStrip(
+                                              local.playerId,
+                                              field,
+                                            ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalInset,
-                        LayoutTokens.gr2,
-                        horizontalInset,
-                        LayoutTokens.gr1,
-                      ),
-                      child: GameplayDialsStripWidget(
-                        player: local,
-                        isEliminated: local.isEliminated,
-                        onAdjustCounter:
-                            (field, delta) => notifier.adjustCounter(
-                              local.playerId,
-                              field,
-                              delta,
-                            ),
-                        onSetCounterAbsolute:
-                            (field, v) => notifier.setGameplayDialAbsolute(
-                              local.playerId,
-                              field,
-                              v,
-                            ),
-                        onProliferate:
-                            () => notifier.proliferate(local.playerId),
-                        onRegisterCustomDial:
-                            (key, label) => notifier.registerCustomGameplayDial(
-                              local.playerId,
-                              key,
-                              label,
-                            ),
-                        onAddDialToStrip:
-                            (field) => notifier.addGameplayDialToStrip(
-                              local.playerId,
-                              field,
-                            ),
-                        onRemoveDialFromStrip:
-                            (field) => notifier.removeGameplayDialFromStrip(
-                              local.playerId,
-                              field,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-                _GameHistoryTab(entries: game.sessionActionLog),
-              ],
+                  );
+                },
+              ),
+              _GameHistoryTab(entries: game.sessionActionLog),
+            ],
+          ),
+        ),
+        _BottomBar(
+          game: game,
+          local: local,
+          onToggleOverview: widget.onToggleOverview,
+          compact: tightVertical,
+        ),
+        SizedBox(height: tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr3),
+      ],
+    );
+  }
+}
+
+/// Horizontal **Play** | **History** segmented control (fits the commander bar).
+class _PlayHistoryPillSwitch extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+
+  const _PlayHistoryPillSwitch({
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderC = AppTheme.textSecondary.withValues(alpha: 0.28);
+    final segmentW = LayoutTokens.gr6 + LayoutTokens.gr1;
+    final segmentH = LayoutTokens.gr5;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+        border: Border.all(color: borderC),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _PillSegment(
+            width: segmentW,
+            height: segmentH,
+            selected: selectedIndex == 0,
+            icon: Icons.sports_esports_rounded,
+            tooltip: 'Play',
+            borderRadius: BorderRadius.horizontal(
+              left: Radius.circular(LayoutTokens.gr2 - 2),
+            ),
+            onTap: () => onChanged(0),
+          ),
+          SizedBox(
+            width: 1,
+            height: segmentH - LayoutTokens.gr1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: borderC),
             ),
           ),
-          _BottomBar(
-            game: game,
-            local: local,
-            onToggleOverview: onToggleOverview,
+          _PillSegment(
+            width: segmentW,
+            height: segmentH,
+            selected: selectedIndex == 1,
+            icon: Icons.history_rounded,
+            tooltip: 'History',
+            borderRadius: BorderRadius.horizontal(
+              right: Radius.circular(LayoutTokens.gr2 - 2),
+            ),
+            onTap: () => onChanged(1),
           ),
-          SizedBox(height: LayoutTokens.gr2),
         ],
+      ),
+    );
+  }
+}
+
+class _PillSegment extends StatelessWidget {
+  final double width;
+  final double height;
+  final bool selected;
+  final IconData icon;
+  final String tooltip;
+  final BorderRadius borderRadius;
+  final VoidCallback onTap;
+
+  const _PillSegment({
+    required this.width,
+    required this.height,
+    required this.selected,
+    required this.icon,
+    required this.tooltip,
+    required this.borderRadius,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: borderRadius,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            width: width,
+            height: height,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: selected ? AppTheme.accent : Colors.transparent,
+              borderRadius: borderRadius,
+            ),
+            child: Icon(
+              icon,
+              size: LayoutTokens.gr4,
+              color:
+                  selected
+                      ? AppTheme.primary
+                      : AppTheme.textSecondary.withValues(alpha: 0.88),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -702,128 +986,133 @@ class _BottomBar extends ConsumerWidget {
   final GameState game;
   final PlayerGameState local;
   final VoidCallback onToggleOverview;
+  final bool compact;
 
   const _BottomBar({
     required this.game,
     required this.local,
     required this.onToggleOverview,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(gameProvider.notifier);
     final hasUndo = local.undoStack.isNotEmpty;
-    final vw = MediaQuery.sizeOf(context).width;
-    final barSig = vw.toStringAsFixed(0);
-    if (_dbgLastBarBtnSig != barSig) {
-      _dbgLastBarBtnSig = barSig;
-      // #region agent log
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _agentDbgGameUi(
-          'H3',
-          'game_screen.dart:_BottomBar',
-          'bottom_bar_viewport',
-          {'viewportW': vw, 'minTouchDp': 48},
-        );
-      });
-      // #endregion
-    }
+    final compact = this.compact;
+    final iconSize = compact ? 22.0 : 24.0;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: LayoutTokens.gr3,
-        vertical: LayoutTokens.gr2,
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: LayoutTokens.gr2,
-          vertical: LayoutTokens.gr2,
+    return SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      minimum: EdgeInsets.only(bottom: LayoutTokens.gr2),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          LayoutTokens.gr3,
+          compact ? LayoutTokens.gr1 : LayoutTokens.gr2,
+          LayoutTokens.gr3,
+          compact ? LayoutTokens.gr2 : LayoutTokens.gr3,
         ),
-        decoration: BoxDecoration(
-          color: AppTheme.card,
-          borderRadius: BorderRadius.circular(LayoutTokens.gr3),
-          border: Border.all(color: AppTheme.surface),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Center(
-                child: _BarButton(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                  enabled: true,
-                  onTap: () => HomeNavBar.promptQuitAndGoHome(context),
-                ),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: LayoutTokens.gr2,
+            vertical: compact ? LayoutTokens.gr2 : LayoutTokens.gr3,
+          ),
+          decoration: BoxDecoration(
+            color: AppTheme.card,
+            borderRadius: BorderRadius.circular(LayoutTokens.gr3),
+            border: Border.all(color: AppTheme.surface),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
-            Expanded(
-              child: Center(
-                child: _BarButton(
-                  icon: Icons.undo,
-                  label: 'Undo',
-                  enabled: hasUndo && !local.isEliminated,
-                  onTap: () => notifier.undo(local.playerId),
-                ),
-              ),
-            ),
-            if (game.isHost)
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
               Expanded(
                 child: Center(
                   child: _BarButton(
-                    icon: game.timeoutActive ? Icons.play_arrow : Icons.timer,
-                    label: game.timeoutActive ? 'Resume' : 'Timeout',
-                    onTap: () {
-                      if (game.timeoutActive) {
-                        notifier.endTimeout();
-                      } else {
-                        _showTimeoutPicker(context, notifier);
-                      }
-                    },
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    iconSize: iconSize,
+                    enabled: true,
+                    onTap: () => HomeNavBar.promptQuitAndGoHome(context),
                   ),
                 ),
               ),
-            Expanded(
-              child: Center(
-                child: _BarButton(
-                  icon: Icons.skip_next,
-                  label: 'End Turn',
-                  enabled:
-                      game.isHost &&
-                      game.isLocalPlayersTurn &&
-                      !game.timeoutActive,
-                  onTap: () => notifier.endTurn(),
+              Expanded(
+                child: Center(
+                  child: _BarButton(
+                    icon: Icons.undo,
+                    label: 'Undo',
+                    iconSize: iconSize,
+                    enabled: hasUndo && !local.isEliminated,
+                    onTap: () => notifier.undo(local.playerId),
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: Center(
-                child: _BarButton(
-                  icon: Icons.grid_view,
-                  label: 'Overview',
-                  enabled: true,
-                  onTap: onToggleOverview,
+              if (game.isHost)
+                Expanded(
+                  child: Center(
+                    child: _BarButton(
+                      icon:
+                          game.timeoutActive ? Icons.play_arrow : Icons.timer,
+                      label: game.timeoutActive ? 'Resume' : 'Timeout',
+                      iconSize: iconSize,
+                      onTap: () {
+                        if (game.timeoutActive) {
+                          notifier.endTimeout();
+                        } else {
+                          _showTimeoutPicker(context, notifier);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: Center(
+                  child: _BarButton(
+                    icon: Icons.skip_next,
+                    label: 'End Turn',
+                    iconSize: iconSize,
+                    enabled:
+                        game.isHost &&
+                        game.isLocalPlayersTurn &&
+                        !game.timeoutActive,
+                    onTap: () => notifier.endTurn(),
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: Center(
-                child: _BarButton(
-                  icon: Icons.flag_outlined,
-                  label: 'Concede',
-                  enabled: !local.isEliminated,
-                  onTap: () => _showConcedeDialog(context, ref, local.playerId),
+              Expanded(
+                child: Center(
+                  child: _BarButton(
+                    icon: Icons.grid_view,
+                    label: 'Overview',
+                    iconSize: iconSize,
+                    enabled: true,
+                    onTap: onToggleOverview,
+                  ),
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: Center(
+                  child: _BarButton(
+                    icon: Icons.flag_outlined,
+                    label: 'Concede',
+                    iconSize: iconSize,
+                    enabled: !local.isEliminated,
+                    onTap:
+                        () => _showConcedeDialog(context, ref, local.playerId),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1239,24 +1528,18 @@ class _BarButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final bool enabled;
+  final double iconSize;
 
   const _BarButton({
     required this.icon,
     required this.label,
     this.onTap,
     this.enabled = true,
+    this.iconSize = 24,
   });
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width;
-    final isVeryNarrow = w < 340;
-    final iconOnly = w < 300;
-    final iconSize = isVeryNarrow ? 20.0 : 22.0;
-    final fontSize = 11.5;
-    final hPad = iconOnly ? 6.0 : (isVeryNarrow ? 10.0 : 14.0);
-    final vPad = 10.0;
-
     final c =
         enabled
             ? AppTheme.textSecondary
@@ -1265,32 +1548,23 @@ class _BarButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+        borderRadius: BorderRadius.circular(LayoutTokens.gr2),
         child: Tooltip(
           message: label,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: iconSize, color: c),
-                  if (!iconOnly) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: c,
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ],
-                ],
+          child: Semantics(
+            button: true,
+            enabled: enabled,
+            label: label,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: LayoutTokens.gr6,
+                minHeight: LayoutTokens.gr6,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(LayoutTokens.gr2),
+                child: Center(
+                  child: Icon(icon, size: iconSize, color: c),
+                ),
               ),
             ),
           ),
@@ -1967,7 +2241,9 @@ class _OverviewPlayerCard extends ConsumerWidget {
     final borderColorResolved =
         isActive ? borderColor : borderColor.withValues(alpha: 0.25);
 
-    final actionLabel = isActive ? game.currentPhase.displayName : 'Waiting';
+    final actionLabel = isActive
+        ? game.currentPhase.displayName
+        : 'Waiting';
 
     final card = AnimatedContainer(
       duration: const Duration(milliseconds: 300),

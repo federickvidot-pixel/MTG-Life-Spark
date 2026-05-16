@@ -6,8 +6,9 @@ import '../tokens/radius_tokens.dart';
 import '../tokens/spacing_tokens.dart';
 import 'app_color_tokens.dart';
 
-/// M3-compliant theme (P2P Magic blueprint): deep purple palette + orange accent;
-/// typography uses **Lato** (Google Fonts) across display through label roles.
+/// M3-compliant theme: near-black base (#0E0E0E), brand red accent (#D41414),
+/// warm orange (#FF6D00) for secondary highlights (often at reduced opacity).
+/// Typography uses **Lato** (Google Fonts) across display through label roles.
 class AppTheme {
   AppTheme._();
 
@@ -26,14 +27,14 @@ class AppTheme {
       // ── Full M3 ColorScheme ────────────────────────────────────────────
       colorScheme: const ColorScheme.dark(
         primary: ColorTokens.primaryAccent,
-        onPrimary: Color(0xFF1A0D12),
+        onPrimary: ColorTokens.onAccent,
         primaryContainer: ColorTokens.darkPrimaryContainer,
         onPrimaryContainer: ColorTokens.darkOnPrimaryContainer,
         secondary: ColorTokens.optionalAccent,
         onSecondary: ColorTokens.backgroundPrimary,
         secondaryContainer: ColorTokens.darkSecondaryContainer,
         onSecondaryContainer: ColorTokens.darkOnSecondaryContainer,
-        tertiary: ColorTokens.accentGold,
+        tertiary: ColorTokens.blueprintOrange,
         onTertiary: ColorTokens.darkOnTertiary,
         tertiaryContainer: ColorTokens.darkTertiaryContainer,
         onTertiaryContainer: ColorTokens.darkOnTertiaryContainer,
@@ -67,7 +68,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: ColorTokens.surface,
         elevation: 1,
-        surfaceTintColor: ColorTokens.primaryAccent.withValues(alpha: 0.12),
+        surfaceTintColor: ColorTokens.blueprintOrange.withValues(alpha: 0.14),
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
@@ -110,10 +111,10 @@ class AppTheme {
       // NavigationBar (M3 bottom navigation)
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: ColorTokens.surface,
-        surfaceTintColor: ColorTokens.primaryAccent,
+        surfaceTintColor: ColorTokens.blueprintOrange.withValues(alpha: 0.22),
         elevation: 3,
         height: 80,
-        indicatorColor: ColorTokens.primaryAccent.withValues(alpha: 0.24),
+        indicatorColor: ColorTokens.blueprintOrange.withValues(alpha: 0.32),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.lato(
@@ -133,7 +134,7 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(
-              color: ColorTokens.primaryAccent,
+              color: ColorTokens.brandRed,
               size: 24,
             );
           }
@@ -148,7 +149,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: ColorTokens.primaryAccent,
-          foregroundColor: const Color(0xFF1A0D12),
+          foregroundColor: ColorTokens.onAccent,
           disabledBackgroundColor: ColorTokens.surfaceElevated,
           disabledForegroundColor: ColorTokens.textMuted,
           minimumSize: const Size(double.infinity, 52),
@@ -213,7 +214,7 @@ class AppTheme {
       // FloatingActionButton
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: ColorTokens.primaryAccent,
-        foregroundColor: const Color(0xFF1A0D12),
+        foregroundColor: ColorTokens.onAccent,
         elevation: 4,
         focusElevation: 6,
         hoverElevation: 6,
@@ -409,7 +410,7 @@ class AppTheme {
       // ── Full M3 ColorScheme ────────────────────────────────────────────
       colorScheme: const ColorScheme.light(
         primary: ColorTokens.lightPrimaryAccent,
-        onPrimary: Color(0xFF1A0D12),
+        onPrimary: ColorTokens.onAccent,
         primaryContainer: ColorTokens.lightPrimaryContainer,
         onPrimaryContainer: ColorTokens.lightOnPrimaryContainer,
         secondary: ColorTokens.optionalAccent,
@@ -449,7 +450,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: ColorTokens.lightSurface,
         elevation: 1,
-        surfaceTintColor: ColorTokens.lightPrimaryAccent.withValues(alpha: 0.08),
+        surfaceTintColor: ColorTokens.blueprintOrange.withValues(alpha: 0.10),
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
@@ -488,10 +489,10 @@ class AppTheme {
 
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: ColorTokens.lightSurface,
-        surfaceTintColor: ColorTokens.lightPrimaryAccent,
+        surfaceTintColor: ColorTokens.blueprintOrange.withValues(alpha: 0.18),
         elevation: 3,
         height: 80,
-        indicatorColor: ColorTokens.lightPrimaryAccent.withValues(alpha: 0.20),
+        indicatorColor: ColorTokens.blueprintOrange.withValues(alpha: 0.28),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return GoogleFonts.lato(
@@ -525,7 +526,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: ColorTokens.lightPrimaryAccent,
-          foregroundColor: const Color(0xFF1A0D12),
+          foregroundColor: ColorTokens.onAccent,
           disabledBackgroundColor: ColorTokens.lightSurfaceElevated,
           disabledForegroundColor: ColorTokens.lightTextMuted,
           minimumSize: const Size(double.infinity, 52),
@@ -586,7 +587,7 @@ class AppTheme {
 
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: ColorTokens.lightPrimaryAccent,
-        foregroundColor: const Color(0xFF1A0D12),
+        foregroundColor: ColorTokens.onAccent,
         elevation: 4,
         focusElevation: 6,
         hoverElevation: 6,

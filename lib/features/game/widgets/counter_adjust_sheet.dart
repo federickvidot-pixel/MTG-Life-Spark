@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/spacing_tokens.dart';
 
 Future<void> showCounterAdjustSheet(
   BuildContext context, {
@@ -12,7 +14,9 @@ Future<void> showCounterAdjustSheet(
     context: context,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(SpacingTokens.lg),
+      ),
     ),
     builder: (_) => CounterAdjustSheet(
       title: title,
@@ -57,41 +61,46 @@ class _CounterAdjustSheetState extends State<CounterAdjustSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+      padding: const EdgeInsets.fromLTRB(
+        SpacingTokens.lg,
+        SpacingTokens.md,
+        SpacingTokens.lg,
+        SpacingTokens.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             widget.title,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
-              fontSize: 16,
+              fontSize: LayoutTokens.gr3,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: SpacingTokens.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _AdjBtn(label: '−5', onTap: () => _adjust(-5)),
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutTokens.gr1),
               _AdjBtn(label: '−1', onTap: () => _adjust(-1)),
-              const SizedBox(width: 16),
+              const SizedBox(width: LayoutTokens.gr3),
               Text(
                 '$_value',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 36,
+                  fontSize: LayoutTokens.gr2 * 3,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: LayoutTokens.gr3),
               _AdjBtn(label: '+1', onTap: () => _adjust(1)),
-              const SizedBox(width: 8),
+              const SizedBox(width: LayoutTokens.gr1),
               _AdjBtn(label: '+5', onTap: () => _adjust(5)),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: SpacingTokens.lg),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
@@ -119,8 +128,8 @@ class _AdjBtn extends StatelessWidget {
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: Container(
-          width: 52,
-          height: 52,
+          width: LayoutTokens.minTapTarget,
+          height: LayoutTokens.minTapTarget,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(

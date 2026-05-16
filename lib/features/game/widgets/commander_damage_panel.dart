@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 /// Collapsible panel showing commander damage received from each opponent.
 /// Partner-aware: shows two damage tracks per opponent when applicable.
@@ -45,24 +47,32 @@ class _CommanderDamagePanelState extends State<CommanderDamagePanel> {
         GestureDetector(
           onTap: () => setState(() => _expanded = !_expanded),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: LayoutTokens.gr3,
+              vertical: LayoutTokens.gr2,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.shield_outlined,
-                    size: 14, color: AppTheme.textSecondary),
-                const SizedBox(width: 6),
+                const Icon(
+                  Icons.shield_outlined,
+                  size: LayoutTokens.gr2,
+                  color: AppTheme.textSecondary,
+                ),
+                const SizedBox(width: LayoutTokens.gr1),
                 Text(
                   'Commander Damage',
                   style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12),
+                    color: AppTheme.textSecondary,
+                    fontSize: LayoutTokens.gr2,
+                  ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: LayoutTokens.gr0),
                 Icon(
                   _expanded
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
-                  size: 16,
+                  size: LayoutTokens.gr3,
                   color: AppTheme.textSecondary,
                 ),
               ],
@@ -72,11 +82,11 @@ class _CommanderDamagePanelState extends State<CommanderDamagePanel> {
 
         if (_expanded)
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr3),
+            padding: const EdgeInsets.all(LayoutTokens.gr3),
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(RadiusTokens.lg),
             ),
             child: Column(
               children: opponentsWithCommanders
@@ -119,12 +129,12 @@ class _OpponentDamageRow extends StatelessWidget {
         : 0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: LayoutTokens.gr3),
       child: Row(
         children: [
           // Opponent avatar
           _OpponentAvatar(opponent: opponent),
-          const SizedBox(width: 12),
+          const SizedBox(width: LayoutTokens.gr2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,9 +142,11 @@ class _OpponentDamageRow extends StatelessWidget {
                 Text(
                   opponent.username,
                   style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11),
+                    color: AppTheme.textSecondary,
+                    fontSize: LayoutTokens.gr2,
+                  ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: LayoutTokens.gr1),
                 // Primary commander damage
                 _DamageTrack(
                   label: opponent.commanderName ?? 'Commander',
@@ -158,7 +170,7 @@ class _OpponentDamageRow extends StatelessWidget {
                 // Partner commander damage (if applicable)
                 if (opponent.hasPartner && opponent.partnerCommanderName != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: LayoutTokens.gr1),
                     child: _DamageTrack(
                       label: opponent.partnerCommanderName!,
                       damage: partnerDmg,
@@ -197,11 +209,11 @@ class _OpponentAvatar extends StatelessWidget {
     if (opponent.commanderImageUrl != null &&
         opponent.commanderImageUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(LayoutTokens.gr1),
         child: CachedNetworkImage(
           imageUrl: opponent.commanderImageUrl!,
-          width: 36,
-          height: 36,
+          width: LayoutTokens.gr3 + LayoutTokens.gr2 + LayoutTokens.gr1,
+          height: LayoutTokens.gr3 + LayoutTokens.gr2 + LayoutTokens.gr1,
           fit: BoxFit.cover,
           errorWidget: (_, __, ___) => _colorDot(),
         ),
@@ -211,14 +223,18 @@ class _OpponentAvatar extends StatelessWidget {
   }
 
   Widget _colorDot() => Container(
-        width: 36,
-        height: 36,
+        width: LayoutTokens.gr3 + LayoutTokens.gr2 + LayoutTokens.gr1,
+        height: LayoutTokens.gr3 + LayoutTokens.gr2 + LayoutTokens.gr1,
         decoration: BoxDecoration(
           color: opponent.playerColor.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
           border: Border.all(color: opponent.playerColor),
         ),
-        child: Icon(Icons.person, color: opponent.playerColor, size: 18),
+        child: Icon(
+          Icons.person,
+          color: opponent.playerColor,
+          size: LayoutTokens.gr3,
+        ),
       );
 }
 
@@ -246,18 +262,21 @@ class _DamageTrack extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: LayoutTokens.gr2,
+            ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: LayoutTokens.gr1),
         _DmgBtn(icon: Icons.remove, onTap: onRemove),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr1),
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
               color: damageColor,
-              fontSize: 16,
+              fontSize: LayoutTokens.gr3,
               fontWeight: FontWeight.bold,
             ),
             child: Text('$damage'),
@@ -266,11 +285,14 @@ class _DamageTrack extends StatelessWidget {
         _DmgBtn(icon: Icons.add, onTap: onAdd),
         if (damage >= 21)
           Padding(
-            padding: const EdgeInsets.only(left: 4),
+            padding: const EdgeInsets.only(left: LayoutTokens.gr0),
             child: Tooltip(
               message: 'Lethal commander damage!',
-              child: Icon(Icons.warning_amber_rounded,
-                  size: 14, color: AppTheme.textSecondary),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                size: LayoutTokens.gr2,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ),
       ],
@@ -286,22 +308,24 @@ class _DmgBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        decoration: BoxDecoration(
-          color: onTap != null
-              ? AppTheme.card
-              : AppTheme.card.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(5),
+    return IconButton(
+      style: IconButton.styleFrom(
+        minimumSize: const Size.square(LayoutTokens.minTapTarget),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: EdgeInsets.zero,
+        backgroundColor:
+            onTap != null
+                ? AppTheme.card
+                : AppTheme.card.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
         ),
-        child: Icon(
-          icon,
-          size: 14,
-          color: onTap != null ? AppTheme.textPrimary : AppTheme.textSecondary,
-        ),
+      ),
+      onPressed: onTap,
+      icon: Icon(
+        icon,
+        size: LayoutTokens.gr2,
+        color: onTap != null ? AppTheme.textPrimary : AppTheme.textSecondary,
       ),
     );
   }

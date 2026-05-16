@@ -185,7 +185,7 @@ class _CounterChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (iconWidget != null) iconWidget!,
-            const SizedBox(height: 4),
+            const SizedBox(height: LayoutTokens.gr0),
             Text(
               '$value',
               style: TextStyle(

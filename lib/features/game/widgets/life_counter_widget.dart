@@ -1,20 +1,24 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/game/commander_identity_colors.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
+import '../../../ui/tokens/spacing_tokens.dart';
 
 /// The main life counter — occupies the center of the personal view.
 ///
+/// Displays **only** `life−1`, `life`, `life+1` between the edge controls.
+///
 /// Interactions:
-///   • Tap left half  → −1
-///   • Tap right half → +1
-///   • Hold left      → −5 repeated every 150 ms (after 500 ms threshold)
-///   • Hold right     → +5 repeated every 150 ms (after 500 ms threshold)
-///   • Swipe up/down  → ±1 per 28 px dragged
-///   • Double-tap      → numeric input dialog
+///   • Horizontal drag on the triplet → ±1 per 36px (4dp-aligned stride)
+///   • Tap left / right edge → −1 / +1
+///   • Hold left / right → −5 / +5 every 150 ms (after 500 ms threshold)
+///   • Double-tap → numeric input dialog
 class LifeCounterWidget extends StatefulWidget {
   final int life;
   final Color playerColor;
@@ -47,15 +51,10 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
   Timer? _holdTimer;
   bool _holding = false;
 
-  double _dragAccum = 0;
+  /// Stride (px) of horizontal drag before committing ±1 life.
+  static const double _kDragStride = 36;
 
-  void _feedVerticalDrag(double dy) {
-    _dragAccum -= dy;
-    while (_dragAccum.abs() >= 28) {
-      _change(_dragAccum > 0 ? 1 : -1);
-      _dragAccum += _dragAccum > 0 ? -28 : 28;
-    }
-  }
+  double _wheelDragAccum = 0;
 
   @override
   void initState() {
@@ -76,6 +75,14 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
     _deltaAnim.dispose();
     _holdTimer?.cancel();
     super.dispose();
+  }
+
+  void _feedHorizontalDrag(double dx) {
+    _wheelDragAccum -= dx;
+    while (_wheelDragAccum.abs() >= _kDragStride) {
+      _change(_wheelDragAccum > 0 ? 1 : -1);
+      _wheelDragAccum += _wheelDragAccum > 0 ? -_kDragStride : _kDragStride;
+    }
   }
 
   // ── Actions ────────────────────────────────────────────────────────────
@@ -161,185 +168,231 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
               ),
             ],
           ),
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(LayoutTokens.gr0),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(25),
             child: Container(
               color: AppTheme.primary.withValues(alpha: 0.88),
               child: GestureDetector(
-                onVerticalDragUpdate: (d) => _feedVerticalDrag(d.delta.dy),
-                onVerticalDragEnd: (_) => _dragAccum = 0,
                 onDoubleTap: widget.isEliminated ? null : _showNumberPad,
+                behavior: HitTestBehavior.deferToChild,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final wBody = constraints.maxWidth;
                     final hBody = constraints.maxHeight;
-                    final tapHalf = wBody / 2;
+                    final tapEdge = math.max(
+                      LayoutTokens.minTapTarget,
+                      LayoutTokens.gr5 + LayoutTokens.gr0,
+                    );
+
+                    if (widget.isEliminated) {
+                      return Center(
+                        child: Text(
+                          '☠',
+                          style: TextStyle(
+                            fontSize: (hBody * 0.45).clamp(40.0, 96.0),
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      );
+                    }
+
                     final baseFontSize =
                         (wBody < 200 || hBody < 120)
-                            ? 48.0
+                            ? 44.0
                             : (wBody < 280 || hBody < 150)
-                            ? 64.0
-                            : (widget.life.abs() >= 100 ? 80.0 : 96.0);
+                            ? 56.0
+                            : (widget.life.abs() >= 100 ? 72.0 : 80.0);
                     final deltaFontSize = (baseFontSize * 0.27).clamp(
                       18.0,
                       26.0,
                     );
 
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    final neighborFontSize =
+                        (baseFontSize * 0.34).clamp(14.0, 26.0);
+                    final neighborColor = AppTheme.textSecondary.withValues(
+                      alpha: 0.42,
+                    );
+                    final gap = LayoutTokens.gr2;
+
+                    final prev = widget.life - 1;
+                    final next = widget.life + 1;
+
+                    return Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        SizedBox(
-                          width: (wBody * 0.14).clamp(36.0, 52.0),
-                          child: IgnorePointer(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                for (var i = -3; i <= 3; i++)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          width: tapEdge,
+                          height: hBody,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _change(-1),
+                            onLongPressStart: (_) => _startHold(-1),
+                            onLongPressEnd: (_) => _stopHold(),
+                            onLongPressCancel: _stopHold,
+                            child: const ColoredBox(color: Colors.transparent),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          width: tapEdge,
+                          height: hBody,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _change(1),
+                            onLongPressStart: (_) => _startHold(1),
+                            onLongPressEnd: (_) => _stopHold(),
+                            onLongPressCancel: _stopHold,
+                            child: const ColoredBox(color: Colors.transparent),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          width: tapEdge,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: IgnorePointer(
+                              child: _LifeEdgeStepGlyph(
+                                icon: Icons.remove_rounded,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          width: tapEdge,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: IgnorePointer(
+                              child: _LifeEdgeStepGlyph(
+                                icon: Icons.add_rounded,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: tapEdge,
+                          right: tapEdge,
+                          top: 0,
+                          bottom: 0,
+                          child: GestureDetector(
+                            onHorizontalDragUpdate: (d) =>
+                                _feedHorizontalDrag(d.delta.dx),
+                            onHorizontalDragEnd: (_) => _wheelDragAccum = 0,
+                            onHorizontalDragCancel: () => _wheelDragAccum = 0,
+                            behavior: HitTestBehavior.translucent,
+                            child: ClipRect(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
                                   Expanded(
-                                    child: Center(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerRight,
                                       child: Text(
-                                        '${(widget.life + i).clamp(0, 999)}',
+                                        '$prev',
                                         maxLines: 1,
-                                        overflow: TextOverflow.fade,
-                                        softWrap: false,
+                                        textAlign: TextAlign.right,
                                         style: TextStyle(
-                                          fontSize: i == 0 ? 17 : 11,
-                                          fontWeight:
-                                              i == 0
-                                                  ? FontWeight.w800
-                                                  : FontWeight.w500,
-                                          color:
-                                              i == 0
-                                                  ? _lifeColor.withValues(
-                                                    alpha:
-                                                        widget.isEliminated
-                                                            ? 0.35
-                                                            : 1,
-                                                  )
-                                                  : AppTheme.textSecondary
-                                                      .withValues(alpha: 0.28),
+                                          fontSize: neighborFontSize,
+                                          fontWeight: FontWeight.w700,
+                                          color: neighborColor,
+                                          letterSpacing: -0.5,
+                                          height: 1.0,
                                         ),
                                       ),
                                     ),
                                   ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                width: tapHalf,
-                                height: hBody,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () => _change(-1),
-                                  onLongPressStart: (_) => _startHold(-1),
-                                  onLongPressEnd: (_) => _stopHold(),
-                                  onLongPressCancel: _stopHold,
-                                  child: Container(
-                                    color: Colors.transparent,
-                                    alignment: Alignment.center,
-                                    child: Icon(
-                                      Icons.remove_rounded,
-                                      size: 40,
-                                      color: AppTheme.textSecondary.withValues(
-                                        alpha: 0.15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                width: tapHalf,
-                                height: hBody,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () => _change(1),
-                                  onLongPressStart: (_) => _startHold(1),
-                                  onLongPressEnd: (_) => _stopHold(),
-                                  onLongPressCancel: _stopHold,
-                                  child: Container(
-                                    color: Colors.transparent,
-                                    alignment: Alignment.center,
-                                    child: Icon(
-                                      Icons.add_rounded,
-                                      size: 40,
-                                      color: AppTheme.textSecondary.withValues(
-                                        alpha: 0.15,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Center(
-                                child: IgnorePointer(
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      Text(
-                                        widget.isEliminated
-                                            ? '☠'
-                                            : '${widget.life}',
+                                  SizedBox(width: gap),
+                                  Expanded(
+                                    flex: 2,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${widget.life}',
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontSize: baseFontSize,
                                           fontWeight: FontWeight.w800,
                                           color: _lifeColor,
-                                          letterSpacing: -3,
+                                          letterSpacing: -2,
+                                          height: 1.0,
                                           shadows: [
                                             Shadow(
                                               color: _lifeColor.withValues(
-                                                alpha: 0.4,
+                                                alpha: 0.35,
                                               ),
-                                              blurRadius: 32,
-                                              offset: const Offset(0, 2),
+                                              blurRadius: 24,
+                                              offset: const Offset(0, LayoutTokens.gr0),
                                             ),
                                             Shadow(
                                               color: Colors.black.withValues(
                                                 alpha: 0.2,
                                               ),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 4),
+                                              blurRadius: LayoutTokens.gr0,
+                                              offset: Offset(0, LayoutTokens.gr0),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      if (_lastDelta != null)
-                                        Positioned(
-                                          top: -32,
-                                          child: FadeTransition(
-                                            opacity: Tween(
-                                              begin: 1.0,
-                                              end: 0.0,
-                                            ).animate(_deltaFade),
-                                            child: SlideTransition(
-                                              position: _deltaSlide,
-                                              child: Text(
-                                                _lastDelta! > 0
-                                                    ? '+$_lastDelta'
-                                                    : '$_lastDelta',
-                                                style: TextStyle(
-                                                  fontSize: deltaFontSize,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: _deltaColor,
-                                                ),
-                                              ),
-                                            ),
+                                    ),
+                                  ),
+                                  SizedBox(width: gap),
+                                  Expanded(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        '$next',
+                                        maxLines: 1,
+                                        textAlign: TextAlign.left,
+                                        style: TextStyle(
+                                          fontSize: neighborFontSize,
+                                          fontWeight: FontWeight.w700,
+                                          color: neighborColor,
+                                          letterSpacing: -0.5,
+                                          height: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: IgnorePointer(
+                            child:
+                                _lastDelta == null
+                                    ? const SizedBox.shrink()
+                                    : FadeTransition(
+                                      opacity: Tween(
+                                        begin: 1.0,
+                                        end: 0.0,
+                                      ).animate(_deltaFade),
+                                      child: SlideTransition(
+                                        position: _deltaSlide,
+                                        child: Text(
+                                          _lastDelta! > 0
+                                              ? '+$_lastDelta'
+                                              : '$_lastDelta',
+                                          style: TextStyle(
+                                            fontSize: deltaFontSize,
+                                            fontWeight: FontWeight.bold,
+                                            color: _deltaColor,
                                           ),
                                         ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
+                                      ),
+                                    ),
                           ),
                         ),
                       ],
@@ -351,6 +404,40 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
           ),
         );
       },
+    );
+  }
+}
+
+class _LifeEdgeStepGlyph extends StatelessWidget {
+  final IconData icon;
+
+  const _LifeEdgeStepGlyph({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: LayoutTokens.gr0,
+            offset: const Offset(0, LayoutTokens.gr0),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(LayoutTokens.gr0),
+        child: Icon(
+          icon,
+          size: LayoutTokens.gr5 + LayoutTokens.gr0,
+          color: AppTheme.textPrimary.withValues(alpha: 0.82),
+        ),
+      ),
     );
   }
 }
@@ -386,20 +473,23 @@ class _LifeInputDialogState extends State<_LifeInputDialog> {
   Widget _key(String label, {VoidCallback? onTap}) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.all(5),
+        padding: const EdgeInsets.all(LayoutTokens.gr0),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.surface,
             foregroundColor: AppTheme.textPrimary,
-            minimumSize: const Size(0, 56),
+            minimumSize: const Size(0, LayoutTokens.gr6),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(RadiusTokens.sm),
             ),
           ),
           onPressed: onTap ?? () => _press(label),
           child: Text(
             label,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: LayoutTokens.gr4 - LayoutTokens.gr0 / 2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -414,12 +504,12 @@ class _LifeInputDialogState extends State<_LifeInputDialog> {
         _input.isEmpty ? 'Set Life Total' : _input,
         style: TextStyle(
           color: _input.isEmpty ? AppTheme.textSecondary : AppTheme.textPrimary,
-          fontSize: _input.isEmpty ? 16 : 32,
+          fontSize: _input.isEmpty ? LayoutTokens.gr3 : LayoutTokens.gr5,
           fontWeight: FontWeight.bold,
         ),
         textAlign: TextAlign.center,
       ),
-      contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      contentPadding: SpacingTokens.horizontalMd.copyWith(top: 0, bottom: 0),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -438,20 +528,22 @@ class _LifeInputDialogState extends State<_LifeInputDialog> {
                     if (label == '✓') {
                       return Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.all(5),
+                          padding: const EdgeInsets.all(LayoutTokens.gr0),
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.accent,
-                              minimumSize: const Size(0, 56),
+                              minimumSize: const Size(0, LayoutTokens.gr6),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(
+                                  RadiusTokens.sm,
+                                ),
                               ),
                             ),
                             onPressed: _input.isNotEmpty ? _confirm : null,
                             child: const Icon(
                               Icons.check,
                               color: Colors.white,
-                              size: 24,
+                              size: LayoutTokens.gr3,
                             ),
                           ),
                         ),

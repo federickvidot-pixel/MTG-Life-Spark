@@ -23,4 +23,15 @@ class LayoutTokens {
   static const double gr4 = 24;
   static const double gr5 = 32;
   static const double gr6 = 48;
+
+  /// Minimum **44×44 dp** tap target (WCAG / Material); `11 × 4dp` on the grid.
+  static const double minTapTarget = 44;
+}
+
+/// Width / height hints for **in-game** layouts (personal view, HUD rows).
+abstract final class GameLayoutBreakpoints {
+  static const double narrow = 320;
+  static const double compact = 360;
+  static const double comfortable = 400;
+  static const double shortViewport = 720;
 }

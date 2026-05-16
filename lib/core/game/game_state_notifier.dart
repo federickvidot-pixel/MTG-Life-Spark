@@ -747,6 +747,18 @@ class GameStateNotifier extends StateNotifier<GameState> {
     ));
   }
 
+  /// Host-only correction: step the turn phase backward (same sync as advance).
+  void previousPhase() {
+    if (state.priorityHeld || state.timeoutActive) return;
+    final prev = state.currentPhase.previous;
+    state = state.copyWith(currentPhase: prev);
+    _send(BleMessage(
+      type: BleMessageType.phaseAdvance,
+      payload: {'phase': prev.name},
+      seqNum: _nextSeq(),
+    ));
+  }
+
   /// Set the current phase directly (e.g. when active player taps a phase chip).
   /// Only the active player (whose turn it is) can set the phase.
   void setPhase(GamePhase phase) {

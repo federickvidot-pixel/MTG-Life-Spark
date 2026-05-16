@@ -51,7 +51,7 @@ class TurnControlsWidget extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  'Round ${game.roundNumber}  •  ${game.currentPhase.displayName}',
+                  'Round ${game.roundNumber}  •  ${game.currentPhase.streamlinedDisplayName}',
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 10,

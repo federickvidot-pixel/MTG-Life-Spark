@@ -45,6 +45,38 @@ extension GamePhaseX on GamePhase {
         GamePhase.cleanup => 'Clean',
       };
 
+  /// UI buckets for players: Untap, Upkeep, Combat phase, End (hides granular steps).
+  String get streamlinedDisplayName => switch (this) {
+        GamePhase.untap => 'Untap',
+        GamePhase.upkeep => 'Upkeep',
+        GamePhase.draw => 'Upkeep',
+        GamePhase.preCombatMain => 'Upkeep',
+        GamePhase.beginningOfCombat => 'Combat Phase',
+        GamePhase.declareAttackers => 'Combat Phase',
+        GamePhase.declareBlockers => 'Combat Phase',
+        GamePhase.combatDamage => 'Combat Phase',
+        GamePhase.endOfCombat => 'Combat Phase',
+        GamePhase.postCombatMain => 'End',
+        GamePhase.endStep => 'End',
+        GamePhase.cleanup => 'End',
+      };
+
+  /// Shorter chip text where width is tight.
+  String get streamlinedShortLabel => switch (this) {
+        GamePhase.untap => 'Untap',
+        GamePhase.upkeep => 'Upkeep',
+        GamePhase.draw => 'Upkeep',
+        GamePhase.preCombatMain => 'Upkeep',
+        GamePhase.beginningOfCombat => 'Combat',
+        GamePhase.declareAttackers => 'Combat',
+        GamePhase.declareBlockers => 'Combat',
+        GamePhase.combatDamage => 'Combat',
+        GamePhase.endOfCombat => 'Combat',
+        GamePhase.postCombatMain => 'End',
+        GamePhase.endStep => 'End',
+        GamePhase.cleanup => 'End',
+      };
+
   /// Untap and Cleanup auto-advance without player priority.
   bool get autoAdvance =>
       this == GamePhase.untap || this == GamePhase.cleanup;

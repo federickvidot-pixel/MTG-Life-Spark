@@ -6,6 +6,9 @@ import '../../../core/game/game_state.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/theme_provider.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/spacing_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 class PoliticalRowWidget extends ConsumerWidget {
   final GameState game;
@@ -18,7 +21,10 @@ class PoliticalRowWidget extends ConsumerWidget {
     final notifier = ref.read(gameProvider.notifier);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: SpacingTokens.md,
+        vertical: SpacingTokens.sm,
+      ),
       decoration: BoxDecoration(
         color: overviewStyle ? Colors.transparent : AppTheme.surface,
         borderRadius: BorderRadius.circular(999),
@@ -46,7 +52,7 @@ class PoliticalRowWidget extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: LayoutTokens.gr1),
 
           // Initiative
           Expanded(
@@ -69,7 +75,7 @@ class PoliticalRowWidget extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: LayoutTokens.gr1),
 
           // Day / Night (host only) — also syncs app theme
           _DayNightToggle(
@@ -117,7 +123,9 @@ class PoliticalRowWidget extends ConsumerWidget {
       context: context,
       backgroundColor: AppTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(RadiusTokens.xl),
+        ),
       ),
       builder: (_) => _PlayerPickerSheet(
         title: title,
@@ -171,7 +179,11 @@ class _PoliticalBadge extends StatelessWidget {
       onTap: canAssign ? onTap : null,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        constraints: const BoxConstraints(minHeight: LayoutTokens.minTapTarget),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutTokens.gr1,
+          vertical: LayoutTokens.gr1,
+        ),
         decoration: BoxDecoration(
           color: overviewStyle ? Colors.transparent : AppTheme.card,
           borderRadius: BorderRadius.circular(999),
@@ -180,7 +192,7 @@ class _PoliticalBadge extends StatelessWidget {
         child: Row(
           children: [
             Text(icon, style: TextStyle(fontSize: overviewStyle ? 12 : 14)),
-            const SizedBox(width: 6),
+            const SizedBox(width: LayoutTokens.gr1),
             Expanded(
               child: overviewStyle
                   ? Text(
@@ -266,7 +278,10 @@ class _DayNightToggle extends StatelessWidget {
       onTap: isHost ? onTap : null,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LayoutTokens.gr2,
+          vertical: LayoutTokens.gr1,
+        ),
         decoration: BoxDecoration(
           color: overviewStyle ? Colors.transparent : AppTheme.card,
           borderRadius: BorderRadius.circular(999),
@@ -277,7 +292,7 @@ class _DayNightToggle extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(icon, style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: LayoutTokens.gr0),
                   Text(
                     label,
                     style: TextStyle(color: textColor, fontSize: 11),
@@ -319,40 +334,45 @@ class _PlayerPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      padding: const EdgeInsets.fromLTRB(
+        SpacingTokens.lg,
+        SpacingTokens.md,
+        SpacingTokens.lg,
+        SpacingTokens.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
-              fontSize: 16,
+              fontSize: LayoutTokens.gr3,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: LayoutTokens.gr2),
           // None option
           ListTile(
             tileColor: currentHolderId == null
                 ? AppTheme.accent.withValues(alpha: 0.1)
                 : AppTheme.surface,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(RadiusTokens.sm)),
             title: const Text('None',
                 style: TextStyle(color: AppTheme.textSecondary)),
             onTap: () => onSelected(null),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: LayoutTokens.gr1),
           ...players.map((p) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: LayoutTokens.gr1),
                 child: ListTile(
                   tileColor: p.playerId == currentHolderId
                       ? p.playerColor.withValues(alpha: 0.15)
                       : AppTheme.surface,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(RadiusTokens.sm)),
                   leading: CircleAvatar(
                     backgroundColor: p.playerColor,
                     radius: 14,
