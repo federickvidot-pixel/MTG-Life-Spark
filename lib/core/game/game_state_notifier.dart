@@ -570,8 +570,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
     state = state.copyWith(
       players: state.players.map((p) {
         if (p.playerId != action.playerId) return p;
-        var stack = List<UndoAction>.from(p.undoStack)..add(action);
-        if (stack.length > kUndoStackDepth) stack.removeAt(0);
+        final stack = List<UndoAction>.from(p.undoStack)..add(action);
         return p.copyWith(undoStack: stack);
       }).toList(),
     );
@@ -759,11 +758,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
     ));
   }
 
-  /// Set the current phase directly (e.g. when active player taps a phase chip).
-  /// Only the active player (whose turn it is) can set the phase.
+  /// Set the current phase directly (picker / carousel).
+  /// Host may correct anytime; other players only on their active turn.
   void setPhase(GamePhase phase) {
     if (state.priorityHeld || state.timeoutActive) return;
-    if (state.activePlayerId != state.localPlayerId) return;
+    final isActivePlayer = state.activePlayerId == state.localPlayerId;
+    if (!state.isHost && !isActivePlayer) return;
     if (phase == state.currentPhase) return;
     state = state.copyWith(currentPhase: phase);
     _send(BleMessage(
@@ -981,6 +981,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
   // ── Concede ───────────────────────────────────────────────────────────────
 
   void concede(String playerId) {
+    final player = _playerById(playerId);
+    if (player == null || player.isEliminated) return;
     _eliminatePlayer(playerId, 'concede', null);
     _send(BleMessage(
       type: BleMessageType.concede,
@@ -1022,6 +1024,9 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
   void _eliminatePlayer(
       String playerId, String reason, String? killedBy) {
+    final existing = _playerById(playerId);
+    if (existing == null || existing.isEliminated) return;
+
     // Award commander kill credit for commander damage kills
     if (reason == 'commanderDamage') {
       _ref.read(profileRepositoryProvider).incrementCommanderKills();
@@ -1049,6 +1054,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
       reason: reason,
       killedByPlayerId: killedBy,
     ));
+
+    _checkGameOver();
   }
 
   void _checkGameOver() {

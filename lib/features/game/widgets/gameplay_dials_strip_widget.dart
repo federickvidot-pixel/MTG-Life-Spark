@@ -20,36 +20,32 @@ const double _kDialPillCornerRadius = 10;
 /// Responsive pill geometry — scales down on narrow phones so the strip doesn’t dominate the Play tab.
 class _DialMetrics {
   const _DialMetrics({
-    required this.labelBarHeight,
+    required this.iconBarHeight,
     required this.stepTapHeight,
     required this.wheelHeight,
     required this.itemExtent,
     required this.leadingSize,
     required this.stepIconSize,
     required this.wheelFontSize,
-    required this.labelFontSize,
     required this.addIconSize,
-    required this.prolifIconSize,
   });
 
-  /// Caption above each pill (counter name / action label).
-  final double labelBarHeight;
+  /// Icon-only header above each counter pill (48dp touch lane).
+  final double iconBarHeight;
   final double stepTapHeight;
   final double wheelHeight;
   final double itemExtent;
   final double leadingSize;
   final double stepIconSize;
   final double wheelFontSize;
-  final double labelFontSize;
   final double addIconSize;
-  final double prolifIconSize;
 
-  /// Rounded pill body only (steppers + wheel), no caption.
+  /// Rounded pill body only (steppers + wheel).
   double get pillBodyHeight => stepTapHeight + wheelHeight + stepTapHeight;
 
-  /// One column: caption + gap + pill.
+  /// Counter column: icon row + gap + pill.
   double get tileStackHeight =>
-      labelBarHeight + LayoutTokens.gr0 + pillBodyHeight;
+      iconBarHeight + LayoutTokens.gr0 + pillBodyHeight;
 
   /// [shortestSide] = `MediaQuery.sizeOf(context).shortestSide`
   factory _DialMetrics.scale(double shortestSide) {
@@ -57,16 +53,14 @@ class _DialMetrics {
     double lerp(double a, double b) => a + (b - a) * t;
     double r4(double x) => (x / 4).round() * 4.0;
     return _DialMetrics(
-      labelBarHeight: r4(lerp(16, 18)),
+      iconBarHeight: LayoutTokens.gr6,
       stepTapHeight: r4(lerp(28, 32)),
       wheelHeight: r4(lerp(48, 64)),
       itemExtent: r4(lerp(18, 22)),
-      leadingSize: r4(lerp(12, 14)),
+      leadingSize: r4(lerp(16, 20)),
       stepIconSize: r4(lerp(18, 22)),
       wheelFontSize: r4(lerp(12, 15)),
-      labelFontSize: r4(lerp(10, 11)),
       addIconSize: r4(lerp(22, 26)),
-      prolifIconSize: r4(lerp(18, 22)),
     );
   }
 }
@@ -80,7 +74,6 @@ class GameplayDialsStripWidget extends StatelessWidget {
   final bool isEliminated;
   final void Function(String field, int delta) onAdjustCounter;
   final void Function(String field, int absoluteValue) onSetCounterAbsolute;
-  final VoidCallback onProliferate;
   final void Function(String dialKey, String label) onRegisterCustomDial;
   final void Function(String field) onAddDialToStrip;
   final void Function(String field) onRemoveDialFromStrip;
@@ -91,7 +84,6 @@ class GameplayDialsStripWidget extends StatelessWidget {
     required this.isEliminated,
     required this.onAdjustCounter,
     required this.onSetCounterAbsolute,
-    required this.onProliferate,
     required this.onRegisterCustomDial,
     required this.onAddDialToStrip,
     required this.onRemoveDialFromStrip,
@@ -192,14 +184,14 @@ class GameplayDialsStripWidget extends StatelessWidget {
     return n;
   }
 
-  /// How many [Wrap] rows the dial strip uses at this width (includes Prolif + Add).
+  /// How many [Wrap] rows the dial strip uses at this width (includes Add tile).
   static int wrapRowCountForWidth({
     required PlayerGameState player,
     required double rowContentWidth,
   }) {
     final fields = orderedStripFieldCount(player);
     final gap = LayoutTokens.gr1;
-    final totalSlots = fields + 2;
+    final totalSlots = fields + 1;
     var cols = _kPillsPerRow;
     late double pillW;
     while (true) {
@@ -399,7 +391,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: LayoutTokens.gr3),
                     child: Text(
-                      'Pick trackers for your strip. Long-press the counter title inside a pill to remove it.',
+                      'Pick trackers for your strip. Long-press a counter icon to remove it from the strip.',
                       style: TextStyle(
                         fontSize: 13,
                         height: 1.35,
@@ -531,10 +523,11 @@ class GameplayDialsStripWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SizedBox(
-                          height: metrics.labelBarHeight,
-                          child: Row(
+                          height: metrics.iconBarHeight,
+                          child: Stack(
+                            clipBehavior: Clip.hardEdge,
                             children: [
-                              Expanded(
+                              Positioned.fill(
                                 child: GestureDetector(
                                   behavior: HitTestBehavior.opaque,
                                   onTap:
@@ -553,55 +546,38 @@ class GameplayDialsStripWidget extends StatelessWidget {
                                               _confirmRemove(context, field),
                                   child: Tooltip(
                                     message:
-                                        'Tap to adjust counters. Long-press label or tap ✕ to remove from strip.',
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        _leadingGlyph(
-                                          field,
-                                          metrics.leadingSize,
-                                        ),
-                                        SizedBox(width: LayoutTokens.gr0),
-                                        Flexible(
-                                          child: Text(
-                                            _labelFor(player, field),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: metrics.labelFontSize,
-                                              fontWeight: FontWeight.w800,
-                                              color:
-                                                  isEliminated
-                                                      ? AppTheme.textSecondary
-                                                      : AppTheme.textPrimary,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                        '${_labelFor(player, field)} — tap to adjust, long-press to remove',
+                                    child: Center(
+                                      child: _leadingGlyph(
+                                        field,
+                                        metrics.leadingSize,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                               if (!isEliminated)
-                                IconButton(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: LayoutTokens.gr6,
-                                    minHeight: LayoutTokens.gr6,
-                                  ),
-                                  tooltip: 'Remove from strip',
-                                  icon: Icon(
-                                    Icons.close_rounded,
-                                    size: 18,
-                                    color: AppTheme.textSecondary.withValues(
-                                      alpha: 0.85,
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
                                     ),
+                                    tooltip: 'Remove from strip',
+                                    icon: Icon(
+                                      Icons.close_rounded,
+                                      size: 16,
+                                      color: AppTheme.textSecondary.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                    ),
+                                    onPressed:
+                                        () => _confirmRemove(context, field),
                                   ),
-                                  onPressed:
-                                      () => _confirmRemove(context, field),
                                 ),
                             ],
                           ),
@@ -630,66 +606,10 @@ class GameplayDialsStripWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(
-                        height: metrics.labelBarHeight,
-                        child: Center(
-                          child: Text(
-                            'Proliferate',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: metrics.labelFontSize,
-                              fontWeight: FontWeight.w800,
-                              color:
-                                  isEliminated
-                                      ? AppTheme.textSecondary
-                                      : AppTheme.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ),
+                      SizedBox(height: metrics.iconBarHeight),
                       SizedBox(height: LayoutTokens.gr0),
                       SizedBox(
                         height: metrics.pillBodyHeight,
-                        width: pillW,
-                        child: _ProliferatePillTile(
-                          metrics: metrics,
-                          width: pillW,
-                          isEliminated: isEliminated,
-                          onTap: onProliferate,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: pillW,
-                  height: metrics.tileStackHeight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: metrics.labelBarHeight,
-                        child: Center(
-                          child: Text(
-                            'Add',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: metrics.labelFontSize,
-                              fontWeight: FontWeight.w800,
-                              color:
-                                  isEliminated
-                                      ? AppTheme.textSecondary
-                                      : AppTheme.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: LayoutTokens.gr0),
-                      SizedBox(
-                        height: metrics.pillBodyHeight,
-                        width: pillW,
                         child: _AddCounterPillTile(
                           metrics: metrics,
                           width: pillW,
@@ -709,7 +629,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
                     spacing: gap,
                     runSpacing: gap,
                     alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.start,
+                    crossAxisAlignment: WrapCrossAlignment.end,
                     children: children,
                   ),
                 ),
@@ -718,57 +638,6 @@ class GameplayDialsStripWidget extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// Proliferate as a pill matching counter tile size.
-class _ProliferatePillTile extends StatelessWidget {
-  final _DialMetrics metrics;
-  final double width;
-  final bool isEliminated;
-  final VoidCallback onTap;
-
-  const _ProliferatePillTile({
-    required this.metrics,
-    required this.width,
-    required this.isEliminated,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Proliferate (+1 to each counter you choose)',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: isEliminated ? null : onTap,
-          borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
-          child: Ink(
-            width: width,
-            height: metrics.pillBodyHeight,
-            decoration: BoxDecoration(
-              color: AppTheme.card.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
-              border: Border.all(
-                color:
-                    isEliminated
-                        ? AppTheme.textSecondary.withValues(alpha: 0.25)
-                        : AppTheme.accent.withValues(alpha: 0.55),
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.coronavirus_outlined,
-                size: metrics.prolifIconSize + 2,
-                color:
-                    isEliminated ? AppTheme.textSecondary : AppTheme.accent,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

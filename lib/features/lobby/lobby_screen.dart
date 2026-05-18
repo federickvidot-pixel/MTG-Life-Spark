@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/bluetooth/ble_providers.dart';
+import '../../core/game/game_format.dart';
 import '../../core/game/lobby_state.dart';
 import '../../core/models/player_slot.dart';
 import '../../core/models/pod_preset.dart';
@@ -367,251 +368,229 @@ class _PlayerSlotCard extends ConsumerWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Commander avatar / color dot
-          _CommanderAvatar(slot: slot, compact: compact),
-          SizedBox(width: LayoutTokens.gr2),
-          // Player info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CommanderAvatar(slot: slot, compact: compact),
+              SizedBox(width: LayoutTokens.gr2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: slot.playerColor,
-                        shape: BoxShape.circle,
+                    Row(
+                      children: [
+                        Container(
+                          width: LayoutTokens.gr1,
+                          height: LayoutTokens.gr1,
+                          decoration: BoxDecoration(
+                            color: slot.playerColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: LayoutTokens.gr1),
+                        Expanded(
+                          child: Text(
+                            slot.username,
+                            style: TextStyle(
+                              color: colors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: FontTokens.title,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: LayoutTokens.gr1),
+                    Text(
+                      slot.commanderName ?? 'No commander selected',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color:
+                            slot.commanderName != null
+                                ? colors.textSecondary
+                                : colors.primaryAccent,
+                        fontSize: FontTokens.caption,
                       ),
                     ),
-                    SizedBox(width: LayoutTokens.gr1),
-                    Expanded(
-                      child: Text(
-                        slot.username,
+                    if (slot.hasPartner && slot.partnerCommanderName != null)
+                      Text(
+                        '+ ${slot.partnerCommanderName}',
                         style: TextStyle(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: FontTokens.title,
+                          color: colors.textSecondary,
+                          fontSize: FontTokens.sm,
                         ),
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    if (isMe && slot.selectedDeckId != null) ...[
+                      SizedBox(height: LayoutTokens.gr0),
+                      Text(
+                        linkedDeck != null
+                            ? 'Tracking: ${linkedDeck.displayName}'
+                            : 'Deck (saved list changed)',
+                        style: TextStyle(
+                          color: colors.primaryAccent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ],
                 ),
-                SizedBox(height: LayoutTokens.gr1),
-                Text(
-                  slot.commanderName ?? 'No commander selected',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: slot.commanderName != null
-                        ? colors.textSecondary
-                        : colors.primaryAccent,
-                    fontSize: FontTokens.caption,
-                  ),
-                ),
-                if (slot.hasPartner && slot.partnerCommanderName != null)
-                  Text(
-                    '+ ${slot.partnerCommanderName}',
-                    style: TextStyle(
-                        color: colors.textSecondary, fontSize: FontTokens.sm),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                if (isMe && slot.selectedDeckId != null) ...[
-                  SizedBox(height: LayoutTokens.gr0),
-                  Text(
-                    linkedDeck != null
-                        ? 'Tracking: ${linkedDeck.displayName}'
-                        : 'Deck (saved list changed)',
-                    style: TextStyle(
-                      color: colors.primaryAccent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          // Controls (for own slot: host and clients)
-          if (isMe)
-            Flexible(
-              fit: FlexFit.loose,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isNarrow = constraints.maxWidth < 280;
-                  final btnH = 44.0; // Min touch target
-                  final btnPadH = isNarrow ? 10.0 : 16.0;
-                  final readyButton = IconButton(
-                    style: IconButton.styleFrom(
-                      minimumSize: Size(btnH, btnH),
-                      backgroundColor: slot.isReady
-                          ? ColorTokens.success.withValues(alpha: 0.2)
-                          : colors.surface,
-                      foregroundColor: slot.isReady
-                          ? ColorTokens.success
-                          : colors.textSecondary,
-                      side: BorderSide(
-                        color: slot.isReady
-                            ? ColorTokens.success
-                            : colors.textSecondary,
-                      ),
-                    ),
-                    onPressed: () {
-                      final notifier = ref.read(lobbyProvider.notifier);
-                      notifier.setReady(slot.playerId, ready: !slot.isReady);
-                    },
-                    icon: Icon(
-                      slot.isReady ? Icons.check : Icons.check,
-                      size: 24,
-                    ),
-                  );
-                  if (isNarrow) {
-                    // Narrow: Partner above Commander (same width), checkmark centered to the box
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _PartnerChip(slot: slot, compact: true),
-                              SizedBox(height: LayoutTokens.gr2),
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: Size(0, btnH),
-                                  padding: EdgeInsets.symmetric(horizontal: btnPadH),
-                                  backgroundColor: slot.selectedDeckId != null
-                                      ? colors.primaryAccent.withValues(alpha: 0.35)
-                                      : Colors.transparent,
-                                  foregroundColor: slot.selectedDeckId != null
-                                      ? colors.textPrimary
-                                      : colors.textSecondary,
-                                  side: BorderSide(
-                                    color: slot.selectedDeckId != null
-                                        ? colors.primaryAccent
-                                        : colors.textSecondary,
-                                  ),
-                                  textStyle: TextStyle(fontSize: FontTokens.body, fontWeight: FontWeight.w600),
-                                ),
-                                onPressed: () => showDeckPickerSheet(
-                                  context,
-                                  ref,
-                                  slot.playerId,
-                                ),
-                                child: const Text('Deck'),
-                              ),
-                              SizedBox(height: LayoutTokens.gr2),
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  minimumSize: Size(0, btnH),
-                                  padding: EdgeInsets.symmetric(horizontal: btnPadH),
-                                  backgroundColor: slot.commanderName != null
-                                      ? colors.primaryAccent
-                                      : Colors.transparent,
-                                  foregroundColor: slot.commanderName != null
-                                      ? Colors.white
-                                      : colors.textSecondary,
-                                  side: BorderSide(
-                                    color: slot.commanderName != null
-                                        ? colors.primaryAccent
-                                        : colors.textSecondary,
-                                  ),
-                                  textStyle: TextStyle(fontSize: FontTokens.body, fontWeight: FontWeight.w600),
-                                ),
-                                onPressed: () => context.push(
-                                  AppRoutes.commanderSelect,
-                                  extra: {
-                                    'playerId': slot.playerId,
-                                    'hasPartner': slot.hasPartner,
-                                  },
-                                ),
-                                child: const Text('Commander'),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: LayoutTokens.gr2),
-                        readyButton,
-                      ],
-                    );
-                  }
-                  // Wide: all three in a row (horizontal scroll when card is tight)
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _PartnerChip(slot: slot, compact: false),
-                        SizedBox(width: LayoutTokens.gr2),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: Size(72, btnH),
-                            padding: EdgeInsets.symmetric(horizontal: btnPadH),
-                            backgroundColor: slot.selectedDeckId != null
-                                ? colors.primaryAccent.withValues(alpha: 0.35)
-                                : Colors.transparent,
-                            foregroundColor: slot.selectedDeckId != null
-                                ? colors.textPrimary
-                                : colors.textSecondary,
-                            side: BorderSide(
-                              color: slot.selectedDeckId != null
-                                  ? colors.primaryAccent
-                                  : colors.textSecondary,
-                            ),
-                            textStyle: TextStyle(fontSize: FontTokens.body, fontWeight: FontWeight.w600),
-                          ),
-                          onPressed: () => showDeckPickerSheet(
-                            context,
-                            ref,
-                            slot.playerId,
-                          ),
-                          child: const Text('Deck'),
-                        ),
-                        SizedBox(width: LayoutTokens.gr2),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: Size(80, btnH),
-                            padding: EdgeInsets.symmetric(horizontal: btnPadH),
-                            backgroundColor: slot.commanderName != null
-                                ? colors.primaryAccent
-                                : Colors.transparent,
-                            foregroundColor: slot.commanderName != null
-                                ? Colors.white
-                                : colors.textSecondary,
-                            side: BorderSide(
-                              color: slot.commanderName != null
-                                  ? colors.primaryAccent
-                                  : colors.textSecondary,
-                            ),
-                            textStyle: TextStyle(fontSize: FontTokens.body, fontWeight: FontWeight.w600),
-                          ),
-                          onPressed: () => context.push(
-                            AppRoutes.commanderSelect,
-                            extra: {
-                              'playerId': slot.playerId,
-                              'hasPartner': slot.hasPartner,
-                            },
-                          ),
-                          child: const Text('Commander'),
-                        ),
-                        SizedBox(width: LayoutTokens.gr2),
-                        readyButton,
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
+              if (isMe) _SlotReadyButton(slot: slot),
+            ],
+          ),
+          if (isMe) ...[
+            SizedBox(height: LayoutTokens.gr2),
+            _SlotCommanderControls(slot: slot),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+/// Partner / Deck / Commander actions for the local player's slot (full-width row).
+class _SlotCommanderControls extends ConsumerWidget {
+  final PlayerSlot slot;
+
+  const _SlotCommanderControls({required this.slot});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gap = LayoutTokens.gr1;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _SlotActionButton(
+            label: 'Deck',
+            highlighted: slot.selectedDeckId != null,
+            filled: false,
+            onPressed:
+                () => showDeckPickerSheet(context, ref, slot.playerId),
+          ),
+        ),
+        SizedBox(width: gap),
+        Expanded(
+          child: _SlotActionButton(
+            label: 'Commander',
+            highlighted: slot.commanderName != null,
+            filled: true,
+            onPressed:
+                () => context.push(
+                  AppRoutes.commanderSelect,
+                  extra: {
+                    'playerId': slot.playerId,
+                    'hasPartner': slot.hasPartner,
+                  },
+                ),
+          ),
+        ),
+        SizedBox(width: gap),
+        Expanded(child: _PartnerChip(slot: slot)),
+      ],
+    );
+  }
+}
+
+class _SlotReadyButton extends ConsumerWidget {
+  final PlayerSlot slot;
+
+  const _SlotReadyButton({required this.slot});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = AppColorTokens.of(context);
+    return IconButton(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(
+          LayoutTokens.minTapTarget,
+          LayoutTokens.minTapTarget,
+        ),
+        backgroundColor:
+            slot.isReady
+                ? ColorTokens.success.withValues(alpha: 0.2)
+                : colors.surface,
+        foregroundColor:
+            slot.isReady ? ColorTokens.success : colors.textSecondary,
+        side: BorderSide(
+          color: slot.isReady ? ColorTokens.success : colors.textSecondary,
+        ),
+      ),
+      onPressed: () {
+        final notifier = ref.read(lobbyProvider.notifier);
+        notifier.setReady(slot.playerId, ready: !slot.isReady);
+      },
+      icon: const Icon(Icons.check_rounded, size: 24),
+    );
+  }
+}
+
+class _SlotActionButton extends StatelessWidget {
+  final String label;
+  final bool highlighted;
+  final bool filled;
+  final VoidCallback onPressed;
+
+  const _SlotActionButton({
+    required this.label,
+    required this.highlighted,
+    required this.filled,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final accent = colors.primaryAccent;
+
+    Color? bg;
+    Color fg;
+    Color border;
+
+    if (filled && highlighted) {
+      bg = accent;
+      fg = Colors.white;
+      border = accent;
+    } else if (highlighted) {
+      bg = accent.withValues(alpha: 0.35);
+      fg = colors.textPrimary;
+      border = accent;
+    } else {
+      bg = Colors.transparent;
+      fg = colors.textSecondary;
+      border = colors.textSecondary;
+    }
+
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, LayoutTokens.minTapTarget),
+        padding: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr2),
+        backgroundColor: bg,
+        foregroundColor: fg,
+        side: BorderSide(color: border),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+        ),
+        textStyle: const TextStyle(
+          fontSize: FontTokens.sm,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onPressed: onPressed,
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -624,10 +603,11 @@ class _CommanderAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 44.0 : 50.0;
+    final size =
+        compact ? LayoutTokens.minTapTarget : LayoutTokens.gr6 + LayoutTokens.gr0;
     if (slot.commanderImageUrl != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LayoutTokens.gr1),
         child: CachedNetworkImage(
           imageUrl: slot.commanderImageUrl!,
           width: size,
@@ -644,7 +624,7 @@ class _CommanderAvatar extends StatelessWidget {
 class _ColorDot extends StatelessWidget {
   final Color color;
   final double size;
-  const _ColorDot({required this.color, this.size = 50});
+  const _ColorDot({required this.color, this.size = LayoutTokens.gr6});
 
   @override
   Widget build(BuildContext context) {
@@ -653,7 +633,7 @@ class _ColorDot extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LayoutTokens.gr1),
         border: Border.all(color: color, width: 2),
       ),
       child: Icon(Icons.person, color: color, size: size * 0.56),
@@ -663,31 +643,40 @@ class _ColorDot extends StatelessWidget {
 
 class _PartnerChip extends ConsumerWidget {
   final PlayerSlot slot;
-  final bool compact;
-  const _PartnerChip({required this.slot, this.compact = false});
+  const _PartnerChip({required this.slot});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColorTokens.of(context);
+    final gold = ColorTokens.accentGold;
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
-        minimumSize: Size(compact ? 60 : 80, 44),
-        padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
-        backgroundColor: slot.hasPartner
-            ? ColorTokens.accentGold.withValues(alpha: 0.15)
-            : Colors.transparent,
-        foregroundColor: slot.hasPartner
-            ? ColorTokens.accentGold
-            : colors.textSecondary,
+        minimumSize: const Size(0, LayoutTokens.minTapTarget),
+        padding: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr2),
+        backgroundColor:
+            slot.hasPartner ? gold.withValues(alpha: 0.15) : Colors.transparent,
+        foregroundColor: slot.hasPartner ? gold : colors.textSecondary,
         side: BorderSide(
-          color: slot.hasPartner
-              ? ColorTokens.accentGold
-              : colors.textSecondary.withValues(alpha: 0.4),
+          color:
+              slot.hasPartner
+                  ? gold
+                  : colors.textSecondary.withValues(alpha: 0.4),
         ),
-        textStyle: TextStyle(fontSize: compact ? 12 : 14, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+        ),
+        textStyle: const TextStyle(
+          fontSize: FontTokens.sm,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-      onPressed: () => ref.read(lobbyProvider.notifier).togglePartner(slot.playerId),
-      child: const Text('Partner'),
+      onPressed:
+          () => ref.read(lobbyProvider.notifier).togglePartner(slot.playerId),
+      child: const Text(
+        'Partner',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }
@@ -759,30 +748,28 @@ class _ConfigSection extends ConsumerWidget {
             ),
           ),
           SizedBox(height: LayoutTokens.gr3),
-          // Format
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: 100,
-                child:                   Text('Format',
-                      style: TextStyle(color: colors.textSecondary, fontSize: FontTokens.label)),
-              ),
-              SizedBox(width: LayoutTokens.gr2),
-              Expanded(
-                child: _FormatToggle(
-                  current: config.format,
-                  onChanged: (f) => notifier.updateConfig(config.copyWith(format: f)),
+          _ConfigDropdownRow(
+            label: 'Format',
+            child: _FormatDropdown(
+              value: config.format,
+              onChanged: (f) => notifier.updateConfig(
+                config.copyWith(
+                  format: f,
+                  startingLife: f.defaultStartingLife,
                 ),
               ),
-            ],
+            ),
           ),
           SizedBox(height: LayoutTokens.gr3),
-          // Starting life — quick-select 20, 25, 30, 40, 60, Custom
-          _StartingLifeRow(
-            value: config.startingLife,
-            onChanged: (v) =>
-                notifier.updateConfig(config.copyWith(startingLife: v)),
+          _ConfigDropdownRow(
+            label: 'Starting Life',
+            child: _StartingLifeDropdown(
+              value: config.startingLife,
+              onChanged:
+                  (v) => notifier.updateConfig(
+                    config.copyWith(startingLife: v),
+                  ),
+            ),
           ),
           SizedBox(height: LayoutTokens.gr4),
           // Gameplay settings
@@ -802,163 +789,118 @@ class _ConfigSection extends ConsumerWidget {
   }
 }
 
-class _FormatToggle extends StatelessWidget {
-  final GameFormat current;
-  final void Function(GameFormat) onChanged;
-  const _FormatToggle({required this.current, required this.onChanged});
+InputDecoration _lobbyDropdownDecoration(BuildContext context) {
+  final colors = AppColorTokens.of(context);
+  final border = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: colors.textSecondary.withValues(alpha: 0.3),
+    ),
+  );
+  return InputDecoration(
+    filled: true,
+    fillColor: colors.backgroundSecondary,
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: LayoutTokens.gr3,
+      vertical: LayoutTokens.gr2,
+    ),
+    border: border,
+    enabledBorder: border,
+    focusedBorder: border.copyWith(
+      borderSide: BorderSide(color: colors.primaryAccent),
+    ),
+  );
+}
+
+/// Label + full-width dropdown (Format, Starting Life, …).
+class _ConfigDropdownRow extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _ConfigDropdownRow({required this.label, required this.child});
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(
-          child: _FormatButton(
-            label: 'Commander',
-            selected: current == GameFormat.commander,
-            onTap: () => onChanged(GameFormat.commander),
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: colors.textSecondary,
+              fontSize: FontTokens.label,
+            ),
           ),
         ),
         SizedBox(width: LayoutTokens.gr2),
-        Expanded(
-          child: _FormatButton(
-            label: 'Standard',
-            selected: current == GameFormat.standard,
-            onTap: () => onChanged(GameFormat.standard),
-          ),
-        ),
+        Expanded(child: child),
       ],
     );
   }
 }
 
-class _FormatButton extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+class _FormatDropdown extends StatelessWidget {
+  final GameFormat value;
+  final ValueChanged<GameFormat> onChanged;
 
-  const _FormatButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  static const _radius = 999.0;
+  const _FormatDropdown({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
-    return Material(
-      color: selected ? colors.primaryAccent : colors.surface,
-      borderRadius: BorderRadius.circular(_radius),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(_radius),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_radius),
-            border: Border.all(
-              color: colors.textSecondary.withValues(alpha: 0.4),
-              width: 1,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: FontTokens.label,
-              color: selected ? Colors.white : colors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
+    return DropdownButtonFormField<GameFormat>(
+      value: value,
+      isExpanded: true,
+      decoration: _lobbyDropdownDecoration(context),
+      dropdownColor: colors.surface,
+      style: TextStyle(color: colors.textPrimary, fontSize: FontTokens.body),
+      menuMaxHeight: 360,
+      items:
+          GameFormatDetails.lobbyPickerOrder
+              .map(
+                (f) => DropdownMenuItem(
+                  value: f,
+                  child: Text(f.displayName),
+                ),
+              )
+              .toList(),
+      onChanged: (f) {
+        if (f != null) onChanged(f);
+      },
     );
   }
 }
 
-// ── Starting life quick-select: 20, 25, 30, 40, 60, Custom ───────────────────
-
-class _StartingLifeRow extends StatelessWidget {
+class _StartingLifeDropdown extends StatelessWidget {
   final int value;
-  final void Function(int) onChanged;
-  const _StartingLifeRow({required this.value, required this.onChanged});
+  final ValueChanged<int> onChanged;
 
-  static const _presets = [20, 30, 40];
+  const _StartingLifeDropdown({
+    required this.value,
+    required this.onChanged,
+  });
 
-  List<Widget> _buildChips(BuildContext context) => [
-    ..._presets.map((v) => _LifeChip(
-          value: v,
-          selected: value == v,
-          onTap: () => onChanged(v),
-        )),
-    _LifeChip(
-      value: value,
-      selected: !_presets.contains(value),
-      isCustom: true,
-      onTap: () => _showCustomDialog(context),
-    ),
-  ];
+  static const _presets = [20, 25, 30, 40, 60];
+  static const _customMenuValue = -1;
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorTokens.of(context);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final stackVertical = constraints.maxWidth < 280;
-        final chips = Wrap(
-          spacing: LayoutTokens.gr2,
-          runSpacing: LayoutTokens.gr2,
-          alignment: WrapAlignment.end,
-          children: _buildChips(context),
-        );
-        return stackVertical
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Starting Life',
-                      style: TextStyle(color: colors.textSecondary, fontSize: FontTokens.label)),
-                  SizedBox(height: LayoutTokens.gr2),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: chips,
-                  ),
-                ],
-              )
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 100,
-                    child: Text('Starting Life',
-                        style: TextStyle(color: colors.textSecondary, fontSize: 13)),
-                  ),
-                  SizedBox(width: LayoutTokens.gr2),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: chips,
-                    ),
-                  ),
-                ],
-              );
-      },
-    );
-  }
-
-  void _showCustomDialog(BuildContext context) {
-    final controller = TextEditingController(text: value.toString());
+  static void _showCustomDialog(
+    BuildContext context, {
+    required int current,
+    required ValueChanged<int> onChanged,
+  }) {
+    final controller = TextEditingController(text: current.toString());
     showDialog<void>(
       context: context,
       builder: (ctx) {
         final colors = AppColorTokens.of(ctx);
         return AlertDialog(
-          title: Text('Custom Starting Life',
-              style: TextStyle(color: colors.textPrimary)),
+          title: Text(
+            'Custom Starting Life',
+            style: TextStyle(color: colors.textPrimary),
+          ),
           content: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
@@ -968,85 +910,109 @@ class _StartingLifeRow extends StatelessWidget {
               hintText: 'Enter life total (1–999)',
               hintStyle: TextStyle(color: colors.textSecondary),
             ),
-          onSubmitted: (s) {
-            final v = int.tryParse(s);
-            if (v != null && v >= 1 && v <= 999) {
-              onChanged(v);
-              Navigator.pop(ctx);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: TextStyle(color: colors.textSecondary)),
-          ),
-          FilledButton(
-            onPressed: () {
-              final v = int.tryParse(controller.text);
+            onSubmitted: (s) {
+              final v = int.tryParse(s);
               if (v != null && v >= 1 && v <= 999) {
                 onChanged(v);
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('OK'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: colors.textSecondary),
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                final v = int.tryParse(controller.text);
+                if (v != null && v >= 1 && v <= 999) {
+                  onChanged(v);
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
         );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColorTokens.of(context);
+    final items = <DropdownMenuItem<int>>[
+      ..._presets.map(
+        (v) => DropdownMenuItem(value: v, child: Text('$v')),
+      ),
+      if (!_presets.contains(value))
+        DropdownMenuItem(value: value, child: Text('$value')),
+      const DropdownMenuItem(
+        value: _customMenuValue,
+        child: Text('Custom…'),
+      ),
+    ];
+
+    return DropdownButtonFormField<int>(
+      value: value,
+      isExpanded: true,
+      decoration: _lobbyDropdownDecoration(context),
+      dropdownColor: colors.surface,
+      style: TextStyle(color: colors.textPrimary, fontSize: FontTokens.body),
+      items: items,
+      onChanged: (v) {
+        if (v == null) return;
+        if (v == _customMenuValue) {
+          _showCustomDialog(context, current: value, onChanged: onChanged);
+        } else {
+          onChanged(v);
+        }
       },
     );
   }
 }
 
-class _LifeChip extends StatelessWidget {
-  final int value;
-  final bool selected;
-  final bool isCustom;
-  final VoidCallback onTap;
+class _TurnTimeLimitDropdown extends StatelessWidget {
+  final int? value;
+  final ValueChanged<int?> onChanged;
 
-  const _LifeChip({
+  const _TurnTimeLimitDropdown({
     required this.value,
-    required this.selected,
-    this.isCustom = false,
-    required this.onTap,
+    required this.onChanged,
   });
+
+  static const _presets = <int?>[null, 30, 60];
+
+  static String _label(int? seconds) => switch (seconds) {
+    null => 'Off',
+    30 => '30 seconds',
+    60 => '60 seconds',
+    final int s => '$s seconds',
+  };
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColorTokens.of(context);
-    final label = isCustom ? '+' : '$value';
-    return SizedBox(
-      width: 40,
-      height: 40,
-      child: Material(
-        color: selected ? colors.primaryAccent : colors.surface,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: selected
-                    ? colors.primaryAccent
-                    : colors.textSecondary.withValues(alpha: 0.4),
-                width: 1,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: isCustom ? FontTokens.headline : FontTokens.sm,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : (isCustom ? colors.textSecondary : colors.textPrimary),
-              ),
-            ),
-          ),
-        ),
+    final items = <DropdownMenuItem<int?>>[
+      ..._presets.map(
+        (v) => DropdownMenuItem(value: v, child: Text(_label(v))),
       ),
+      if (value != null && !_presets.contains(value))
+        DropdownMenuItem(value: value, child: Text(_label(value))),
+    ];
+
+    return DropdownButtonFormField<int?>(
+      value: value,
+      isExpanded: true,
+      decoration: _lobbyDropdownDecoration(context),
+      dropdownColor: colors.surface,
+      style: TextStyle(color: colors.textPrimary, fontSize: FontTokens.body),
+      items: items,
+      onChanged: onChanged,
     );
   }
 }
@@ -1108,12 +1074,36 @@ class _GameplayToggles extends StatelessWidget {
         ),
         _GameplaySwitchTile(
           title: 'Turn timer',
-          subtitle: 'Tracks turn durations',
+          subtitle: 'Show elapsed time each turn',
           value: config.trackTurnDuration,
-          onChanged: (v) =>
-              notifier.updateConfig(config.copyWith(trackTurnDuration: v)),
+          onChanged:
+              (v) => notifier.updateConfig(
+                config.copyWith(
+                  trackTurnDuration: v,
+                  turnTimeLimitSeconds: v ? config.turnTimeLimitSeconds : null,
+                ),
+              ),
         ),
-        _TurnTimeLimitTile(config: config, notifier: notifier),
+        if (config.trackTurnDuration) ...[
+          SizedBox(height: LayoutTokens.gr1),
+          Padding(
+            padding: const EdgeInsets.only(
+              left: LayoutTokens.gr4,
+              right: LayoutTokens.gr4,
+              bottom: LayoutTokens.gr2,
+            ),
+            child: _ConfigDropdownRow(
+              label: 'Turn limit',
+              child: _TurnTimeLimitDropdown(
+                value: config.turnTimeLimitSeconds,
+                onChanged:
+                    (v) => notifier.updateConfig(
+                      config.copyWith(turnTimeLimitSeconds: v),
+                    ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1176,168 +1166,6 @@ class _GameplaySwitchTile extends StatelessWidget {
           horizontal: compact ? 12 : 16,
           vertical: 8,
         ),
-      ),
-    );
-  }
-}
-
-class _TimerChip extends StatelessWidget {
-  final String label;
-  final int? value;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _TimerChip({
-    required this.label,
-    required this.value,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorTokens.of(context);
-    return SizedBox(
-      width: 40,
-      height: 40,
-      child: Material(
-        color: selected ? colors.primaryAccent : colors.surface,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: selected
-                    ? colors.primaryAccent
-                    : colors.textSecondary.withValues(alpha: 0.4),
-                width: 1,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: FontTokens.sm,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : colors.textSecondary,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TurnTimeLimitTile extends StatelessWidget {
-  final LobbyConfig config;
-  final LobbyNotifier notifier;
-
-  const _TurnTimeLimitTile({required this.config, required this.notifier});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColorTokens.of(context);
-    final limit = config.turnTimeLimitSeconds;
-    final compact = MediaQuery.sizeOf(context).width < 360;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: compact ? 8 : 12),
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 12 : 16,
-        vertical: compact ? 12 : 16,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final stackVertical = constraints.maxWidth < 320;
-          final chips = Wrap(
-            spacing: LayoutTokens.gr1,
-            runSpacing: LayoutTokens.gr1,
-            alignment: WrapAlignment.end,
-            children: [
-              _TimerChip(
-                label: 'Off',
-                value: null,
-                selected: limit == null,
-                onTap: () => notifier.updateConfig(
-                    config.copyWith(turnTimeLimitSeconds: null)),
-              ),
-              _TimerChip(
-                label: '30s',
-                value: 30,
-                selected: limit == 30,
-                onTap: () => notifier.updateConfig(
-                    config.copyWith(turnTimeLimitSeconds: 30)),
-              ),
-              _TimerChip(
-                label: '60s',
-                value: 60,
-                selected: limit == 60,
-                onTap: () => notifier.updateConfig(
-                    config.copyWith(turnTimeLimitSeconds: 60)),
-              ),
-            ],
-          );
-          return stackVertical
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Turn time limit',
-                      style: TextStyle(
-                        color: colors.textPrimary,
-                        fontSize: FontTokens.title,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      limit != null ? '${limit}s per turn' : 'No timer',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: FontTokens.caption,
-                      ),
-                    ),
-                    SizedBox(height: LayoutTokens.gr2),
-                    chips,
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Turn time limit',
-                            style: TextStyle(
-                              color: colors.textPrimary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            limit != null ? '${limit}s per turn' : 'No timer',
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    chips,
-                  ],
-                );
-        },
       ),
     );
   }

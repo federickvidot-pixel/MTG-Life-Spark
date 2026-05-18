@@ -914,13 +914,15 @@ Widget _behaviourSpectrumTrack({
       width.isFinite && width > 0 ? width : 280.0;
   const double sideInset = 16.0;
   final double trackUsableW = math.max(0.0, w - 2 * sideInset);
-  final double knobCenterX = sideInset + trackUsableW * salt;
-  final double knobLeft = (knobCenterX - 9.0).clamp(4.0, w - 22.0);
-
-  const double thumbTop = 2.0;
   const double barHeight = 14.0;
   const double thumbSize = 18.0;
-  final double h = thumbTop + thumbSize;
+  final double knobCenterX = sideInset + trackUsableW * salt;
+  final double knobLeft = (knobCenterX - thumbSize / 2).clamp(
+    0.0,
+    math.max(0.0, w - thumbSize),
+  );
+  final double h = thumbSize;
+  final double barTop = (thumbSize - barHeight) / 2;
 
   return SizedBox(
     width: w,
@@ -931,7 +933,7 @@ Widget _behaviourSpectrumTrack({
       children: [
         Positioned(
           left: 0,
-          top: 0,
+          top: barTop,
           child: Container(
             width: w,
             height: barHeight,
@@ -953,7 +955,7 @@ Widget _behaviourSpectrumTrack({
         ),
         Positioned(
           left: knobLeft,
-          top: thumbTop,
+          top: 0,
           child: Container(
             width: thumbSize,
             height: thumbSize,

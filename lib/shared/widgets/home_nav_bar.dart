@@ -57,21 +57,32 @@ class HomeNavBar extends StatelessWidget {
           title: Text(
             'Are you sure you want to quit?',
             style: TextStyle(color: colors.textPrimary),
+            textAlign: TextAlign.center,
           ),
-          content: Text(
-            'You will return to the home page.',
-            style: TextStyle(color: colors.textSecondary),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'You will return to the home page.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colors.textSecondary),
+              ),
+              const SizedBox(height: SpacingTokens.lg),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Yes'),
+              ),
+              const SizedBox(height: SpacingTokens.sm),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(
+                  'No',
+                  style: TextStyle(color: colors.textSecondary),
+                ),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('No', style: TextStyle(color: colors.textSecondary)),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Yes'),
-            ),
-          ],
         );
       },
     ).then((quit) {

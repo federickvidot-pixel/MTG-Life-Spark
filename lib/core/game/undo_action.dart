@@ -1,4 +1,4 @@
-/// One reversible action in a player's undo stack (max depth 5).
+/// One reversible action in a player's undo stack (unlimited depth).
 class UndoAction {
   /// Player whose state was changed.
   final String playerId;

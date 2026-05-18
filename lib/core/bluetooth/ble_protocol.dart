@@ -19,7 +19,7 @@ final kBleRxCharUuid = Uuid.parse('19B10002-E8F2-537E-4F6C-D104768A1214');
 /// Negotiated MTU at runtime may allow larger; this is the safe fallback.
 const kDefaultMtu = 185;
 
-/// Maximum undo action stack depth per player.
+/// Legacy BLE constant (undo depth is no longer capped in app logic).
 const kUndoStackDepth = 5;
 
 /// Reconnection window in seconds after a client drops.

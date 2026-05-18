@@ -11,10 +11,9 @@ import '../models/player_deck.dart';
 import '../models/pod_preset.dart';
 import '../persistence/providers.dart';
 import '../../shared/theme/app_theme.dart';
+import 'game_format.dart';
 
 // ── Config ─────────────────────────────────────────────────────────────────
-
-enum GameFormat { commander, standard }
 
 class LobbyConfig {
   final GameFormat format;
@@ -109,10 +108,9 @@ class LobbyConfig {
       };
 
   factory LobbyConfig.fromJson(Map<String, dynamic> json) => LobbyConfig(
-        format: GameFormat.values.firstWhere(
-          (f) => f.name == json['format'],
-          orElse: () => GameFormat.commander,
-        ),
+        format:
+            GameFormatDetails.fromName(json['format'] as String?) ??
+            GameFormat.commander,
         startingLife: (json['startingLife'] as num?)?.toInt() ?? 40,
         alliancesEnabled: json['alliancesEnabled'] as bool? ?? true,
         maxPlayers: (json['maxPlayers'] as num?)?.toInt() ?? 6,

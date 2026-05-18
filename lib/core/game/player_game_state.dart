@@ -74,7 +74,7 @@ class PlayerGameState {
   // Life change log (last 10 entries)
   final List<LifeChange> lifeChangeLog;
 
-  // Undo stack (max kUndoStackDepth entries)
+  // Undo stack (unlimited depth; synced over BLE)
   final List<UndoAction> undoStack;
 
   const PlayerGameState({

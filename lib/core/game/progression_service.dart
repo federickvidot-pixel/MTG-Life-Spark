@@ -11,6 +11,7 @@ import '../persistence/match_repository.dart';
 import '../persistence/profile_repository.dart';
 import '../persistence/providers.dart';
 import 'game_state.dart';
+import 'game_format.dart';
 import 'lobby_state.dart';
 
 /// XP award constants.
@@ -117,9 +118,7 @@ class ProgressionService {
       opponentNames: opponentNames,
       result: result,
       eliminationReason: local.eliminationReason ?? 'survived',
-      format: lobbyState.config.format == GameFormat.commander
-          ? 'Commander'
-          : 'Standard',
+      format: lobbyState.config.format.displayName,
       durationMinutes: durationMinutes,
       startingLifeTotal: lobbyState.config.startingLife,
       playerCount: finalState.players.length,

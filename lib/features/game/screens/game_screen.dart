@@ -27,6 +27,7 @@ import '../widgets/game_ui_tokens.dart';
 import '../widgets/variant_card_panel.dart';
 import '../widgets/gameplay_dials_strip_widget.dart';
 import '../widgets/life_counter_widget.dart';
+import '../widgets/phase_picker_sheet.dart';
 import '../widgets/political_row_widget.dart';
 import '../widgets/team_panel_widget.dart';
 
@@ -375,7 +376,12 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: horizontalInset),
+          padding: EdgeInsets.fromLTRB(
+            horizontalInset,
+            LayoutTokens.gr3,
+            horizontalInset,
+            0,
+          ),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppTheme.card,
@@ -465,6 +471,11 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
                                   GameUiTokens.hostPhaseNavButton(
                                     AppTheme.accent,
                                   );
+                              final activeColor =
+                                  game
+                                      .playerById(game.activePlayerId)
+                                      ?.playerColor ??
+                                  AppTheme.accent;
 
                               return Column(
                                 crossAxisAlignment:
@@ -526,24 +537,21 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
                                                     horizontal:
                                                         LayoutTokens.gr1,
                                                   ),
-                                              child: FittedBox(
-                                                fit: BoxFit.scaleDown,
-                                                child: Text(
-                                                  game.currentPhase
-                                                      .displayName,
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 1,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w800,
-                                                    fontSize: 16,
-                                                    letterSpacing: 0.2,
-                                                    color:
-                                                        game.isLocalPlayersTurn
-                                                            ? AppTheme.accent
-                                                            : AppTheme
-                                                                .textSecondary,
-                                                  ),
-                                                ),
+                                              child: _PhaseSelectorLabel(
+                                                game: game,
+                                                activeColor: activeColor,
+                                                onPickPhase:
+                                                    game.timeoutActive
+                                                        ? null
+                                                        : (game.isHost ||
+                                                                game
+                                                                    .isLocalPlayersTurn)
+                                                            ? (phase) =>
+                                                                notifier
+                                                                    .setPhase(
+                                                                  phase,
+                                                                )
+                                                            : null,
                                               ),
                                             ),
                                           ),
@@ -721,10 +729,6 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
                                               field,
                                               v,
                                             ),
-                                    onProliferate:
-                                        () => notifier.proliferate(
-                                          local.playerId,
-                                        ),
                                     onRegisterCustomDial:
                                         (key, label) =>
                                             notifier.registerCustomGameplayDial(
@@ -765,8 +769,87 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
           onToggleOverview: widget.onToggleOverview,
           compact: tightVertical,
         ),
-        SizedBox(height: tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr3),
       ],
+    );
+  }
+}
+
+/// Current phase label; tap opens scrollable picker when [onPickPhase] is set.
+class _PhaseSelectorLabel extends StatelessWidget {
+  final GameState game;
+  final Color activeColor;
+  final void Function(GamePhase phase)? onPickPhase;
+
+  const _PhaseSelectorLabel({
+    required this.game,
+    required this.activeColor,
+    this.onPickPhase,
+  });
+
+  bool get _canPick =>
+      onPickPhase != null && (game.isHost || game.isLocalPlayersTurn);
+
+  @override
+  Widget build(BuildContext context) {
+    final phaseColor =
+        game.isLocalPlayersTurn ? AppTheme.accent : AppTheme.textSecondary;
+
+    final label = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            game.currentPhase.displayName,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              letterSpacing: 0.2,
+              color: phaseColor,
+            ),
+          ),
+          if (_canPick) ...[
+            const SizedBox(width: LayoutTokens.gr0),
+            Icon(
+              Icons.unfold_more_rounded,
+              size: 18,
+              color: phaseColor.withValues(alpha: 0.9),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (!_canPick) {
+      return Center(child: label);
+    }
+
+    return Center(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap:
+              () => showPhasePickerSheet(
+                context,
+                currentPhase: game.currentPhase,
+                accentColor: activeColor,
+                onSelected: onPickPhase!,
+              ),
+          borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: LayoutTokens.gr2,
+              vertical: LayoutTokens.gr1,
+            ),
+            child: Tooltip(
+              message: 'Choose phase',
+              child: label,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -998,7 +1081,6 @@ class _BottomBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(gameProvider.notifier);
-    final hasUndo = local.undoStack.isNotEmpty;
     final compact = this.compact;
     final iconSize = compact ? 22.0 : 24.0;
 
@@ -1006,13 +1088,12 @@ class _BottomBar extends ConsumerWidget {
       top: false,
       left: false,
       right: false,
-      minimum: EdgeInsets.only(bottom: LayoutTokens.gr2),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           LayoutTokens.gr3,
           compact ? LayoutTokens.gr1 : LayoutTokens.gr2,
           LayoutTokens.gr3,
-          compact ? LayoutTokens.gr2 : LayoutTokens.gr3,
+          LayoutTokens.gr3,
         ),
         child: Container(
           padding: EdgeInsets.symmetric(
@@ -1051,7 +1132,7 @@ class _BottomBar extends ConsumerWidget {
                     icon: Icons.undo,
                     label: 'Undo',
                     iconSize: iconSize,
-                    enabled: hasUndo && !local.isEliminated,
+                    enabled: !local.isEliminated,
                     onTap: () => notifier.undo(local.playerId),
                   ),
                 ),
@@ -1103,9 +1184,9 @@ class _BottomBar extends ConsumerWidget {
                 child: Center(
                   child: _BarButton(
                     icon: Icons.flag_outlined,
-                    label: 'Concede',
+                    label: 'Forfeit',
                     iconSize: iconSize,
-                    enabled: !local.isEliminated,
+                    enabled: !local.isEliminated && !game.gameOver,
                     onTap:
                         () => _showConcedeDialog(context, ref, local.playerId),
                   ),
@@ -1138,11 +1219,21 @@ class _BottomBar extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder:
-          (_) => _ConcedeDialog(
+          (dialogContext) => _ConcedeDialog(
             game: game,
             playerId: playerId,
             onConcede: () {
               ref.read(gameProvider.notifier).concede(playerId);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!context.mounted) return;
+                final after = ref.read(gameProvider);
+                final local = after.localPlayer;
+                if (local != null &&
+                    local.isEliminated &&
+                    !after.gameOver) {
+                  context.go(AppRoutes.endGame);
+                }
+              });
             },
           ),
     );
@@ -1221,7 +1312,7 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
                         children: [
                           const Expanded(
                             child: Text(
-                              'Concede?',
+                              'Forfeit?',
                               style: TextStyle(
                                 color: AppTheme.textPrimary,
                                 fontSize: 20,
@@ -1333,7 +1424,7 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: () => _submit(ref),
-                        child: const Text('Concede'),
+                        child: const Text('Forfeit'),
                       ),
                     ),
                   ],
@@ -2191,10 +2282,14 @@ class _OverviewView extends ConsumerWidget {
             ],
           ),
 
-          // Monarch / Day-Night row (compact, white borders)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+              padding: const EdgeInsets.fromLTRB(
+                LayoutTokens.gr3,
+                LayoutTokens.gr2,
+                LayoutTokens.gr3,
+                LayoutTokens.gr1,
+              ),
               child: PoliticalRowWidget(game: game, overviewStyle: true),
             ),
           ),
