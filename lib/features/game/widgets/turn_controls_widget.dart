@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/font_tokens.dart';
+import '../../../ui/tokens/opacity_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/game/game_phase.dart';
@@ -47,7 +49,7 @@ class TurnControlsWidget extends ConsumerWidget {
                   style: TextStyle(
                     color: isMyTurn ? activeColor : AppTheme.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: FontTokens.hudSm,
                   ),
                 ),
                 Text(
@@ -92,14 +94,14 @@ class _ControlBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = enabled ? color : color.withValues(alpha: 0.3);
+    final c = enabled ? color : color.withValues(alpha: OpacityTokens.moderate);
     final child = GestureDetector(
       onTap: enabled ? onTap : null,
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: c.withValues(alpha: 0.12),
+          color: c.withValues(alpha: OpacityTokens.subtle),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: c.withValues(alpha: 0.4)),
         ),

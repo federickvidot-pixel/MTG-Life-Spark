@@ -19,7 +19,12 @@ import '../../../core/game/lobby_state.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/utils/app_router.dart';
+import '../../../ui/tokens/font_tokens.dart';
+import '../../../ui/tokens/color_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
+import '../../../ui/tokens/opacity_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 import '../../../shared/widgets/home_nav_bar.dart';
 import '../widgets/commander_damage_panel.dart';
 import '../widgets/commander_info_bar.dart';
@@ -177,7 +182,7 @@ class _FirstPlayerRollOverlayState extends State<_FirstPlayerRollOverlay>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: MotionTokens.slow,
     );
     _scaleAnim = Tween<double>(
       begin: 0.5,
@@ -254,7 +259,7 @@ class _FirstPlayerRollOverlayState extends State<_FirstPlayerRollOverlay>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.accent.withValues(alpha: 0.3),
+                      color: AppTheme.accent.withValues(alpha: OpacityTokens.moderate),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),
@@ -303,7 +308,7 @@ class _FirstPlayerRollOverlayState extends State<_FirstPlayerRollOverlay>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: RadiusTokens.radiusControlSm,
             ),
             child: Text(
               widget.game.isHost
@@ -392,7 +397,7 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
+                  color: Colors.black.withValues(alpha: OpacityTokens.faint),
                   blurRadius: LayoutTokens.gr2,
                   offset: const Offset(0, 2),
                 ),
@@ -445,7 +450,7 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
             style: ButtonStyle(
               visualDensity: VisualDensity.compact,
               textStyle: WidgetStatePropertyAll(
-                TextStyle(fontSize: 13, color: AppTheme.textPrimary),
+                TextStyle(fontSize: FontTokens.hudSm, color: AppTheme.textPrimary),
               ),
             ),
           ),
@@ -833,7 +838,7 @@ class _PhaseSelectorLabel extends StatelessWidget {
             Icon(
               Icons.unfold_more_rounded,
               size: 18,
-              color: phaseColor.withValues(alpha: 0.9),
+              color: phaseColor.withValues(alpha: OpacityTokens.nearOpaque),
             ),
           ],
         ],
@@ -887,7 +892,7 @@ class _GameHistoryTab extends StatelessWidget {
             'No actions logged yet.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.textSecondary.withValues(alpha: 0.9),
+              color: AppTheme.textSecondary.withValues(alpha: OpacityTokens.nearOpaque),
               fontSize: 14,
             ),
           ),
@@ -937,7 +942,7 @@ class _GameHistoryTab extends StatelessWidget {
                       Text(
                         _formatTime(e.time),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: FontTokens.hudXs,
                           color: AppTheme.textSecondary.withValues(alpha: 0.85),
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
@@ -948,7 +953,7 @@ class _GameHistoryTab extends StatelessWidget {
                           e.message,
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
-                            fontSize: 13,
+                            fontSize: FontTokens.hudSm,
                             height: 1.25,
                           ),
                         ),
@@ -1013,7 +1018,7 @@ class _BottomBar extends ConsumerWidget {
             border: Border.all(color: AppTheme.surface),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
+                color: Colors.black.withValues(alpha: OpacityTokens.faint),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1250,7 +1255,7 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
                         'This will remove you from the game. Rate your opponents before leaving.',
                         style: TextStyle(
                           color: AppTheme.textSecondary,
-                          fontSize: 13,
+                          fontSize: FontTokens.hudSm,
                         ),
                       ),
                     ),
@@ -1265,7 +1270,7 @@ class _ConcedeDialogState extends State<_ConcedeDialog> {
                           'Rate opponents',
                           style: TextStyle(
                             color: AppTheme.textPrimary,
-                            fontSize: 13,
+                            fontSize: FontTokens.hudSm,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1381,7 +1386,7 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
               player.username,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
-                fontSize: 13,
+                fontSize: FontTokens.hudSm,
                 fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,
@@ -1397,7 +1402,7 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
             style: IconButton.styleFrom(
               backgroundColor:
                   isLiked
-                      ? AppTheme.success.withValues(alpha: 0.2)
+                      ? AppTheme.success.withValues(alpha: OpacityTokens.soft)
                       : Colors.transparent,
               minimumSize: const Size(44, 44),
               padding: EdgeInsets.zero,
@@ -1413,7 +1418,7 @@ class _ConcedePlayerFeedbackRow extends StatelessWidget {
             style: IconButton.styleFrom(
               backgroundColor:
                   isDisliked
-                      ? AppTheme.accent.withValues(alpha: 0.2)
+                      ? AppTheme.accent.withValues(alpha: OpacityTokens.soft)
                       : Colors.transparent,
               minimumSize: const Size(44, 44),
               padding: EdgeInsets.zero,
@@ -1453,7 +1458,7 @@ class _ConcedeVoteDropdown extends StatelessWidget {
             label,
             style: const TextStyle(
               color: AppTheme.textSecondary,
-              fontSize: 11,
+              fontSize: FontTokens.hudXs,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1503,7 +1508,7 @@ class _ConcedeVoteDropdown extends StatelessWidget {
                           p.username,
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
-                            fontSize: 13,
+                            fontSize: FontTokens.hudSm,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1642,7 +1647,7 @@ class _TimeoutOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       tileColor: AppTheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: RadiusTokens.radiusControlSm),
       leading: Icon(icon, color: AppTheme.accentGold),
       title: Text(label, style: const TextStyle(color: AppTheme.textPrimary)),
       onTap: onTap,
@@ -1731,7 +1736,7 @@ class _AllianceProposalBanner extends ConsumerWidget {
                       'Decline',
                       style: TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 13,
+                        fontSize: FontTokens.hudSm,
                       ),
                     ),
                   ),
@@ -1757,7 +1762,7 @@ class _GameMarkerBanner extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.accentGold.withValues(alpha: 0.08),
+        color: AppTheme.accentGold.withValues(alpha: OpacityTokens.faint),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1890,7 +1895,7 @@ class _TimeoutOverlayState extends State<_TimeoutOverlay> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.accentGold.withValues(alpha: 0.3),
+                    color: AppTheme.accentGold.withValues(alpha: OpacityTokens.moderate),
                     blurRadius: 24,
                     spreadRadius: 4,
                   ),
@@ -2009,9 +2014,9 @@ class _TimeoutBannerState extends State<_TimeoutBanner> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.accentGold.withValues(alpha: 0.12),
+        color: AppTheme.accentGold.withValues(alpha: OpacityTokens.subtle),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.accentGold.withValues(alpha: 0.5)),
+        border: Border.all(color: AppTheme.accentGold.withValues(alpha: OpacityTokens.half)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2086,9 +2091,9 @@ class _TurnDurationBannerState extends State<_TurnDurationBanner> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.accent.withValues(alpha: 0.12),
+        color: AppTheme.accent.withValues(alpha: OpacityTokens.subtle),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.5)),
+        border: Border.all(color: AppTheme.accent.withValues(alpha: OpacityTokens.half)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2170,7 +2175,7 @@ class _OverviewView extends ConsumerWidget {
                           ? () => notifier.endTurn()
                           : null,
                   style: TextButton.styleFrom(
-                    backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+                    backgroundColor: AppTheme.accent.withValues(alpha: OpacityTokens.soft),
                     foregroundColor: AppTheme.accent,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -2248,14 +2253,14 @@ class _OverviewPlayerCard extends ConsumerWidget {
         : 'Waiting';
 
     final card = AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: MotionTokens.slow,
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color:
             p.isEliminated
-                ? AppTheme.surface.withValues(alpha: 0.5)
+                ? AppTheme.surface.withValues(alpha: OpacityTokens.half)
                 : isLocal
-                ? AppTheme.card.withValues(alpha: 0.9)
+                ? AppTheme.card.withValues(alpha: OpacityTokens.nearOpaque)
                 : AppTheme.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColorResolved, width: isActive ? 2 : 1),
@@ -2274,7 +2279,7 @@ class _OverviewPlayerCard extends ConsumerWidget {
               child: Text(
                 p.username.isNotEmpty ? p.username[0].toUpperCase() : '?',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: ColorTokens.onAccent,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2302,14 +2307,14 @@ class _OverviewPlayerCard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color:
                     isActive
-                        ? borderColor.withValues(alpha: 0.2)
-                        : AppTheme.surface.withValues(alpha: 0.5),
+                        ? borderColor.withValues(alpha: OpacityTokens.soft)
+                        : AppTheme.surface.withValues(alpha: OpacityTokens.half),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color:
                       isActive
-                          ? borderColor.withValues(alpha: 0.5)
-                          : AppTheme.textSecondary.withValues(alpha: 0.2),
+                          ? borderColor.withValues(alpha: OpacityTokens.half)
+                          : AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft),
                 ),
               ),
               child: Text(
@@ -2331,10 +2336,10 @@ class _OverviewPlayerCard extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.surface.withValues(alpha: 0.5),
+                color: AppTheme.surface.withValues(alpha: OpacityTokens.half),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.2),
+                  color: AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft),
                 ),
               ),
               child: Text(
@@ -2417,13 +2422,13 @@ class _OverviewPlayerCard extends ConsumerWidget {
                                     )
                                     : color.withValues(alpha: 0.15))
                                 : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: RadiusTokens.radiusControlSm,
                         child: InkWell(
                           onTap: () {
                             notifier.assignTeam(playerId, idx);
                             Navigator.of(ctx).pop();
                           },
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: RadiusTokens.radiusControlSm,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,

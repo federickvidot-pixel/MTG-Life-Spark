@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/font_tokens.dart';
 import 'package:flutter/services.dart';
 import '../../../core/game/gameplay_dial_ids.dart';
 import '../../../core/game/player_game_state.dart';
@@ -321,7 +322,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: FontTokens.hudXs,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.1,
                     color: AppTheme.textSecondary.withValues(alpha: 0.75),
@@ -393,7 +394,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
                     child: Text(
                       'Pick trackers for your strip. Long-press a counter icon to remove it from the strip.',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: FontTokens.hudSm,
                         height: 1.35,
                         color: AppTheme.textSecondary.withValues(alpha: 0.88),
                       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_color_tokens.dart';
+import '../tokens/color_tokens.dart';
 import '../tokens/font_tokens.dart';
 import '../tokens/radius_tokens.dart';
 
@@ -42,14 +43,14 @@ class UiButton extends StatelessWidget {
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: ColorTokens.onAccent,
                   ),
                 )
               : (icon ?? const SizedBox.shrink()),
           label: loading ? const SizedBox.shrink() : Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
           style: FilledButton.styleFrom(
             backgroundColor: colors.primaryAccent,
-            foregroundColor: Colors.white,
+            foregroundColor: ColorTokens.onAccent,
             disabledBackgroundColor: colors.surface,
             disabledForegroundColor: colors.textMuted,
             shape: RoundedRectangleBorder(

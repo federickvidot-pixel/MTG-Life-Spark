@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/motion_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -64,7 +65,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _next() {
     if (_currentPage < _slides.length - 1) {
       _controller.nextPage(
-        duration: const Duration(milliseconds: 300),
+        duration: MotionTokens.slow,
         curve: Curves.easeInOut,
       );
     } else {
@@ -106,7 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_slides.length, (i) {
                 return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: MotionTokens.standard,
                   margin: EdgeInsets.symmetric(horizontal: LayoutTokens.gr0),
                   width: _currentPage == i ? 24 : 8,
                   height: 8,

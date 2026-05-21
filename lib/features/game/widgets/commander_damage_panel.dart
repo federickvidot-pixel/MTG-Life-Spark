@@ -1,5 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/motion_tokens.dart';
+import '../../../ui/tokens/opacity_tokens.dart';
 
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
@@ -226,7 +228,7 @@ class _OpponentAvatar extends StatelessWidget {
         width: LayoutTokens.gr3 + LayoutTokens.gr2 + LayoutTokens.gr1,
         height: LayoutTokens.gr3 + LayoutTokens.gr2 + LayoutTokens.gr1,
         decoration: BoxDecoration(
-          color: opponent.playerColor.withValues(alpha: 0.2),
+          color: opponent.playerColor.withValues(alpha: OpacityTokens.soft),
           borderRadius: BorderRadius.circular(LayoutTokens.gr1),
           border: Border.all(color: opponent.playerColor),
         ),
@@ -273,7 +275,7 @@ class _DamageTrack extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr1),
           child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
+            duration: MotionTokens.standard,
             style: TextStyle(
               color: damageColor,
               fontSize: LayoutTokens.gr3,

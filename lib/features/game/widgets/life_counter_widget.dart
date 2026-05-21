@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/color_tokens.dart';
+import '../../../ui/tokens/opacity_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/game/commander_identity_colors.dart';
@@ -61,7 +64,7 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
     super.initState();
     _deltaAnim = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: MotionTokens.hero,
     );
     _deltaFade = CurvedAnimation(parent: _deltaAnim, curve: Curves.easeOut);
     _deltaSlide = Tween<Offset>(
@@ -98,10 +101,10 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
   void _startHold(int direction) {
     if (widget.isEliminated) return;
     _holding = true;
-    _holdTimer = Timer(const Duration(milliseconds: 500), () {
+    _holdTimer = Timer(MotionTokens.hero, () {
       if (!_holding || !mounted) return;
       _change(direction * 5);
-      _holdTimer = Timer.periodic(const Duration(milliseconds: 150), (_) {
+      _holdTimer = Timer.periodic(MotionTokens.fast, (_) {
         if (!_holding || !mounted) {
           _holdTimer?.cancel();
           return;
@@ -424,7 +427,7 @@ class _LifeEdgeStepGlyph extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: OpacityTokens.soft),
             blurRadius: LayoutTokens.gr0,
             offset: const Offset(0, LayoutTokens.gr0),
           ),
@@ -542,7 +545,7 @@ class _LifeInputDialogState extends State<_LifeInputDialog> {
                             onPressed: _input.isNotEmpty ? _confirm : null,
                             child: const Icon(
                               Icons.check,
-                              color: Colors.white,
+                              color: ColorTokens.onAccent,
                               size: LayoutTokens.gr3,
                             ),
                           ),

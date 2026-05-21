@@ -7,6 +7,8 @@ import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/theme_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/font_tokens.dart';
+import '../../../ui/tokens/color_tokens.dart';
+import '../../../ui/tokens/opacity_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import '../../../ui/tokens/spacing_tokens.dart';
 import '../../../ui/tokens/radius_tokens.dart';
@@ -210,7 +212,7 @@ class _PoliticalBadge extends StatelessWidget {
 
     final borderColor =
         hasHolder
-            ? AppTheme.accentGold.withValues(alpha: 0.5)
+            ? AppTheme.accentGold.withValues(alpha: OpacityTokens.half)
             : AppTheme.surface;
     final holderColor =
         hasHolder ? AppTheme.accentGold : AppTheme.textSecondary;
@@ -242,14 +244,14 @@ class _PoliticalBadge extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: 9,
+                      fontSize: FontTokens.xs,
                     ),
                   ),
                   Text(
                     holder?.username ?? 'None',
                     style: TextStyle(
                       color: holderColor,
-                      fontSize: 11,
+                      fontSize: FontTokens.hudXs,
                       fontWeight:
                           hasHolder ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -262,7 +264,7 @@ class _PoliticalBadge extends StatelessWidget {
               Icon(
                 Icons.edit,
                 size: 12,
-                color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                color: AppTheme.textSecondary.withValues(alpha: OpacityTokens.half),
               ),
           ],
         ),
@@ -308,7 +310,7 @@ class _DayNightToggle extends StatelessWidget {
     }
 
     final borderColor =
-        isActive ? color.withValues(alpha: 0.5) : AppTheme.surface;
+        isActive ? color.withValues(alpha: OpacityTokens.half) : AppTheme.surface;
     final icon = switch (dayNight) {
       DayNightState.none => '🌓',
       DayNightState.day => '☀️',
@@ -332,7 +334,7 @@ class _DayNightToggle extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(icon, style: const TextStyle(fontSize: 18)),
-            Text(label, style: TextStyle(color: color, fontSize: 9)),
+            Text(label, style: TextStyle(color: color, fontSize: FontTokens.xs)),
           ],
         ),
       ),
@@ -374,7 +376,7 @@ class _OverviewFilledMarkerButton extends StatelessWidget {
         backgroundColor: fillColor,
         foregroundColor: foregroundColor,
         disabledBackgroundColor: AppTheme.surface.withValues(alpha: 0.6),
-        disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: 0.5),
+        disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: OpacityTokens.half),
         elevation: filled ? 0 : 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(LayoutTokens.gr1),
@@ -478,7 +480,7 @@ class _PlayerPickerSheet extends StatelessWidget {
                         ? p.username[0].toUpperCase()
                         : '?',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: ColorTokens.onAccent,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),

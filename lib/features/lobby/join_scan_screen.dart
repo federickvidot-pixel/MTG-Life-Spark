@@ -18,6 +18,7 @@ import 'deck_picker_sheet.dart';
 import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
+import '../../ui/tokens/radius_tokens.dart';
 
 enum _JoinPhase { scanning, connecting, waitingRoom }
 
@@ -224,7 +225,7 @@ class _QrScanView extends StatelessWidget {
             'Point the camera at the host\'s QR code',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white,
+              color: ColorTokens.onAccent,
               fontSize: FontTokens.body,
               shadows: [Shadow(blurRadius: 4, color: Colors.black)],
             ),
@@ -381,7 +382,7 @@ class _WaitingRoomViewState extends ConsumerState<_WaitingRoomView> {
                 icon: Icon(
                   Icons.check,
                   size: 32,
-                  color: Colors.white,
+                  color: ColorTokens.onAccent,
                 ),
               ),
             ],
@@ -404,13 +405,13 @@ class _WaitingSlotRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: RadiusTokens.radiusControlSm,
       ),
       child: Row(
         children: [
           if (slot.commanderImageUrl != null)
             ClipRRect(
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: RadiusTokens.radiusXs,
               child: CachedNetworkImage(
                 imageUrl: slot.commanderImageUrl!,
                 width: 36,
@@ -456,7 +457,7 @@ class _WaitingSlotRow extends StatelessWidget {
               color:
                   (slot.isReady ? ColorTokens.success : colors.textSecondary)
                       .withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: RadiusTokens.radiusXs,
               border: Border.all(
                   color: slot.isReady
                       ? ColorTokens.success
@@ -483,7 +484,7 @@ class _WaitingSlotRow extends StatelessWidget {
         height: 36,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: RadiusTokens.radiusXs,
           border: Border.all(color: color),
         ),
         child: Icon(Icons.person, color: color, size: 20),

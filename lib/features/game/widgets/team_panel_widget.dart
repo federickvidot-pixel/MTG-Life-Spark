@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/game/game_providers.dart';
 import '../../../core/game/game_state.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/font_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
+import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 const _teamColors = <int, Color>{
   1: Color(0xFF4FC3F7), // Sky blue
@@ -125,22 +129,22 @@ class _TeamChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: MotionTokens.fast,
         margin: const EdgeInsets.only(left: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr1, vertical: LayoutTokens.gr0),
         decoration: BoxDecoration(
           color: isActive ? color.withValues(alpha: 0.25) : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: RadiusTokens.radiusXs,
           border: Border.all(
             color: isActive ? color : color.withValues(alpha: 0.3),
-            width: isActive ? 1.5 : 1,
+            width: 1,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
             color: isActive ? color : color.withValues(alpha: 0.5),
-            fontSize: 9,
+            fontSize: FontTokens.hudXs,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -160,15 +164,15 @@ class TeamBadge extends StatelessWidget {
     if (teamIndex == 0) return const SizedBox.shrink();
     final color = _teamColors[teamIndex] ?? AppTheme.textSecondary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: LayoutTokens.gr1, vertical: LayoutTokens.gr0),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: RadiusTokens.radiusXs,
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         _teamLabels[teamIndex] ?? 'T$teamIndex',
-        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
+        style: TextStyle(color: color, fontSize: FontTokens.hudXs, fontWeight: FontWeight.bold),
       ),
     );
   }

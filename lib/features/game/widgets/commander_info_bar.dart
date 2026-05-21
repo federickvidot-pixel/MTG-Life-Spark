@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/color_tokens.dart';
 
 import '../../../core/game/game_phase.dart';
 import '../../../core/game/player_game_state.dart';
@@ -312,7 +313,7 @@ class _CastableCommanderAvatar extends StatelessWidget {
                           size: size >= LayoutTokens.minTapTarget
                               ? LayoutTokens.gr2
                               : LayoutTokens.gr0 * 2,
-                          color: Colors.white,
+                          color: ColorTokens.onAccent,
                         ),
                       ),
                     ),

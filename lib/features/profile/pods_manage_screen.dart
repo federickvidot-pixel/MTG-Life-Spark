@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/font_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/pod_preset.dart';
@@ -147,7 +148,7 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
                         'Add players when you edit this pod.',
                         style: TextStyle(
                           color: colors.textSecondary,
-                          fontSize: 13,
+                          fontSize: FontTokens.hudSm,
                         ),
                       ),
                     ),
@@ -181,7 +182,7 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
                             id,
                             style: TextStyle(
                               color: colors.textPrimary,
-                              fontSize: 13,
+                              fontSize: FontTokens.hudSm,
                             ),
                           ),
                           backgroundColor: colors.backgroundSecondary,

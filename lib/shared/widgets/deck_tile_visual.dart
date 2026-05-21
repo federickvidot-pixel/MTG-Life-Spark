@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../ui/tokens/opacity_tokens.dart';
 
 import '../../core/models/player_deck.dart';
 import '../../ui/theme/app_color_tokens.dart';
@@ -69,7 +70,7 @@ class DeckCommanderAvatarCluster extends StatelessWidget {
                   border: Border.all(color: colors.surface, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withValues(alpha: OpacityTokens.soft),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -225,7 +226,7 @@ class DeckCommanderAvatarCluster extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: innerR,
           border: Border.all(
-            color: colors.borderSubtle.withValues(alpha: 0.75),
+            color: colors.borderSubtle.withValues(alpha: OpacityTokens.strong),
             width: 1,
           ),
           boxShadow: [
@@ -310,7 +311,7 @@ class DeckWinLossRatioBar extends StatelessWidget {
               Expanded(
                 flex: l,
                 child: Container(
-                  color: ColorTokens.danger.withValues(alpha: 0.9),
+                  color: ColorTokens.danger.withValues(alpha: OpacityTokens.nearOpaque),
                 ),
               ),
           ],
@@ -354,7 +355,7 @@ class DeckStatChips extends StatelessWidget {
           color: colors.backgroundSecondary,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: colors.textSecondary.withValues(alpha: 0.2),
+            color: colors.textSecondary.withValues(alpha: OpacityTokens.soft),
           ),
         ),
         child: Row(

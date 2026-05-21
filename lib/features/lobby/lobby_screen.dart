@@ -18,6 +18,8 @@ import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
 import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
+import '../../ui/tokens/radius_tokens.dart';
+import '../../ui/tokens/opacity_tokens.dart';
 
 class LobbyScreen extends ConsumerStatefulWidget {
   const LobbyScreen({super.key});
@@ -134,7 +136,7 @@ class _PodSection extends ConsumerWidget {
       padding: EdgeInsets.all(compact ? LayoutTokens.gr3 : LayoutTokens.gr4),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: RadiusTokens.radiusChip,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +199,7 @@ class _PodSection extends ConsumerWidget {
               style: TextStyle(
                 color: colors.textSecondary,
                 fontWeight: FontWeight.w600,
-                fontSize: 11,
+                fontSize: FontTokens.hudXs,
               ),
             ),
             SizedBox(height: LayoutTokens.gr1),
@@ -289,7 +291,7 @@ class _QrHeader extends StatelessWidget {
           else
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: ColorTokens.onAccent,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -362,7 +364,7 @@ class _PlayerSlotCard extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withValues(alpha: OpacityTokens.subtle),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -435,7 +437,7 @@ class _PlayerSlotCard extends ConsumerWidget {
                             : 'Deck (saved list changed)',
                         style: TextStyle(
                           color: colors.primaryAccent,
-                          fontSize: 11,
+                          fontSize: FontTokens.hudXs,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
@@ -518,7 +520,7 @@ class _SlotReadyButton extends ConsumerWidget {
         ),
         backgroundColor:
             slot.isReady
-                ? ColorTokens.success.withValues(alpha: 0.2)
+                ? ColorTokens.success.withValues(alpha: OpacityTokens.soft)
                 : colors.surface,
         foregroundColor:
             slot.isReady ? ColorTokens.success : colors.textSecondary,
@@ -559,7 +561,7 @@ class _SlotActionButton extends StatelessWidget {
 
     if (filled && highlighted) {
       bg = accent;
-      fg = Colors.white;
+      fg = ColorTokens.onAccent;
       border = accent;
     } else if (highlighted) {
       bg = accent.withValues(alpha: 0.35);
@@ -695,9 +697,9 @@ class _EmptySlotCard extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: LayoutTokens.gr4),
       decoration: BoxDecoration(
         color: colors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: RadiusTokens.radiusChip,
         border: Border.all(
-          color: colors.textSecondary.withValues(alpha: 0.2),
+          color: colors.textSecondary.withValues(alpha: OpacityTokens.soft),
           style: BorderStyle.solid,
         ),
       ),
@@ -734,7 +736,7 @@ class _ConfigSection extends ConsumerWidget {
       padding: EdgeInsets.all(compact ? LayoutTokens.gr3 : LayoutTokens.gr4),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: RadiusTokens.radiusChip,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -794,7 +796,7 @@ InputDecoration _lobbyDropdownDecoration(BuildContext context) {
   final border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
     borderSide: BorderSide(
-      color: colors.textSecondary.withValues(alpha: 0.3),
+      color: colors.textSecondary.withValues(alpha: OpacityTokens.moderate),
     ),
   );
   return InputDecoration(
@@ -1155,7 +1157,7 @@ class _GameplaySwitchTile extends StatelessWidget {
         ),
         value: value,
         onChanged: onChanged,
-        activeTrackColor: colors.primaryAccent.withValues(alpha: 0.5),
+        activeTrackColor: colors.primaryAccent.withValues(alpha: OpacityTokens.half),
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return colors.primaryAccent;
@@ -1192,7 +1194,7 @@ class _StartGameButtonState extends ConsumerState<_StartGameButton> {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: canStart ? ColorTokens.success : colors.textSecondary,
-        disabledBackgroundColor: colors.textSecondary.withValues(alpha: 0.3),
+        disabledBackgroundColor: colors.textSecondary.withValues(alpha: OpacityTokens.moderate),
         minimumSize: const Size(double.infinity, 52),
         padding: const EdgeInsets.symmetric(vertical: 14),
       ),
@@ -1213,7 +1215,7 @@ class _StartGameButtonState extends ConsumerState<_StartGameButton> {
               width: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: ColorTokens.onAccent,
               ),
             )
           : Text(
@@ -1221,7 +1223,7 @@ class _StartGameButtonState extends ConsumerState<_StartGameButton> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: MediaQuery.sizeOf(context).width < 360 ? FontTokens.title : FontTokens.bodyLg,
-                color: Colors.white,
+                color: ColorTokens.onAccent,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,

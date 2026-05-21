@@ -16,6 +16,9 @@ import '../../shared/utils/achievement_definitions.dart';
 import '../../shared/utils/app_router.dart';
 import '../../shared/utils/wizard_rank_titles.dart';
 import '../../ui/tokens/layout_tokens.dart';
+import '../../ui/tokens/font_tokens.dart';
+import '../../ui/tokens/radius_tokens.dart';
+import '../../ui/tokens/color_tokens.dart';
 
 class EndGameScreen extends ConsumerStatefulWidget {
   const EndGameScreen({super.key});
@@ -307,7 +310,7 @@ class _WinnerBanner extends StatelessWidget {
                           ? winner!.username[0].toUpperCase()
                           : '?',
                       style: const TextStyle(
-                          color: Colors.white,
+                          color: ColorTokens.onAccent,
                           fontSize: 40,
                           fontWeight: FontWeight.bold),
                     ),
@@ -324,7 +327,7 @@ class _WinnerBanner extends StatelessWidget {
                     ? winner!.username[0].toUpperCase()
                     : '?',
                 style: const TextStyle(
-                    color: Colors.white,
+                    color: ColorTokens.onAccent,
                     fontSize: 40,
                     fontWeight: FontWeight.bold),
               ),
@@ -474,7 +477,7 @@ class _XpCard extends StatelessWidget {
                 wizardRankTitle(result.newLevel),
                 style: const TextStyle(
                     color: AppTheme.textSecondary,
-                    fontSize: 11,
+                    fontSize: FontTokens.hudXs,
                     fontWeight: FontWeight.w500),
               ),
             ],
@@ -543,7 +546,7 @@ class _FeedbackCard extends StatelessWidget {
                 'Thanks! Your feedback has been recorded.',
                 style: TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 13,
+                  fontSize: FontTokens.hudSm,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -615,7 +618,7 @@ class _FeedbackCard extends StatelessWidget {
               onPressed: onSubmit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accent,
-                foregroundColor: Colors.white,
+                foregroundColor: ColorTokens.onAccent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999)),
@@ -664,7 +667,7 @@ class _PlayerFeedbackRow extends StatelessWidget {
               player.username,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
-                fontSize: 13,
+                fontSize: FontTokens.hudSm,
                 fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,
@@ -728,7 +731,7 @@ class _VoteDropdown extends StatelessWidget {
           label,
           style: const TextStyle(
             color: AppTheme.textSecondary,
-            fontSize: 11,
+            fontSize: FontTokens.hudXs,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -758,7 +761,7 @@ class _VoteDropdown extends StatelessWidget {
                 '— None —',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
-                  fontSize: 13,
+                  fontSize: FontTokens.hudSm,
                 ),
               ),
             ),
@@ -779,7 +782,7 @@ class _VoteDropdown extends StatelessWidget {
                         p.username,
                         style: const TextStyle(
                           color: AppTheme.textPrimary,
-                          fontSize: 13,
+                          fontSize: FontTokens.hudSm,
                         ),
                       ),
                     ],
@@ -814,7 +817,7 @@ class _AchievementsCard extends StatelessWidget {
       padding: EdgeInsets.all(LayoutTokens.gr2),
       decoration: BoxDecoration(
         color: AppTheme.card,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: RadiusTokens.radiusChip,
         border: Border.all(
             color: AppTheme.success.withValues(alpha: 0.3)),
       ),
@@ -825,7 +828,7 @@ class _AchievementsCard extends StatelessWidget {
             '🏅 New Achievements',
             style: TextStyle(
               color: AppTheme.success,
-              fontSize: 13,
+              fontSize: FontTokens.hudSm,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -843,7 +846,7 @@ class _AchievementsCard extends StatelessWidget {
                         Text(def.title,
                             style: const TextStyle(
                                 color: AppTheme.textPrimary,
-                                fontSize: 13,
+                                fontSize: FontTokens.hudSm,
                                 fontWeight: FontWeight.w600)),
                         Text(def.description,
                             style: const TextStyle(
@@ -882,7 +885,7 @@ class _FinalPlayerRow extends StatelessWidget {
         color: isWinner
             ? AppTheme.accentGold.withValues(alpha: 0.1)
             : AppTheme.card,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: RadiusTokens.radiusControlSm,
         border: Border.all(
           color: isWinner
               ? AppTheme.accentGold.withValues(alpha: 0.4)
@@ -915,7 +918,7 @@ class _FinalPlayerRow extends StatelessWidget {
                       color: AppTheme.textPrimary,
                       fontWeight:
                           isLocal ? FontWeight.bold : FontWeight.normal,
-                      fontSize: 13,
+                      fontSize: FontTokens.hudSm,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -998,7 +1001,7 @@ class _ActionButtons extends StatelessWidget {
                 label: const Text('Rematch'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accent,
-                  foregroundColor: Colors.white,
+                  foregroundColor: ColorTokens.onAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(999)),

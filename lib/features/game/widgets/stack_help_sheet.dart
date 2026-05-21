@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/font_tokens.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../shared/theme/app_theme.dart';
@@ -63,7 +64,7 @@ class StackHelpSheet extends StatelessWidget {
             Text(
               'Example: You cast a pump spell on your creature. Your opponent casts Lightning Bolt in response. Bolt resolves first, then your pump spell (if its target is still legal).',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: FontTokens.hudSm,
                 color: AppTheme.textSecondary.withValues(alpha: 0.95),
                 height: 1.4,
               ),

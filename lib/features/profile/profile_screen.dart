@@ -20,20 +20,17 @@ import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
 import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
+import '../../ui/tokens/motion_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
 
-/// Profile — bento-style tiles (large radius, layered depth).
-const double _kBentoRadiusPx = 28;
-
 /// Internal padding of every bento card.
-/// Inner element radius = _kBentoRadiusPx − _kBentoCardPaddingPx (nested radius rule).
+/// Inner element radius = RadiusTokens.bento − _kBentoCardPaddingPx (nested radius rule).
 const double _kBentoCardPaddingPx = 16;
 
 /// Bundled MTG art when no custom banner is set (from project mana assets).
 const String _kDefaultBannerPlaceholderAsset = 'assets/mana/MYB/fullManaCost.png';
 
-BorderRadius get _kBentoRadius =>
-    const BorderRadius.all(Radius.circular(_kBentoRadiusPx));
+BorderRadius get _kBentoRadius => RadiusTokens.radiusBento;
 
 /// Typical phones (≥360 logical width) use tighter horizontal page padding.
 const double _kProfileStatsRowBreakpoint = 360;
@@ -267,7 +264,7 @@ class _ProfileHeroCard extends StatelessWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(_kBentoRadiusPx),
+      borderRadius: RadiusTokens.radiusBento,
       child: SizedBox(
         height: cardHeight,
         width: double.infinity,
@@ -316,7 +313,7 @@ class _ProfileHeroCard extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.wallpaper_outlined,
-                            color: Colors.white,
+                            color: ColorTokens.onAccent,
                             size: 18,
                           ),
                           const SizedBox(width: 6),
@@ -325,7 +322,7 @@ class _ProfileHeroCard extends StatelessWidget {
                             style: Theme.of(
                               context,
                             ).textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
+                              color: ColorTokens.onAccent,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -374,7 +371,7 @@ class _ProfileHeroIdentityAndStats extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Colors.white,
+            color: ColorTokens.onAccent,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.3,
             shadows: [
@@ -445,7 +442,7 @@ class _StatColumn extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            color: Colors.white,
+            color: ColorTokens.onAccent,
             fontWeight: FontWeight.w700,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
@@ -488,7 +485,7 @@ class _AnimatedXpInLevelLabel extends StatefulWidget {
 
 class _AnimatedXpInLevelLabelState extends State<_AnimatedXpInLevelLabel>
     with SingleTickerProviderStateMixin {
-  static const _duration = Duration(milliseconds: 1100);
+  static const _duration = MotionTokens.emphasis;
 
   late final AnimationController _controller;
   Animation<double> _value = const AlwaysStoppedAnimation<double>(0);
@@ -721,7 +718,7 @@ class _MostPlayedBentoCard extends ConsumerWidget {
       imageUrl ??= profile.selectedCommanderImageUrl;
     }
 
-    final innerRadius = _kBentoRadiusPx - _kBentoCardPaddingPx;
+    final innerRadius = RadiusTokens.bento - _kBentoCardPaddingPx;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1337,7 +1334,7 @@ class _AnimatedDonutGauge extends StatefulWidget {
 
 class _AnimatedDonutGaugeState extends State<_AnimatedDonutGauge>
     with SingleTickerProviderStateMixin {
-  static const _duration = Duration(milliseconds: 1100);
+  static const _duration = MotionTokens.emphasis;
 
   late final AnimationController _controller;
   Animation<double> _fill = const AlwaysStoppedAnimation<double>(0);
@@ -2150,7 +2147,7 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
           ),
           crossFadeState:
               _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 200),
+          duration: MotionTokens.standard,
           sizeCurve: Curves.easeInOut,
           alignment: Alignment.topCenter,
         ),
@@ -2455,7 +2452,7 @@ class _DeckPerformanceSection extends ConsumerStatefulWidget {
 
 /// Horizontal card width — sized so 1.5 cards peek on a 360px-wide viewport
 /// (signals "more to scroll") and 2+ cards show on wider devices.
-const double _kDeckPerfCardWidth = 236;
+const double _kDeckPerfCardWidth = LayoutTokens.profileCarouselCardWidth;
 
 /// Title row height (text + spacing) reserved above the horizontal deck list.
 const double _kDeckPerfTitleHeight = 44;

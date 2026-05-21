@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/opacity_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
 
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/game_icon.dart';
@@ -95,7 +97,7 @@ class CounterRowWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(LayoutTokens.gr2),
                   border: Border.all(
                     color: isEliminated
-                        ? AppTheme.textSecondary.withValues(alpha: 0.3)
+                        ? AppTheme.textSecondary.withValues(alpha: OpacityTokens.moderate)
                         : AppTheme.accent.withValues(alpha: 0.6),
                   ),
                 ),
@@ -169,7 +171,7 @@ class _CounterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: MotionTokens.standard,
         padding: EdgeInsets.symmetric(
           horizontal: LayoutTokens.gr2,
           vertical: LayoutTokens.gr2,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/color_tokens.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/game/game_phase.dart';
@@ -208,7 +209,7 @@ class _PhasePickerSheetState extends State<PhasePickerSheet> {
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(0, LayoutTokens.minTapTarget),
                       backgroundColor: widget.accentColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: ColorTokens.onAccent,
                     ),
                     child: Text(
                       'Set ${GamePhase.values[_highlightIndex].displayName}',

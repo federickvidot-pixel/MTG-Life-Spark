@@ -8,6 +8,8 @@ import '../../../core/game/stack_display.dart';
 import '../../../core/game/scryfall_service.dart';
 import '../../../core/game/stack_item.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/font_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import 'stack_card_picker_dialog.dart';
 import 'stack_help_sheet.dart';
@@ -303,7 +305,7 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                   color: g.isActivePlayer
                       ? AppTheme.accent
                       : AppTheme.textPrimary,
-                  fontSize: 13,
+                  fontSize: FontTokens.hudSm,
                 ),
               ),
             ],
@@ -560,7 +562,7 @@ class _StackAnimatedEnterState extends State<_StackAnimatedEnter>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: MotionTokens.standard,
     );
     final curve = CurvedAnimation(
       parent: _controller,
@@ -1289,7 +1291,7 @@ class _StackItemCard extends ConsumerWidget {
                 Text(
                   item.typeLine!,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: FontTokens.hudSm,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textSecondary.withValues(alpha: 0.9),
                   ),
@@ -1329,7 +1331,7 @@ class _ResolvesNextBadge extends StatelessWidget {
           child: Text(
             'Resolves next',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: FontTokens.hudXs,
               fontWeight: FontWeight.w700,
               color: AppTheme.accent,
             ),
@@ -1339,7 +1341,7 @@ class _ResolvesNextBadge extends StatelessWidget {
         Text(
           '#1',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: FontTokens.hudXs,
             fontWeight: FontWeight.w600,
             color: AppTheme.textSecondary.withValues(alpha: 0.8),
           ),
@@ -1381,7 +1383,7 @@ class _StackCardInfo extends StatelessWidget {
         Text(
           'Resolves after items above',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: FontTokens.hudXs,
             height: 1.35,
             color: AppTheme.textSecondary.withValues(alpha: 0.75),
           ),
@@ -1390,7 +1392,7 @@ class _StackCardInfo extends StatelessWidget {
         Text(
           'Target is no longer on the stack',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: FontTokens.hudXs,
             height: 1.35,
             fontWeight: FontWeight.w600,
             color: AppTheme.dangerAmber,
@@ -1400,7 +1402,7 @@ class _StackCardInfo extends StatelessWidget {
         Text(
           statusLabel!,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: FontTokens.hudXs,
             height: 1.35,
             fontWeight: FontWeight.w600,
             color: statusColor,
@@ -1465,7 +1467,7 @@ class _StackCardInfo extends StatelessWidget {
               child: Text(
                 item.typeLabel!,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: FontTokens.hudXs,
                   height: 1.35,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textSecondary.withValues(alpha: 0.95),

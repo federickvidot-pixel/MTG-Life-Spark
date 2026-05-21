@@ -1,5 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/color_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
+import '../../../ui/tokens/font_tokens.dart';
 
 import '../../../core/game/game_phase.dart';
 import '../../../core/game/game_state.dart';
@@ -77,7 +80,7 @@ class _TurnOrderPlayerBox extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: LayoutTokens.gr2),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: MotionTokens.standard,
         width: side,
         height: side,
         decoration: BoxDecoration(
@@ -126,8 +129,8 @@ class _TurnOrderPlayerBox extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
+                            color: ColorTokens.onAccent,
+                            fontSize: FontTokens.hudSm,
                             fontWeight: FontWeight.w800,
                             height: 1.05,
                             shadows: [
@@ -150,7 +153,7 @@ class _TurnOrderPlayerBox extends StatelessWidget {
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             style: TextStyle(
-                              color: Colors.white,
+                              color: ColorTokens.onAccent,
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
                               height: 1,
@@ -198,8 +201,8 @@ class _TurnOrderPlayerBox extends StatelessWidget {
           child: const Text(
             'OUT',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 11,
+              color: ColorTokens.onAccent,
+              fontSize: FontTokens.hudXs,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -225,8 +228,8 @@ class _TurnOrderPlayerBox extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11,
+            color: ColorTokens.onAccent,
+            fontSize: FontTokens.hudXs,
             fontWeight: FontWeight.w700,
           ),
         ),

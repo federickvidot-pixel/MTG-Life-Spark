@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/font_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -226,7 +227,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                                   : deck.commanderName,
                               style: TextStyle(
                                 color: colors.textSecondary,
-                                fontSize: 13,
+                                fontSize: FontTokens.hudSm,
                               ),
                             ),
                             if (_deckHasMana(deck)) ...[

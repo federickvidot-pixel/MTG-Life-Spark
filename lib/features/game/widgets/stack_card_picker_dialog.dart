@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/font_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/game/scryfall_service.dart';
@@ -235,7 +236,7 @@ class _StackCardPickerDialogState extends ConsumerState<_StackCardPickerDialog> 
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        fontSize: 11,
+        fontSize: FontTokens.hudXs,
         color: AppTheme.textSecondary.withValues(alpha: 0.85),
       ),
     );
@@ -251,7 +252,7 @@ class _StackCardPickerDialogState extends ConsumerState<_StackCardPickerDialog> 
           'Type to search cards',
           style: TextStyle(
             color: AppTheme.textSecondary.withValues(alpha: 0.8),
-            fontSize: 13,
+            fontSize: FontTokens.hudSm,
           ),
         ),
       );

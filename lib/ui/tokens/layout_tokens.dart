@@ -26,6 +26,14 @@ class LayoutTokens {
 
   /// Minimum **44×44 dp** tap target (WCAG / Material); `11 × 4dp` on the grid.
   static const double minTapTarget = 44;
+
+  // ── Named layout constants ────────────────────────────────────────────────
+
+  /// Width of a profile carousel card (deck performance, player stats). 236dp.
+  static const double profileCarouselCardWidth = 236;
+
+  /// Height of the M3 bottom navigation bar. 80dp.
+  static const double bottomNavHeight = 80;
 }
 
 /// Width / height hints for **in-game** layouts (personal view, HUD rows).

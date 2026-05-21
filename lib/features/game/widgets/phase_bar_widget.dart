@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../ui/tokens/color_tokens.dart';
+import '../../../ui/tokens/motion_tokens.dart';
 
 import '../../../core/game/game_phase.dart';
 import '../../../shared/theme/app_theme.dart';
@@ -88,7 +90,7 @@ class _PhaseBarWidgetState extends State<PhaseBarWidget> {
       if (animate) {
         _scrollController.animateTo(
           targetOffset,
-          duration: const Duration(milliseconds: 300),
+          duration: MotionTokens.slow,
           curve: Curves.easeOutCubic,
         );
       } else {
@@ -106,7 +108,7 @@ class _PhaseBarWidgetState extends State<PhaseBarWidget> {
 
     _scrollController.animateTo(
       index * itemExtent,
-      duration: const Duration(milliseconds: 250),
+      duration: MotionTokens.standard,
       curve: Curves.easeOutCubic,
     );
 
@@ -205,10 +207,10 @@ class _PhaseCarouselItem extends StatelessWidget {
     final fontSizeActive = 16.0;
 
     return AnimatedOpacity(
-      duration: const Duration(milliseconds: 150),
+      duration: MotionTokens.fast,
       opacity: opacity,
       child: AnimatedScale(
-        duration: const Duration(milliseconds: 150),
+        duration: MotionTokens.fast,
         scale: scale,
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: marginH),
@@ -234,7 +236,7 @@ class _PhaseCarouselItem extends StatelessWidget {
             child: Text(
               phase.shortName,
               style: TextStyle(
-                color: isCentered ? Colors.white : AppTheme.textSecondary,
+                color: isCentered ? ColorTokens.onAccent : AppTheme.textSecondary,
                 fontSize: isCentered ? fontSizeActive : fontSizeInactive,
                 fontWeight: isCentered ? FontWeight.bold : FontWeight.w500,
               ),

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../ui/tokens/color_tokens.dart';
+import '../../ui/tokens/motion_tokens.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -516,7 +518,7 @@ class _CommanderCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: MotionTokens.fast,
         decoration: BoxDecoration(
           color: AppTheme.card,
           borderRadius: BorderRadius.circular(12),
@@ -595,12 +597,12 @@ class _CommanderCard extends StatelessWidget {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check, size: 14, color: Colors.white),
+                    Icon(Icons.check, size: 14, color: ColorTokens.onAccent),
                     SizedBox(width: 4),
                     Text(
                       'Selected',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: ColorTokens.onAccent,
                           fontSize: 11,
                           fontWeight: FontWeight.bold),
                     ),

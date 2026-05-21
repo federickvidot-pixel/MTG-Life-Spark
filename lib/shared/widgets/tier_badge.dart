@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../ui/tokens/font_tokens.dart';
 
 import '../../ui/tokens/color_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
@@ -42,7 +43,7 @@ class TierBadge extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: _color,
-            fontSize: 11,
+            fontSize: FontTokens.hudXs,
             fontWeight: FontWeight.bold,
           ),
         ),
