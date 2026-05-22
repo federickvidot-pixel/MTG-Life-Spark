@@ -7,6 +7,7 @@ import '../../../core/game/game_phase.dart';
 import '../../../core/game/game_providers.dart';
 import '../../../core/game/game_state.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 class TurnControlsWidget extends ConsumerWidget {
   final GameState game;
@@ -102,7 +103,7 @@ class _ControlBtn extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: c.withValues(alpha: OpacityTokens.subtle),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: RadiusTokens.radiusControlMd,
           border: Border.all(color: c.withValues(alpha: 0.4)),
         ),
         child: Row(

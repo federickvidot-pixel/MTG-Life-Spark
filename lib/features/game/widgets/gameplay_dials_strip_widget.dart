@@ -8,6 +8,7 @@ import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/game_icon.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 import 'counter_adjust_sheet.dart';
 
 const int _kDialWheelMax = 60;
@@ -16,7 +17,7 @@ const int _kDialWheelMax = 60;
 const int _kPillsPerRow = 4;
 
 /// Counter dial / action tiles — modest rounding (not stadium pills).
-const double _kDialPillCornerRadius = 10;
+const double _kDialPillCornerRadius = RadiusTokens.controlSm;
 
 /// Responsive pill geometry — scales down on narrow phones so the strip doesn’t dominate the Play tab.
 class _DialMetrics {
@@ -295,7 +296,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
       context: context,
       backgroundColor: AppTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: RadiusTokens.radiusSheetTop,
       ),
       builder: (sheetCtx) {
         void pick(String field) {
@@ -369,7 +370,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
                       height: 4,
                       decoration: BoxDecoration(
                         color: AppTheme.textSecondary.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: RadiusTokens.radiusPill,
                       ),
                     ),
                   ),

@@ -176,14 +176,14 @@ class _VariantTile extends StatelessWidget {
       margin: EdgeInsets.only(bottom: pad),
       decoration: BoxDecoration(
         color: AppTheme.card,
-        borderRadius: BorderRadius.circular(pad),
+        borderRadius: RadiusTokens.radiusMd,
         border: Border.all(color: AppTheme.surface, width: 1),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showCardDetail(context),
-          borderRadius: BorderRadius.circular(pad),
+          borderRadius: RadiusTokens.radiusMd,
           child: Padding(
             padding: EdgeInsets.all(pad),
             child: Row(
@@ -298,7 +298,7 @@ class _VariantTile extends StatelessWidget {
       context: context,
       backgroundColor: AppTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: RadiusTokens.radiusSheetTop,
       ),
       builder: (ctx) => DraggableScrollableSheet(
         initialChildSize: 0.6,

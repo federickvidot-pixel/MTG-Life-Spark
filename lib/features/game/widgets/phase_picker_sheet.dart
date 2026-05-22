@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../core/game/game_phase.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
-import '../../../ui/tokens/spacing_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 /// Scrollable phase list for host / active player to jump to any step.
 Future<void> showPhasePickerSheet(
@@ -19,9 +19,7 @@ Future<void> showPhasePickerSheet(
     backgroundColor: AppTheme.card,
     isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(SpacingTokens.lg),
-      ),
+      borderRadius: RadiusTokens.radiusSheetTop,
     ),
     builder: (sheetCtx) => PhasePickerSheet(
       currentPhase: currentPhase,
@@ -95,7 +93,7 @@ class _PhasePickerSheetState extends State<PhasePickerSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppTheme.textSecondary.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: RadiusTokens.radiusPill,
                 ),
               ),
             ),
@@ -124,13 +122,13 @@ class _PhasePickerSheetState extends State<PhasePickerSheet> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+                  borderRadius: RadiusTokens.radiusSm,
                   border: Border.all(
                     color: AppTheme.surface.withValues(alpha: 0.6),
                   ),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+                  borderRadius: RadiusTokens.radiusSm,
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (n) {
                       if (n is ScrollEndNotification && _wheelCtrl.hasClients) {

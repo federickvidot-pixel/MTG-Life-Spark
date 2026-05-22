@@ -39,7 +39,7 @@ class TeamPanelWidget extends ConsumerWidget {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       decoration: BoxDecoration(
         color: AppTheme.card,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: RadiusTokens.radiusMd,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

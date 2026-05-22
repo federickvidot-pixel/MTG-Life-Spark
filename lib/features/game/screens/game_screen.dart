@@ -351,6 +351,7 @@ class _PersonalView extends ConsumerStatefulWidget {
 class _PersonalViewState extends ConsumerState<_PersonalView> {
   /// 0 = Play, 1 = Stack, 2 = History
   int _mainTabIndex = 0;
+  bool _commanderDamageExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -379,6 +380,31 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
       notifier.adjustLife(local.playerId, delta);
     }
 
+    void onCommanderDamageChange({
+      required String fromPlayerId,
+      required int partnerIndex,
+      required int delta,
+    }) {
+      notifier.applyCommanderDamage(
+        fromPlayerId: fromPlayerId,
+        partnerIndex: partnerIndex,
+        toPlayerId: local.playerId,
+        delta: delta,
+      );
+    }
+
+    final opponentsWithCommanders = opponents
+        .where((o) => !o.isEliminated || o.commanderName != null)
+        .toList();
+    final showCommanderDamage = isCommanderGameSession(
+      local: local,
+      allPlayers: game.players,
+    );
+    final maxCmdDamage = maxCommanderDamageTrack(
+      local,
+      opponentsWithCommanders,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -392,7 +418,7 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppTheme.card,
-              borderRadius: BorderRadius.circular(LayoutTokens.gr3),
+              borderRadius: RadiusTokens.radiusMd,
               border: Border.all(
                 color: AppTheme.textSecondary.withValues(alpha: 0.14),
               ),
@@ -408,13 +434,37 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
               padding: EdgeInsets.all(
                 tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr2,
               ),
-              child: CommanderInfoBar(
-                player: local,
-                onCastCommander:
-                    () => notifier.castCommanderFromZone(local.playerId),
-                includeCastButton: false,
-                embeddedInCard: true,
-                roundNumber: game.roundNumber,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CommanderInfoBar(
+                    player: local,
+                    onCastCommander:
+                        () => notifier.castCommanderFromZone(local.playerId),
+                    includeCastButton: false,
+                    embeddedInCard: true,
+                    roundNumber: game.roundNumber,
+                    statusTrailing: showCommanderDamage
+                        ? CommanderDamageBarButton(
+                            totalDamage: local.totalCommanderDamageReceived,
+                            maxTrackDamage: maxCmdDamage,
+                            expanded: _commanderDamageExpanded,
+                            enabled: !local.isEliminated,
+                            onTap: () => setState(
+                              () => _commanderDamageExpanded =
+                                  !_commanderDamageExpanded,
+                            ),
+                          )
+                        : null,
+                  ),
+                  CommanderDamagePanel(
+                    expanded: _commanderDamageExpanded,
+                    localPlayer: local,
+                    opponents: opponents,
+                    onDamageChange: onCommanderDamageChange,
+                  ),
+                ],
               ),
             ),
           ),
@@ -683,21 +733,6 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
                                             ? LayoutTokens.gr1
                                             : LayoutTokens.gr2,
                                   ),
-                                  CommanderDamagePanel(
-                                    localPlayer: local,
-                                    opponents: opponents,
-                                    onDamageChange:
-                                        ({
-                                          required String fromPlayerId,
-                                          required int partnerIndex,
-                                          required int delta,
-                                        }) => notifier.applyCommanderDamage(
-                                          fromPlayerId: fromPlayerId,
-                                          partnerIndex: partnerIndex,
-                                          toPlayerId: local.playerId,
-                                          delta: delta,
-                                        ),
-                                  ),
                                   if (game.pendingProposalFor(
                                         local.playerId,
                                       ) !=
@@ -864,7 +899,7 @@ class _PhaseSelectorLabel extends StatelessWidget {
                 accentColor: activeColor,
                 onSelected: onPickPhase!,
               ),
-          borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+          borderRadius: RadiusTokens.radiusMd,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: LayoutTokens.gr2,
@@ -1018,7 +1053,7 @@ class _BottomBar extends ConsumerWidget {
           ),
           decoration: BoxDecoration(
             color: AppTheme.card,
-            borderRadius: BorderRadius.circular(LayoutTokens.gr3),
+            borderRadius: RadiusTokens.radiusMd,
             border: Border.all(color: AppTheme.surface),
             boxShadow: [
               BoxShadow(
@@ -1120,7 +1155,7 @@ class _BottomBar extends ConsumerWidget {
       context: context,
       backgroundColor: AppTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: RadiusTokens.radiusSheetTop,
       ),
       builder: (_) => _TimeoutPickerSheet(notifier: notifier),
     );
@@ -1476,7 +1511,7 @@ class _ConcedeVoteDropdown extends StatelessWidget {
               filled: true,
               fillColor: AppTheme.surface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: RadiusTokens.radiusPill,
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
@@ -1553,7 +1588,7 @@ class _BarButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+        borderRadius: RadiusTokens.radiusMd,
         child: Tooltip(
           message: label,
           child: Semantics(
@@ -1765,7 +1800,7 @@ class _GameMarkerBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.accentGold.withValues(alpha: OpacityTokens.faint),
-        borderRadius: RadiusTokens.radiusControlMd,
+        borderRadius: RadiusTokens.radiusControlSm,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2017,7 +2052,7 @@ class _TimeoutBannerState extends State<_TimeoutBanner> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.accentGold.withValues(alpha: OpacityTokens.subtle),
-        borderRadius: RadiusTokens.radiusControlMd,
+        borderRadius: RadiusTokens.radiusControlSm,
         border: Border.all(color: AppTheme.accentGold.withValues(alpha: OpacityTokens.half)),
       ),
       child: Row(
@@ -2099,7 +2134,7 @@ class _TurnDurationBannerState extends State<_TurnDurationBanner> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.accent.withValues(alpha: OpacityTokens.subtle),
-        borderRadius: RadiusTokens.radiusControlMd,
+        borderRadius: RadiusTokens.radiusControlSm,
         border: Border.all(color: AppTheme.accent.withValues(alpha: OpacityTokens.half)),
       ),
       child: Row(
@@ -2189,7 +2224,7 @@ class _OverviewView extends ConsumerWidget {
                       vertical: 8,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: RadiusTokens.radiusControlMd,
+                      borderRadius: RadiusTokens.radiusControlSm,
                     ),
                   ),
                   child: const Text(
@@ -2316,7 +2351,7 @@ class _OverviewPlayerCard extends ConsumerWidget {
                     isActive
                         ? borderColor.withValues(alpha: OpacityTokens.soft)
                         : AppTheme.surface.withValues(alpha: OpacityTokens.half),
-                borderRadius: RadiusTokens.radiusControlMd,
+                borderRadius: RadiusTokens.radiusControlSm,
                 border: Border.all(
                   color:
                       isActive
@@ -2344,7 +2379,7 @@ class _OverviewPlayerCard extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: AppTheme.surface.withValues(alpha: OpacityTokens.half),
-                borderRadius: RadiusTokens.radiusControlMd,
+                borderRadius: RadiusTokens.radiusControlSm,
                 border: Border.all(
                   color: AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft),
                 ),
@@ -2394,7 +2429,7 @@ class _OverviewPlayerCard extends ConsumerWidget {
       context: context,
       backgroundColor: AppTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: RadiusTokens.radiusSheetTop,
       ),
       builder:
           (ctx) => SafeArea(

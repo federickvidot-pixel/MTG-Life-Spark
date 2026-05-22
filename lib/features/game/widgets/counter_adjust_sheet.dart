@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 import '../../../ui/tokens/spacing_tokens.dart';
 
 Future<void> showCounterAdjustSheet(
@@ -14,9 +15,7 @@ Future<void> showCounterAdjustSheet(
     context: context,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(SpacingTokens.lg),
-      ),
+      borderRadius: RadiusTokens.radiusSheetTop,
     ),
     builder: (_) => CounterAdjustSheet(
       title: title,

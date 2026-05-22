@@ -102,7 +102,7 @@ class PoliticalRowWidget extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: RadiusTokens.radiusPill,
         ),
         child: row,
       );
@@ -149,9 +149,7 @@ class PoliticalRowWidget extends ConsumerWidget {
       context: context,
       backgroundColor: AppTheme.card,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(RadiusTokens.xl),
-        ),
+        borderRadius: RadiusTokens.radiusSheetTop,
       ),
       builder:
           (_) => _PlayerPickerSheet(
@@ -228,7 +226,7 @@ class _PoliticalBadge extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: AppTheme.card,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: RadiusTokens.radiusPill,
           border: Border.all(color: borderColor),
         ),
         child: Row(
@@ -327,7 +325,7 @@ class _DayNightToggle extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: AppTheme.card,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: RadiusTokens.radiusPill,
           border: Border.all(color: borderColor),
         ),
         child: Column(
@@ -379,7 +377,7 @@ class _OverviewFilledMarkerButton extends StatelessWidget {
         disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: OpacityTokens.half),
         elevation: filled ? 0 : 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+          borderRadius: RadiusTokens.radiusControlMd,
         ),
       ),
       child: Column(

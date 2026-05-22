@@ -28,18 +28,63 @@ Future<void> main() async {
       debugPrint('Stack: ${details.stack}');
     };
 
-    try {
-      await _initHive();
-      runApp(const ProviderScope(child: MgtLifeSparkApp()));
-    } catch (e, st) {
-      debugPrint('Init error: $e');
-      debugPrint('Stack: $st');
-      runApp(_ErrorApp(message: e.toString(), stack: st.toString()));
-    }
+    runApp(const ProviderScope(child: _AppBootstrap()));
   }, (error, stack) {
     debugPrint('Zone error: $error');
     debugPrint('Stack: $stack');
   });
+}
+
+/// Paints immediately so the HTML splash can dismiss, then finishes Hive init.
+class _AppBootstrap extends StatefulWidget {
+  const _AppBootstrap();
+
+  @override
+  State<_AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<_AppBootstrap> {
+  late final Future<void> _initFuture = _initHive();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _ErrorApp(
+            message: snapshot.error.toString(),
+            stack: snapshot.stackTrace.toString(),
+          );
+        }
+        if (snapshot.connectionState != ConnectionState.done) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: Scaffold(
+              backgroundColor: const Color(0xFF0e0e0e),
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.red.shade700),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Loading MGT Life Spark…',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return const MgtLifeSparkApp();
+      },
+    );
+  }
 }
 
 class _ErrorApp extends StatelessWidget {
@@ -105,17 +150,26 @@ Future<void> _initHive() async {
 
   // Purge match history entries older than 30 days on every startup
   await MatchRepository().purgeOldMatches();
+  await FeedbackRepository().init();
 
-  final profileRepo = ProfileRepository();
-  final feedbackRepo = FeedbackRepository();
-  await feedbackRepo.init();
-  final prof = profileRepo.getProfile();
-  if (prof != null) {
+  // Non-blocking maintenance — keeps first paint fast on web/mobile.
+  unawaited(_deferredProfileMaintenance());
+}
+
+Future<void> _deferredProfileMaintenance() async {
+  try {
+    final profileRepo = ProfileRepository();
+    final feedbackRepo = FeedbackRepository();
+    final prof = profileRepo.getProfile();
+    if (prof == null) return;
     await profileRepo.recomputeSocialStatsFromFeedback(
       feedbackRepo,
       prof.username,
     );
     await _maybeSeedPreviewXpRing(profileRepo);
+  } catch (e, st) {
+    debugPrint('Deferred profile maintenance failed: $e');
+    debugPrint('Stack: $st');
   }
 }
 

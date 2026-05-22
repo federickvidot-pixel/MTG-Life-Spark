@@ -11,6 +11,7 @@ import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/font_tokens.dart';
 import '../../../ui/tokens/motion_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 import 'stack_card_picker_dialog.dart';
 import 'stack_help_sheet.dart';
 
@@ -104,7 +105,7 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                             : 'By player',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontSize: FontTokens.body,
                           color: AppTheme.textPrimary,
                         ),
                       ),
@@ -155,6 +156,9 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                       visualDensity: VisualDensity.compact,
                       padding:
                           EdgeInsets.symmetric(horizontal: LayoutTokens.gr0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: RadiusTokens.radiusChip,
+                      ),
                     ),
                     FilterChip(
                       label: const Text('Resolved / countered'),
@@ -163,6 +167,9 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                       visualDensity: VisualDensity.compact,
                       padding:
                           EdgeInsets.symmetric(horizontal: LayoutTokens.gr0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: RadiusTokens.radiusChip,
+                      ),
                     ),
                   ],
                 ),
@@ -182,7 +189,7 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
               child: Text(
                 'Who added what (active player first)',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: FontTokens.caption,
                   color: AppTheme.textSecondary.withValues(alpha: 0.9),
                 ),
               ),
@@ -319,7 +326,6 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
             depth: 0,
             siblingIndex: i,
             siblingCount: g.items.length,
-            showStemBelow: false,
             linkToParent: false,
             resolvesNextId: resolvesNext?.id,
             showWaitsHint: false,
@@ -418,7 +424,7 @@ class _TipBanner extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppTheme.accent.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+          borderRadius: RadiusTokens.radiusMd,
         ),
         child: Padding(
           padding: EdgeInsets.all(LayoutTokens.gr2),
@@ -428,7 +434,7 @@ class _TipBanner extends StatelessWidget {
               Text(
                 'Top spell resolves first. Add newest on top. Search Scryfall when adding cards so names and rules are correct.',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: FontTokens.caption,
                   height: 1.4,
                   color: AppTheme.textPrimary.withValues(alpha: 0.9),
                 ),
@@ -479,7 +485,7 @@ class _EmptyStackState extends StatelessWidget {
               'Nothing on the stack',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 16,
+                fontSize: FontTokens.body,
                 color: AppTheme.textPrimary,
               ),
             ),
@@ -492,6 +498,11 @@ class _EmptyStackState extends StatelessWidget {
               onPressed: onPutOnStack,
               icon: const Icon(Icons.add_rounded),
               label: const Text('Add spell'),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: RadiusTokens.radiusControlSm,
+                ),
+              ),
             ),
             if (onLoadExample != null) ...[
               SizedBox(height: LayoutTokens.gr2),
@@ -499,6 +510,11 @@ class _EmptyStackState extends StatelessWidget {
                 onPressed: onLoadExample,
                 icon: const Icon(Icons.science_outlined),
                 label: const Text('Load 4-player example'),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: RadiusTokens.radiusControlSm,
+                  ),
+                ),
               ),
             ],
           ],
@@ -517,14 +533,14 @@ class _EmptyStackState extends StatelessWidget {
             '• ',
             style: TextStyle(
               color: AppTheme.textSecondary.withValues(alpha: 0.9),
-              fontSize: 14,
+              fontSize: FontTokens.hudSm,
             ),
           ),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: FontTokens.hudSm,
                 color: AppTheme.textSecondary.withValues(alpha: 0.9),
                 height: 1.35,
               ),
@@ -600,46 +616,12 @@ class _StackAnimatedEnterState extends State<_StackAnimatedEnter>
   }
 }
 
-/// Reports the laid-out height of [child] so connector rails align to the card center.
-class _MeasureCardHeight extends StatefulWidget {
-  const _MeasureCardHeight({
-    required this.child,
-    required this.onHeight,
-  });
-
-  final Widget child;
-  final ValueChanged<double> onHeight;
-
-  @override
-  State<_MeasureCardHeight> createState() => _MeasureCardHeightState();
+/// Nested stack row indent — fixed per depth level so deep chains stay readable.
+abstract final class _StackNestMetrics {
+  static const double indent = LayoutTokens.gr2;
 }
 
-class _MeasureCardHeightState extends State<_MeasureCardHeight> {
-  final GlobalKey _key = GlobalKey();
-  double? _lastHeight;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(_reportHeight);
-  }
-
-  void _reportHeight(Duration _) {
-    final box = _key.currentContext?.findRenderObject() as RenderBox?;
-    final h = box?.size.height;
-    if (h == null || h <= 0 || h == _lastHeight) return;
-    _lastHeight = h;
-    widget.onHeight(h);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback(_reportHeight);
-    return KeyedSubtree(key: _key, child: widget.child);
-  }
-}
-
-class _StackNodeTile extends ConsumerStatefulWidget {
+class _StackNodeTile extends ConsumerWidget {
   final GameState game;
   final StackDisplayNode node;
   final int siblingIndex;
@@ -663,86 +645,69 @@ class _StackNodeTile extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_StackNodeTile> createState() => _StackNodeTileState();
-}
-
-class _StackNodeTileState extends ConsumerState<_StackNodeTile> {
-  double? _cardHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final node = widget.node;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final node = this.node;
     final isRoot = node.depth == 0;
     final showWaits = isRoot &&
         node.item.isActive &&
-        widget.resolvesNextId != null &&
-        node.item.id != widget.resolvesNextId &&
-        widget.activeRoots.any((r) => r.id == node.item.id);
-    final cardColumn = Column(
+        resolvesNextId != null &&
+        node.item.id != resolvesNextId &&
+        activeRoots.any((r) => r.id == node.item.id);
+
+    final card = _StackItemCard(
+      game: game,
+      item: node.item,
+      resolvesNextId: resolvesNextId,
+      showWaitsHint: showWaits,
+      allItems: allItems,
+    );
+
+    final cardRow = isRoot
+        ? card
+        : Padding(
+            padding: EdgeInsets.only(
+              left: node.depth * _StackNestMetrics.indent,
+            ),
+            child: card,
+          );
+
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MeasureCardHeight(
-          onHeight: (h) {
-            if (_cardHeight != h) setState(() => _cardHeight = h);
-          },
-          child: _StackItemCard(
-            game: widget.game,
-            item: node.item,
-            resolvesNextId: widget.resolvesNextId,
-            showWaitsHint: showWaits,
-            allItems: widget.allItems,
-          ),
+        Padding(
+          padding: EdgeInsets.only(bottom: _StackCardLayout.itemGap),
+          child: cardRow,
         ),
         for (var i = 0; i < node.responses.length; i++)
           _StackNodeTile(
-            game: widget.game,
+            game: game,
             node: node.responses[i],
             siblingIndex: i,
             siblingCount: node.responses.length,
-            resolvesNextId: widget.resolvesNextId,
-            activeRoots: widget.activeRoots,
-            allItems: widget.allItems,
-            shouldAnimateEnter: widget.shouldAnimateEnter,
-            onEnterComplete: widget.onEnterComplete,
+            resolvesNextId: resolvesNextId,
+            activeRoots: activeRoots,
+            allItems: allItems,
+            shouldAnimateEnter: shouldAnimateEnter,
+            onEnterComplete: onEnterComplete,
           ),
       ],
     );
 
-    final content = node.depth == 0
-        ? Padding(
-            padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
-            child: cardColumn,
-          )
-        : IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _StackOrderRail(
-                  depth: node.depth,
-                  cardCenterY: _cardHeight != null ? _cardHeight! / 2 : null,
-                  showStemBelow: node.responses.isNotEmpty,
-                ),
-                Expanded(child: cardColumn),
-              ],
-            ),
-          );
-
     return _StackAnimatedEnter(
-      animate: widget.shouldAnimateEnter(node.item.id),
-      onEnterComplete: () => widget.onEnterComplete(node.item.id),
+      animate: shouldAnimateEnter(node.item.id),
+      onEnterComplete: () => onEnterComplete(node.item.id),
       child: content,
     );
   }
 }
 
-/// Stack list row: order rail + card (+ nested entries for APNAP mode).
-class _StackItemEntry extends ConsumerStatefulWidget {
+/// Stack list row: card (+ nested entries for APNAP mode).
+class _StackItemEntry extends ConsumerWidget {
   final GameState game;
   final StackItem item;
   final int depth;
   final int siblingIndex;
   final int siblingCount;
-  final bool showStemBelow;
   final bool linkToParent;
   final String? resolvesNextId;
   final bool showWaitsHint;
@@ -757,7 +722,6 @@ class _StackItemEntry extends ConsumerStatefulWidget {
     required this.depth,
     this.siblingIndex = 0,
     this.siblingCount = 1,
-    required this.showStemBelow,
     required this.linkToParent,
     required this.resolvesNextId,
     required this.showWaitsHint,
@@ -768,187 +732,60 @@ class _StackItemEntry extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_StackItemEntry> createState() => _StackItemEntryState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final card = _StackItemCard(
+      game: game,
+      item: item,
+      resolvesNextId: resolvesNextId,
+      showWaitsHint: showWaitsHint,
+      allItems: allItems,
+    );
 
-class _StackItemEntryState extends ConsumerState<_StackItemEntry> {
-  double? _cardHeight;
+    final cardRow = !linkToParent
+        ? card
+        : Padding(
+            padding: EdgeInsets.only(
+              left: depth * _StackNestMetrics.indent,
+            ),
+            child: card,
+          );
 
-  @override
-  Widget build(BuildContext context) {
-    final cardColumn = Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MeasureCardHeight(
-          onHeight: (h) {
-            if (_cardHeight != h) setState(() => _cardHeight = h);
-          },
-          child: _StackItemCard(
-            game: widget.game,
-            item: widget.item,
-            resolvesNextId: widget.resolvesNextId,
-            showWaitsHint: widget.showWaitsHint,
-            allItems: widget.allItems,
-          ),
+        Padding(
+          padding: EdgeInsets.only(bottom: _StackCardLayout.itemGap),
+          child: cardRow,
         ),
-        for (var i = 0; i < widget.nestedResponses.length; i++)
+        for (var i = 0; i < nestedResponses.length; i++)
           _StackItemEntry(
-            game: widget.game,
-            item: widget.nestedResponses[i],
-            depth: widget.depth + 1,
+            game: game,
+            item: nestedResponses[i],
+            depth: depth + 1,
             siblingIndex: i,
-            siblingCount: widget.nestedResponses.length,
-            showStemBelow: false,
+            siblingCount: nestedResponses.length,
             linkToParent: true,
-            resolvesNextId: widget.resolvesNextId,
+            resolvesNextId: resolvesNextId,
             showWaitsHint: false,
-            allItems: widget.allItems,
-            nestedResponses: widget.allItems
+            allItems: allItems,
+            nestedResponses: allItems
                 .where(
-                  (r) => r.parentId == widget.nestedResponses[i].id,
+                  (r) => r.parentId == nestedResponses[i].id,
                 )
                 .toList()
               ..sort((a, b) => a.createdAt.compareTo(b.createdAt)),
-            shouldAnimateEnter: widget.shouldAnimateEnter,
-            onEnterComplete: widget.onEnterComplete,
+            shouldAnimateEnter: shouldAnimateEnter,
+            onEnterComplete: onEnterComplete,
           ),
       ],
     );
 
-    final content = !widget.linkToParent
-        ? Padding(
-            padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
-            child: cardColumn,
-          )
-        : IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _StackOrderRail(
-                  depth: widget.depth,
-                  cardCenterY:
-                      _cardHeight != null ? _cardHeight! / 2 : null,
-                  showStemBelow: widget.nestedResponses.isNotEmpty,
-                ),
-                Expanded(child: cardColumn),
-              ],
-            ),
-          );
-
     return _StackAnimatedEnter(
-      animate: widget.shouldAnimateEnter(widget.item.id),
-      onEnterComplete: () => widget.onEnterComplete(widget.item.id),
+      animate: shouldAnimateEnter(item.id),
+      onEnterComplete: () => onEnterComplete(item.id),
       child: content,
     );
   }
-}
-
-class _StackOrderRail extends StatelessWidget {
-  final int depth;
-  final double? cardCenterY;
-  final bool showStemBelow;
-
-  const _StackOrderRail({
-    required this.depth,
-    required this.cardCenterY,
-    required this.showStemBelow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final lineColor = AppTheme.textSecondary.withValues(alpha: 0.22);
-    return SizedBox(
-      width: LayoutTokens.gr3 + depth * LayoutTokens.gr4,
-      child: CustomPaint(
-        painter: _StackOrderRailPainter(
-          depth: depth,
-          cardCenterY: cardCenterY,
-          showStemBelow: showStemBelow,
-          color: lineColor,
-        ),
-      ),
-    );
-  }
-}
-
-class _StackOrderRailPainter extends CustomPainter {
-  _StackOrderRailPainter({
-    required this.depth,
-    required this.cardCenterY,
-    required this.showStemBelow,
-    required this.color,
-  });
-
-  final int depth;
-  final double? cardCenterY;
-  final bool showStemBelow;
-  final Color color;
-
-  static const double _stroke = 2;
-  static const double _dotLength = 2;
-  static const double _dotGap = LayoutTokens.gr0;
-
-  static void _drawDottedLine(
-    Canvas canvas,
-    Offset from,
-    Offset to,
-    Paint paint,
-  ) {
-    final path = Path()
-      ..moveTo(from.dx, from.dy)
-      ..lineTo(to.dx, to.dy);
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final end = (distance + _dotLength).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(distance, end), paint);
-        distance += _dotLength + _dotGap;
-      }
-    }
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = _stroke
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    if (depth <= 0) return;
-
-    final centerY = cardCenterY ?? size.height / 2;
-    final parentX = LayoutTokens.gr1 + (depth - 1) * LayoutTokens.gr4;
-
-    // L-branch from parent spell into this response card.
-    _drawDottedLine(
-      canvas,
-      Offset(parentX, 0),
-      Offset(parentX, centerY),
-      paint,
-    );
-    _drawDottedLine(
-      canvas,
-      Offset(parentX, centerY),
-      Offset(size.width, centerY),
-      paint,
-    );
-
-    if (showStemBelow) {
-      _drawDottedLine(
-        canvas,
-        Offset(parentX, centerY),
-        Offset(parentX, size.height),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _StackOrderRailPainter oldDelegate) =>
-      oldDelegate.depth != depth ||
-      oldDelegate.cardCenterY != cardCenterY ||
-      oldDelegate.showStemBelow != showStemBelow;
 }
 
 /// Stack action pill dimensions (4dp grid).
@@ -961,13 +798,13 @@ abstract final class _StackPillMetrics {
 abstract final class _StackCardLayout {
   static const double paddingH = LayoutTokens.gr3;
   static const double paddingV = LayoutTokens.gr3;
+  static const double itemGap = LayoutTokens.gr2;
   static const double groupGap = LayoutTokens.gr1;
   static const double metaGap = LayoutTokens.gr0;
   static const double actionsTopGap = LayoutTokens.gr2;
 
   /// Align footer actions with text column (player rail + gap).
-  static const double actionsInset =
-      LayoutTokens.gr0 + LayoutTokens.gr2;
+  static const double actionsInset = LayoutTokens.gr3;
 }
 
 class _StackPlayerRail extends StatelessWidget {
@@ -984,7 +821,7 @@ class _StackPlayerRail extends StatelessWidget {
         height: LayoutTokens.gr4,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(LayoutTokens.gr0),
+          borderRadius: RadiusTokens.radiusXs,
         ),
       ),
     );
@@ -1063,7 +900,7 @@ class _StackItemCard extends ConsumerWidget {
               ? AppTheme.success.withValues(alpha: 0.14)
               : AppTheme.card,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+        borderRadius: RadiusTokens.radiusMd,
         side: BorderSide(
           color: isFizzled
               ? AppTheme.dangerAmber.withValues(alpha: 0.35)
@@ -1075,7 +912,7 @@ class _StackItemCard extends ConsumerWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+        borderRadius: RadiusTokens.radiusMd,
         onTap: item.isActive || isFizzled || isResolved
             ? () => _openItemMenu(context, ref, item)
             : null,
@@ -1282,7 +1119,7 @@ class _StackItemCard extends ConsumerWidget {
               Text(
                 item.name,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: FontTokens.headline,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
                 ),
@@ -1302,7 +1139,7 @@ class _StackItemCard extends ConsumerWidget {
               Text(
                 text,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: FontTokens.hudSm,
                   height: 1.45,
                   color: AppTheme.textPrimary.withValues(alpha: 0.92),
                 ),
@@ -1327,7 +1164,7 @@ class _ResolvesNextBadge extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: AppTheme.accent.withValues(alpha: 0.25),
-            borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+            borderRadius: RadiusTokens.radiusControlSm,
           ),
           child: Text(
             'Resolves next',
@@ -1463,7 +1300,7 @@ class _StackCardInfo extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: AppTheme.textSecondary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+                borderRadius: RadiusTokens.radiusControlSm,
               ),
               child: Text(
                 item.typeLabel!,
@@ -1482,7 +1319,7 @@ class _StackCardInfo extends StatelessWidget {
           Text(
             'In response to $parentName',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: FontTokens.caption,
               height: 1.35,
               fontStyle: FontStyle.italic,
               color: AppTheme.textSecondary.withValues(alpha: 0.85),
@@ -1493,7 +1330,7 @@ class _StackCardInfo extends StatelessWidget {
         Text(
           ownerLabel,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: FontTokens.caption,
             height: 1.35,
             color: AppTheme.textSecondary.withValues(alpha: 0.85),
           ),
@@ -1546,12 +1383,13 @@ class _StackPillButton extends StatelessWidget {
               ? background
               : background?.withValues(alpha: 0.18),
           padding: EdgeInsets.symmetric(
-            horizontal: LayoutTokens.gr1,
+            horizontal: LayoutTokens.gr2,
             vertical: LayoutTokens.gr1,
           ),
           minimumSize: Size(0, _StackPillMetrics.height),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          shape: StadiumBorder(
+          shape: RoundedRectangleBorder(
+            borderRadius: RadiusTokens.radiusControlSm,
             side: border != null
                 ? BorderSide(color: border!, width: 1)
                 : BorderSide.none,
@@ -1562,8 +1400,8 @@ class _StackPillButton extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: FontTokens.caption,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.1,
           ),

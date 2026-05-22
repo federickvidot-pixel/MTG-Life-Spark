@@ -6,6 +6,7 @@ import '../../../core/game/game_phase.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 /// Cast Commander button; can be used inline or in the top-right corner.
 class CastCommanderButton extends StatelessWidget {
@@ -29,7 +30,7 @@ class CastCommanderButton extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: AppTheme.accent.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+          borderRadius: RadiusTokens.radiusControlMd,
           border: Border.all(
             color: player.isEliminated
                 ? AppTheme.textSecondary.withValues(alpha: 0.3)
@@ -78,6 +79,8 @@ class CommanderInfoBar extends StatelessWidget {
   final GamePhase? gamePhase;
   /// When true, phase label uses stronger styling (e.g. it is your turn).
   final bool phaseEmphasized;
+  /// Optional trailing control (e.g. commander damage status).
+  final Widget? statusTrailing;
 
   const CommanderInfoBar({
     super.key,
@@ -88,6 +91,7 @@ class CommanderInfoBar extends StatelessWidget {
     this.roundNumber,
     this.gamePhase,
     this.phaseEmphasized = false,
+    this.statusTrailing,
   });
 
   @override
@@ -221,6 +225,11 @@ class CommanderInfoBar extends StatelessWidget {
               onCastCommander: onCastCommander,
             ),
 
+          if (statusTrailing != null) ...[
+            SizedBox(width: isVeryNarrow ? LayoutTokens.gr0 : LayoutTokens.gr1),
+            statusTrailing!,
+          ],
+
           // Alliance indicator
           if (player.allyPlayerId != null) ...[
             const SizedBox(width: LayoutTokens.gr1),
@@ -230,7 +239,7 @@ class CommanderInfoBar extends StatelessWidget {
                 padding: const EdgeInsets.all(LayoutTokens.gr1),
                 decoration: BoxDecoration(
                   color: AppTheme.accentGold.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+                  borderRadius: RadiusTokens.radiusControlMd,
                   border: Border.all(
                       color: AppTheme.accentGold.withValues(alpha: 0.6)),
                 ),
@@ -271,7 +280,7 @@ class _CastableCommanderAvatar extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: enabled ? onCast : null,
-          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+          borderRadius: RadiusTokens.radiusControlMd,
           child: SizedBox(
             width: size,
             height: size,
@@ -344,7 +353,7 @@ class _CommanderAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+        borderRadius: RadiusTokens.radiusControlMd,
         child: CachedNetworkImage(
           imageUrl: imageUrl!,
           width: size,
@@ -362,7 +371,7 @@ class _CommanderAvatar extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           color: playerColor.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+          borderRadius: RadiusTokens.radiusControlMd,
           border: Border.all(color: playerColor.withValues(alpha: 0.5)),
         ),
         child: Icon(Icons.style, color: playerColor, size: size * 0.5),
@@ -399,7 +408,7 @@ class _CommanderTaxBadge extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: AppTheme.textSecondary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(LayoutTokens.gr1),
+            borderRadius: RadiusTokens.radiusControlMd,
             border: Border.all(
                 color: AppTheme.textSecondary.withValues(alpha: 0.6)),
           ),

@@ -9,6 +9,7 @@ import '../../../core/game/game_state.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 /// Row of square player tiles in turn order: name, centered life, phase for active player.
 class TurnOrderWidget extends StatelessWidget {
@@ -75,7 +76,7 @@ class _TurnOrderPlayerBox extends StatelessWidget {
     final compact = shortest < 360;
     // Slightly smaller squares on 4dp grid (overview / turn strip).
     final side = compact ? 92.0 : 100.0;
-    final radius = LayoutTokens.gr2;
+    final radius = RadiusTokens.sm;
 
     return Padding(
       padding: const EdgeInsets.only(right: LayoutTokens.gr2),
@@ -196,7 +197,7 @@ class _TurnOrderPlayerBox extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: AppTheme.textSecondary.withValues(alpha: 0.88),
-            borderRadius: BorderRadius.circular(LayoutTokens.gr0),
+            borderRadius: RadiusTokens.radiusXs,
           ),
           child: const Text(
             'OUT',
@@ -220,7 +221,7 @@ class _TurnOrderPlayerBox extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: activeColor.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(LayoutTokens.gr0),
+          borderRadius: RadiusTokens.radiusXs,
         ),
         child: Text(
           currentPhase.streamlinedShortLabel,

@@ -46,4 +46,9 @@ class RadiusTokens {
   static const BorderRadius radiusPill = BorderRadius.all(Radius.circular(pill));
   static const BorderRadius radiusControlSm = BorderRadius.all(Radius.circular(controlSm));
   static const BorderRadius radiusChip = BorderRadius.all(Radius.circular(chip));
+
+  /// Modal bottom sheets in game / profile flows.
+  static const BorderRadius radiusSheetTop = BorderRadius.vertical(
+    top: Radius.circular(lg),
+  );
 }

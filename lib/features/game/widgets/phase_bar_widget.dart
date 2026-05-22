@@ -5,6 +5,7 @@ import '../../../ui/tokens/motion_tokens.dart';
 import '../../../core/game/game_phase.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 
 class _NoScrollbarScrollBehavior extends ScrollBehavior {
   const _NoScrollbarScrollBehavior();
@@ -217,7 +218,7 @@ class _PhaseCarouselItem extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: padH, vertical: padV),
           decoration: BoxDecoration(
             color: isCentered ? activeColor : AppTheme.card,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: RadiusTokens.radiusPill,
             border: Border.all(
               color: isCentered ? activeColor.withValues(alpha: 0.5) : AppTheme.textSecondary.withValues(alpha: 0.12),
               width: 1,

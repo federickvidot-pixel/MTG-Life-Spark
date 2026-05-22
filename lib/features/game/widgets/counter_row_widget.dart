@@ -5,6 +5,7 @@ import '../../../ui/tokens/motion_tokens.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../shared/widgets/game_icon.dart';
 import '../../../ui/tokens/layout_tokens.dart';
+import '../../../ui/tokens/radius_tokens.dart';
 import 'counter_adjust_sheet.dart';
 
 /// A compact row of player-level counters: poison, energy, experience, rad.
@@ -94,7 +95,7 @@ class CounterRowWidget extends StatelessWidget {
                 height: LayoutTokens.gr6,
                 decoration: BoxDecoration(
                   color: AppTheme.card,
-                  borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+                  borderRadius: RadiusTokens.radiusMd,
                   border: Border.all(
                     color: isEliminated
                         ? AppTheme.textSecondary.withValues(alpha: OpacityTokens.moderate)
@@ -178,7 +179,7 @@ class _CounterChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: _chipColor.withValues(alpha: value > 0 ? 0.12 : 0.06),
-          borderRadius: BorderRadius.circular(LayoutTokens.gr2),
+          borderRadius: RadiusTokens.radiusMd,
           border: Border.all(
             color: _chipColor.withValues(alpha: value > 0 ? 0.6 : 0.25),
           ),
