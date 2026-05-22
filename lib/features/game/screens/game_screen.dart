@@ -64,9 +64,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _listenForGameOver();
       final lobby = ref.read(lobbyProvider);
       ref.read(gameProvider.notifier).initFromLobby(lobby);
-      _listenForGameOver();
     });
   }
 
@@ -728,6 +728,10 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
                                       turnStartTime: game.turnStartTime!,
                                       limitSeconds: game.turnTimeLimitSeconds,
                                       isActiveTurn: game.isLocalPlayersTurn,
+                                      activePlayerName:
+                                          game.playerById(game.activePlayerId)
+                                              ?.username ??
+                                          'Player',
                                     ),
                                   SizedBox(
                                     height:
@@ -810,8 +814,7 @@ class _PhaseSelectorLabel extends StatelessWidget {
     this.onPickPhase,
   });
 
-  bool get _canPick =>
-      onPickPhase != null && (game.isHost || game.isLocalPlayersTurn);
+  bool get _canPick => onPickPhase != null;
 
   @override
   Widget build(BuildContext context) {
@@ -2040,11 +2043,13 @@ class _TurnDurationBanner extends StatefulWidget {
   final DateTime turnStartTime;
   final int? limitSeconds;
   final bool isActiveTurn;
+  final String activePlayerName;
 
   const _TurnDurationBanner({
     required this.turnStartTime,
     this.limitSeconds,
     required this.isActiveTurn,
+    required this.activePlayerName,
   });
 
   @override
@@ -2075,15 +2080,18 @@ class _TurnDurationBannerState extends State<_TurnDurationBanner> {
     final remaining =
         hasLimit ? (widget.limitSeconds! - elapsed).clamp(0, 9999) : null;
 
+    final prefix = widget.isActiveTurn
+        ? 'Your turn'
+        : "${widget.activePlayerName}'s turn";
     String label;
     if (hasLimit && remaining != null) {
       final m = remaining ~/ 60;
       final s = remaining % 60;
-      label = 'Turn: $m:${s.toString().padLeft(2, '0')} left';
+      label = '$prefix: $m:${s.toString().padLeft(2, '0')} left';
     } else {
       final m = elapsed ~/ 60;
       final s = elapsed % 60;
-      label = 'Turn: $m:${s.toString().padLeft(2, '0')}';
+      label = '$prefix: $m:${s.toString().padLeft(2, '0')}';
     }
 
     return Container(

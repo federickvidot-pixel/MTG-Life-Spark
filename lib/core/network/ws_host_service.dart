@@ -25,6 +25,7 @@ class WsHostService implements BleService {
 
   HttpServer? _server;
   int _seqNum = 0;
+  int _nextClientId = 0;
   bool _ready = false;
 
   final String hostPlayerId;
@@ -87,7 +88,7 @@ class WsHostService implements BleService {
   // ── Incoming connections ──────────────────────────────────────────────────
 
   void _onNewSocket(WebSocket ws) {
-    final key = '${ws.hashCode}';
+    final key = '${_nextClientId++}';
     _sockets[key] = ws;
 
     ws.listen(

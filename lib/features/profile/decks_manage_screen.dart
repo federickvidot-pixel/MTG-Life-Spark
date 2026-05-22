@@ -201,7 +201,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DeckCommanderAvatarCluster(
+                      ResolvedDeckCommanderAvatarCluster(
                         deck: deck,
                         colors: colors,
                         size: 56,

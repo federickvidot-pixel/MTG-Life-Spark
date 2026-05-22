@@ -31,6 +31,13 @@ Future<void> startHostSession(WidgetRef ref) async {
   final profile = ref.read(profileRepositoryProvider).getProfile();
   if (profile == null) return;
 
+  final existing = ref.read(bleServiceProvider);
+  if (existing != null) {
+    await existing.dispose();
+    ref.read(bleServiceProvider.notifier).state = null;
+    ref.read(bleRoleProvider.notifier).state = BleRole.none;
+  }
+
   final host = WsHostService(
     hostPlayerId: profile.username,
     hostUsername: profile.username,

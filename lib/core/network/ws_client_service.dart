@@ -35,9 +35,9 @@ class WsClientService implements BleService {
   Stream<BleConnectionEvent> get connectionStream =>
       _connectionController.stream;
 
+  /// Clients only connect to the host; peer player IDs are not tracked here.
   @override
-  List<String> get connectedPlayerIds =>
-      _hostUri != null && _ready ? [_hostUri!] : [];
+  List<String> get connectedPlayerIds => const [];
 
   @override
   bool get isReady => _ready;

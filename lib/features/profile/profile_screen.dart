@@ -13,6 +13,7 @@ import '../../core/models/player_deck.dart';
 import '../../core/models/player_profile.dart';
 import '../../core/persistence/providers.dart';
 import '../../shared/utils/app_router.dart';
+import '../../shared/utils/commander_image_resolver.dart';
 import '../../shared/widgets/deck_tile_visual.dart';
 import '../../shared/widgets/mana_cost_pips.dart';
 import '../../shared/widgets/tier_badge.dart';
@@ -24,9 +25,16 @@ import '../../ui/tokens/motion_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
 import '../../ui/tokens/typography_tokens.dart';
 
-/// Internal padding of every bento card.
-/// Inner element radius = RadiusTokens.bento − _kBentoCardPaddingPx (nested radius rule).
-const double _kBentoCardPaddingPx = 16;
+/// Internal padding of every profile carousel card ([LayoutTokens.gr2]).
+/// Inner element radius = RadiusTokens.bento − padding (nested radius rule).
+const double _kBentoCardPaddingPx = LayoutTokens.gr2;
+
+/// Outline strength shared by all profile carousel [Card]s.
+const double _kBentoCardBorderAlpha = 0.55;
+
+/// When true, profile sections show rich sample data for layout review.
+/// Set to false once you want only real Hive data.
+const bool _kProfileForcePlaceholderPreview = true;
 
 /// Bundled MTG art when no custom banner is set (from project mana assets).
 const String _kDefaultBannerPlaceholderAsset = 'assets/mana/MYB/fullManaCost.png';
@@ -88,39 +96,112 @@ Widget _defaultBannerFill(BuildContext context) {
   );
 }
 
-/// Bento section surface — Material 3 [Card] with tiered container color.
+Widget _recentMatchCommanderArt(BuildContext context, String? imageUrl) {
+  if (imageUrl != null && imageUrl.isNotEmpty) {
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (_, __) => _defaultBannerFill(context),
+      errorWidget: (_, __, ___) => _defaultBannerFill(context),
+    );
+  }
+  return _defaultBannerFill(context);
+}
+
+/// Bottom-weighted vignette for text over commander art on recent match cards.
+Widget _recentMatchCardVignette({required bool expanded}) {
+  if (expanded) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.52),
+                Colors.black.withValues(alpha: 0.68),
+                Colors.black.withValues(alpha: 0.88),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 1.15,
+              colors: [
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.42),
+              ],
+              stops: const [0.45, 1.0],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // Bottom-only scrim with a long, soft feather into the art.
+  return Align(
+    alignment: Alignment.bottomCenter,
+    child: FractionallySizedBox(
+      heightFactor: 0.68,
+      widthFactor: 1,
+      alignment: Alignment.bottomCenter,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.transparent,
+              Colors.black.withValues(alpha: 0.04),
+              Colors.black.withValues(alpha: 0.14),
+              Colors.black.withValues(alpha: 0.32),
+              Colors.black.withValues(alpha: 0.58),
+              Colors.black.withValues(alpha: 0.82),
+            ],
+            stops: const [0.0, 0.18, 0.38, 0.58, 0.78, 1.0],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Shared [Card] chrome for profile carousel tiles.
+RoundedRectangleBorder _profileCarouselCardShape(ColorScheme scheme) {
+  return RoundedRectangleBorder(
+    borderRadius: _kBentoRadius,
+    side: BorderSide(
+      color: scheme.outlineVariant.withValues(alpha: _kBentoCardBorderAlpha),
+      width: 1,
+    ),
+  );
+}
+
+/// Shared shell for profile carousel tiles (player stats, deck perf, recent games).
 class _BentoCard extends StatelessWidget {
-  const _BentoCard({
-    required this.child,
-    this.gradientColors,
-  });
+  const _BentoCard({required this.child});
 
   final Widget child;
-  final List<Color>? gradientColors;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final Color cardColor;
-    if (gradientColors != null && gradientColors!.length >= 2) {
-      cardColor = Color.lerp(gradientColors![0], gradientColors![1], 0.5)!;
-    } else {
-      cardColor = scheme.surfaceContainerHigh;
-    }
 
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      color: cardColor,
+      color: scheme.surfaceContainerHigh,
       elevation: 1,
       surfaceTintColor: scheme.surfaceTint,
-      shape: RoundedRectangleBorder(
-        borderRadius: _kBentoRadius,
-        side: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: 0.65),
-          width: 1,
-        ),
-      ),
+      shape: _profileCarouselCardShape(scheme),
       child: Padding(
         padding: EdgeInsets.all(_kBentoCardPaddingPx),
         child: child,
@@ -143,8 +224,16 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     final storedMatches = matchRepo.getAllMatches().toList();
-    final allMatches =
-        storedMatches.isEmpty ? _previewPlaceholderMatches() : storedMatches;
+    final hasStoredMatches = storedMatches.isNotEmpty;
+    final hasStoredDecks =
+        ref.read(deckRepositoryProvider).getAll().isNotEmpty;
+    final usePreview = _kProfileForcePlaceholderPreview;
+    final displayProfile =
+        usePreview ? _previewPlaceholderProfile(profile) : profile;
+    final allMatches = (usePreview || !hasStoredMatches)
+        ? _previewPlaceholderMatches()
+        : storedMatches;
+    final isExampleProfile = usePreview;
 
     final colors = AppColorTokens.of(context);
     return Scaffold(
@@ -177,7 +266,7 @@ class ProfileScreen extends ConsumerWidget {
                     // Match horizontal inset so the banner isn’t flush under SafeArea.
                     padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 0),
                     child: _ProfileHeroCard(
-                      profile: profile,
+                      profile: displayProfile,
                       colors: colors,
                     ),
                   ),
@@ -188,18 +277,27 @@ class ProfileScreen extends ConsumerWidget {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _PlayerStatsSection(
-                        profile: profile,
+                        profile: displayProfile,
                         colors: colors,
                         listMaxHeight: sectionCardListMaxHeight,
+                        isExampleData: isExampleProfile,
+                        previewTopCommander: usePreview
+                            ? _previewPlaceholderTopCommander()
+                            : null,
+                        previewWorstDeck: usePreview
+                            ? _previewPlaceholderWorstDeck()
+                            : null,
                       ),
                       SizedBox(height: LayoutTokens.gr4),
                       _DeckPerformanceSection(
                         colors: colors,
                         listMaxHeight: sectionCardListMaxHeight,
+                        usePlaceholderDecks: usePreview || !hasStoredDecks,
                       ),
                       SizedBox(height: LayoutTokens.gr4),
                       _RecentGamesModule(
                         matches: allMatches,
+                        isExampleData: isExampleProfile || !hasStoredMatches,
                         colors: colors,
                         listMaxHeight: sectionCardListMaxHeight,
                       ),
@@ -559,25 +657,65 @@ class _PlayerStatsBentoTile extends StatelessWidget {
     required this.width,
     required this.height,
     required this.child,
-    this.gradientColors,
   });
 
   final double width;
   final double height;
   final Widget child;
-  final List<Color>? gradientColors;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: width,
       height: height,
-      child: _BentoCard(
-        gradientColors: gradientColors,
-        child: child,
-      ),
+      child: _BentoCard(child: child),
     );
   }
+}
+
+/// Rich sample profile for layout preview ([_kProfileForcePlaceholderPreview]).
+PlayerProfile _previewPlaceholderProfile(PlayerProfile real) {
+  return PlayerProfile(
+    username: real.username.trim().isNotEmpty ? real.username : 'Planeswalker',
+    level: 24,
+    xp: 1650,
+    tier: 'Gold',
+    totalWins: 47,
+    totalLosses: 31,
+    totalGamesPlayed: 78,
+    likesReceived: 42,
+    dislikesReceived: 9,
+    honorsMvpReceived: 6,
+    honorsTeamPlayerReceived: 4,
+    honorsUnderdogReceived: 3,
+    lifetimePoisonDealt: 18,
+    lifetimeCommanderKills: 11,
+    currentWinStreak: 3,
+    profileBannerImageUrl: _kMostPlayedPlaceholderImageUrl,
+    selectedCommanderName: _kMostPlayedPlaceholderCommander,
+    selectedCommanderImageUrl: _kMostPlayedPlaceholderImageUrl,
+  );
+}
+
+CommanderStats _previewPlaceholderTopCommander() => CommanderStats(
+      commanderName: _kMostPlayedPlaceholderCommander,
+      wins: 12,
+      losses: 7,
+      gamesPlayed: 19,
+    );
+
+/// Deck with the lowest win rate among decks with at least one recorded game.
+PlayerDeck? _pickWorstDeck(Iterable<PlayerDeck> decks) {
+  final played = decks.where((d) => d.gamesPlayed > 0).toList();
+  if (played.isEmpty) return null;
+  played.sort((a, b) {
+    final wr = a.winRate.compareTo(b.winRate);
+    if (wr != 0) return wr;
+    final lossCmp = b.losses.compareTo(a.losses);
+    if (lossCmp != 0) return lossCmp;
+    return a.wins.compareTo(b.wins);
+  });
+  return played.first;
 }
 
 class _PlayerStatsSection extends ConsumerWidget {
@@ -585,15 +723,22 @@ class _PlayerStatsSection extends ConsumerWidget {
     required this.profile,
     required this.colors,
     required this.listMaxHeight,
+    this.isExampleData = false,
+    this.previewTopCommander,
+    this.previewWorstDeck,
   });
 
   final PlayerProfile profile;
   final AppColorTokens colors;
   final double listMaxHeight;
+  final bool isExampleData;
+  final CommanderStats? previewTopCommander;
+  final PlayerDeck? previewWorstDeck;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(deckListRevisionProvider);
+    final repoDecks = ref.watch(deckRepositoryProvider).getAll();
     final xpNeeded = _xpNeededForLevel(profile.level);
     final xpInLevel = profile.xp % xpNeeded;
     final xpProgress =
@@ -607,9 +752,16 @@ class _PlayerStatsSection extends ConsumerWidget {
           if (g != 0) return g;
           return b.wins.compareTo(a.wins);
         });
-    CommanderStats? top;
-    if (stats.isNotEmpty && stats.first.gamesPlayed > 0) {
+    CommanderStats? top = previewTopCommander;
+    if (top == null &&
+        stats.isNotEmpty &&
+        stats.first.gamesPlayed > 0) {
       top = stats.first;
+    }
+
+    PlayerDeck? worst = previewWorstDeck;
+    if (worst == null) {
+      worst = _pickWorstDeck(repoDecks);
     }
 
     final titleStyle = TypographyTokens.sectionTitle(colors.textPrimary);
@@ -617,17 +769,13 @@ class _PlayerStatsSection extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, _) {
         final cardHeight =
-            _profileSectionHorizontalCardHeight(context, listMaxHeight);
+            _profilePlayerStatsCardHeight(context, listMaxHeight);
         final cardWidth = _kDeckPerfCardWidth;
 
         final tiles = <Widget>[
           _PlayerStatsBentoTile(
             width: cardWidth,
             height: cardHeight,
-            gradientColors: [
-              Color.lerp(colors.surfaceElevated, colors.primaryAccent, 0.12)!,
-              colors.surfaceElevated,
-            ],
             child: _LevelDonutCard(
               profile: profile,
               colors: colors,
@@ -640,10 +788,6 @@ class _PlayerStatsSection extends ConsumerWidget {
           _PlayerStatsBentoTile(
             width: cardWidth,
             height: cardHeight,
-            gradientColors: [
-              Color.lerp(colors.surfaceElevated, colors.primaryAccent, 0.12)!,
-              colors.surfaceElevated,
-            ],
             child: _BehaviourBarCard(
               profile: profile,
               colors: colors,
@@ -653,14 +797,19 @@ class _PlayerStatsSection extends ConsumerWidget {
           _PlayerStatsBentoTile(
             width: cardWidth,
             height: cardHeight,
-            gradientColors: [
-              Color.lerp(colors.surfaceElevated, colors.primaryAccent, 0.08)!,
-              colors.surfaceElevated,
-            ],
             child: _MostPlayedBentoCard(
               profile: profile,
               colors: colors,
               top: top,
+            ),
+          ),
+          _PlayerStatsBentoTile(
+            width: cardWidth,
+            height: cardHeight,
+            child: _WorstDeckBentoCard(
+              profile: profile,
+              colors: colors,
+              deck: worst,
             ),
           ),
         ];
@@ -669,6 +818,15 @@ class _PlayerStatsSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('Player stats', style: titleStyle),
+            if (isExampleData) ...[
+              SizedBox(height: LayoutTokens.gr0),
+              Text(
+                'Example stats — play games to track your real progress.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
             SizedBox(height: LayoutTokens.gr2),
             SizedBox(
               height: cardHeight,
@@ -689,6 +847,117 @@ class _PlayerStatsSection extends ConsumerWidget {
   }
 }
 
+/// Preview art/stats for Most played when no commander history exists yet.
+const String _kMostPlayedPlaceholderImageUrl =
+    'https://cards.scryfall.io/art_crop/front/1/0/10d42b35-844f-4a64-9981-c6118d45e826.jpg?1689999317';
+const String _kMostPlayedPlaceholderCommander = 'The Ur-Dragon';
+const String _kMostPlayedPlaceholderStatsLine = '12W · 7L · 19 games';
+
+/// Preview art/stats for Worst deck when no deck record qualifies yet.
+const String _kWorstDeckPlaceholderImageUrl =
+    'https://cards.scryfall.io/art_crop/front/f/e/fe9be3e0-076c-4703-9750-2a6b0a178bc9.jpg?1761053654';
+const String _kWorstDeckPlaceholderLabel = 'Yuriko turns';
+const String _kWorstDeckPlaceholderStatsLine = '6W · 5L · 11 games';
+
+/// Shared layout for Most played / Worst deck player-stats tiles.
+class _PlayerStatsHighlightBentoCard extends StatelessWidget {
+  const _PlayerStatsHighlightBentoCard({
+    required this.title,
+    required this.infoMessage,
+    required this.colors,
+    required this.primaryLabel,
+    required this.statsLine,
+    required this.imageUrl,
+  });
+
+  final String title;
+  final String infoMessage;
+  final AppColorTokens colors;
+  final String primaryLabel;
+  final String statsLine;
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final innerRadius = RadiusTokens.bento - _kBentoCardPaddingPx;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _BentoSectionHeader(
+          title: title,
+          colors: colors,
+          infoMessage: infoMessage,
+        ),
+        SizedBox(height: LayoutTokens.gr2),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(innerRadius),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (imageUrl != null && imageUrl!.isNotEmpty)
+                        CachedNetworkImage(
+                          imageUrl: imageUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              _defaultBannerFill(context),
+                          errorWidget: (_, __, ___) =>
+                              _defaultBannerFill(context),
+                        )
+                      else
+                        _defaultBannerFill(context),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.08),
+                              Colors.black.withValues(alpha: 0.65),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: LayoutTokens.gr1),
+              Text(
+                primaryLabel,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.textPrimary,
+                  height: 1.15,
+                ),
+              ),
+              SizedBox(height: LayoutTokens.gr0),
+              Text(
+                statsLine,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _MostPlayedBentoCard extends ConsumerWidget {
   const _MostPlayedBentoCard({
     required this.profile,
@@ -702,113 +971,73 @@ class _MostPlayedBentoCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isPlaceholder = top == null;
+    final commander = top;
+
     String? imageUrl;
-    if (top != null) {
+    if (isPlaceholder) {
+      imageUrl = _kMostPlayedPlaceholderImageUrl;
+    } else {
       final decks = ref.watch(deckRepositoryProvider).getAll();
       for (final d in decks) {
-        if (d.commanderName.toLowerCase() == top!.commanderName.toLowerCase()) {
-          imageUrl = d.commanderImageUrl;
+        if (d.commanderName.toLowerCase() ==
+            commander!.commanderName.toLowerCase()) {
+          imageUrl = resolveDeckCommanderImageUrl(deck: d, profile: profile);
           break;
         }
       }
       imageUrl ??= profile.selectedCommanderImageUrl;
     }
 
-    final innerRadius = RadiusTokens.bento - _kBentoCardPaddingPx;
+    final commanderName =
+        commander?.commanderName ?? _kMostPlayedPlaceholderCommander;
+    final statsLine = commander != null
+        ? '${commander.wins}W · ${commander.losses}L · ${commander.gamesPlayed} games'
+        : _kMostPlayedPlaceholderStatsLine;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _BentoSectionHeader(
-          title: 'Most\nplayed',
-          titleMaxLines: 2,
-          colors: colors,
-          infoMessage:
-              'Commander you have played the most games with across recorded matches.',
-        ),
-        SizedBox(height: LayoutTokens.gr2),
-        Expanded(
-          child: top == null
-              ? Center(
-                  child: Text(
-                    'Play games with a commander deck to see stats here.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                      height: 1.35,
-                    ),
-                  ),
-                )
-              : Builder(
-                  builder: (context) {
-                    final commander = top!;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(innerRadius),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                if (imageUrl != null && imageUrl.isNotEmpty)
-                                  CachedNetworkImage(
-                                    imageUrl: imageUrl,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) =>
-                                        _defaultBannerFill(context),
-                                    errorWidget: (_, __, ___) =>
-                                        _defaultBannerFill(context),
-                                  )
-                                else
-                                  _defaultBannerFill(context),
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black.withValues(alpha: 0.08),
-                                        Colors.black.withValues(alpha: 0.65),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: LayoutTokens.gr1),
-                        Text(
-                          commander.commanderName,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: colors.textPrimary,
-                                height: 1.15,
-                              ),
-                        ),
-                        SizedBox(height: LayoutTokens.gr0),
-                        Text(
-                          '${commander.wins}W · ${commander.losses}L · ${commander.gamesPlayed} games',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-        ),
-      ],
+    return _PlayerStatsHighlightBentoCard(
+      title: 'Most played',
+      infoMessage:
+          'Commander you have played the most games with across recorded matches.',
+      colors: colors,
+      primaryLabel: commanderName,
+      statsLine: statsLine,
+      imageUrl: imageUrl,
+    );
+  }
+}
+
+class _WorstDeckBentoCard extends ConsumerWidget {
+  const _WorstDeckBentoCard({
+    required this.profile,
+    required this.colors,
+    required this.deck,
+  });
+
+  final PlayerProfile profile;
+  final AppColorTokens colors;
+  final PlayerDeck? deck;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final d = deck;
+    final isPlaceholder = d == null;
+    final String? imageUrl = isPlaceholder
+        ? _kWorstDeckPlaceholderImageUrl
+        : resolveDeckCommanderImageUrl(deck: d!, profile: profile);
+    final primaryLabel = d?.displayName ?? _kWorstDeckPlaceholderLabel;
+    final statsLine = d != null
+        ? '${d.wins}W · ${d.losses}L · ${d.gamesPlayed} games'
+        : _kWorstDeckPlaceholderStatsLine;
+
+    return _PlayerStatsHighlightBentoCard(
+      title: 'Tough record',
+      infoMessage:
+          'Saved deck with the lowest win rate among decks with at least one recorded game.',
+      colors: colors,
+      primaryLabel: primaryLabel,
+      statsLine: statsLine,
+      imageUrl: imageUrl,
     );
   }
 }
@@ -934,6 +1163,26 @@ Widget _behaviourSpectrumTrack({
   );
 }
 
+void _showBentoSectionInfo(
+  BuildContext context, {
+  required String title,
+  required String message,
+}) {
+  showAdaptiveDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog.adaptive(
+      title: Text(title),
+      content: SingleChildScrollView(child: Text(message)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Title + info icon row shared by Level and Behaviour bento cards so headers
 /// line up when the two cards sit side-by-side (same min height, top alignment).
 class _BentoSectionHeader extends StatelessWidget {
@@ -941,7 +1190,7 @@ class _BentoSectionHeader extends StatelessWidget {
     required this.title,
     required this.infoMessage,
     required this.colors,
-    this.titleMaxLines = 2,
+    this.titleMaxLines = 1,
   });
 
   final String title;
@@ -949,31 +1198,38 @@ class _BentoSectionHeader extends StatelessWidget {
   final AppColorTokens colors;
   final int titleMaxLines;
 
-  static const double _minRowHeight = 44;
+  static const double _minRowHeight = 36;
 
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: _minRowHeight),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Text(
               title,
               maxLines: titleMaxLines,
               overflow: TextOverflow.ellipsis,
-              style: TypographyTokens.sectionTitle(colors.textPrimary),
+              style: TypographyTokens.cardTitle(colors.textPrimary),
             ),
           ),
-          SizedBox(width: LayoutTokens.gr1),
-          Tooltip(
-            message: infoMessage,
-            child: Icon(
+          IconButton(
+            onPressed: () => _showBentoSectionInfo(
+              context,
+              title: title,
+              message: infoMessage,
+            ),
+            icon: Icon(
               Icons.info_outline_rounded,
               size: 20,
               color: colors.textSecondary,
             ),
+            tooltip: infoMessage,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.all(LayoutTokens.gr1),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
         ],
       ),
@@ -1002,9 +1258,14 @@ class _LevelDonutCard extends StatelessWidget {
   /// Reserve for the `… / … XP` line at the bottom of the card (fill-height layout).
   static const double _kBottomXpLabelReserveH = 24.0;
 
-  /// Donut + center (% + level) only; stroke scales with [size], clamped [6, 10].
+  static const double _kDonutSizeMin = 56.0;
+  static const double _kDonutSizeMax = 164.0;
+  static const double _kDonutStrokeReferenceSize = 140.0;
+
+  /// Donut + center (% + level) only; stroke scales with [size].
   Widget _donutGaugeOnly(BuildContext context, double size) {
-    final stroke = (size / 112 * 10).clamp(6.0, 10.0);
+    final stroke =
+        (size / _kDonutStrokeReferenceSize * 12).clamp(8.0, 14.0);
     return Center(
       child: _AnimatedDonutGauge(
         targetProgress: xpProgress,
@@ -1023,7 +1284,7 @@ class _LevelDonutCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: colors.textPrimary,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  fontSize: size < 90 ? 16 : null,
+                  fontSize: size < 100 ? 17 : 20,
                 ),
               ),
               Text(
@@ -1060,8 +1321,7 @@ class _LevelDonutCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _BentoSectionHeader(
-          title: 'Level\nprogress',
-          titleMaxLines: 2,
+          title: 'Level progress',
           colors: colors,
           infoMessage:
               'XP in your current level fills the ring. Reach 100% for the next level band.',
@@ -1073,8 +1333,14 @@ class _LevelDonutCard extends StatelessWidget {
               builder: (context, c) {
                 final layoutTs = _profileLayoutTextScale(context);
                 final bottomReserve = _kBottomXpLabelReserveH * layoutTs;
-                final donutSize =
-                    (c.maxHeight - bottomReserve).clamp(48.0, 112.0);
+                final widthLimit = c.maxWidth.isFinite && c.maxWidth > 0
+                    ? c.maxWidth
+                    : _kDonutSizeMax;
+                final heightLimit =
+                    math.max(0.0, c.maxHeight - bottomReserve);
+                final donutSize = math
+                    .min(widthLimit, heightLimit)
+                    .clamp(_kDonutSizeMin, _kDonutSizeMax);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1097,7 +1363,7 @@ class _LevelDonutCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _donutGaugeOnly(context, 112),
+              _donutGaugeOnly(context, _kDonutSizeMax),
               SizedBox(height: LayoutTokens.gr2),
               _xpNumeralsLine(context),
             ],
@@ -1182,8 +1448,7 @@ class _BehaviourBarCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _BentoSectionHeader(
-          title: 'Player\nbehaviour',
-          titleMaxLines: 2,
+          title: 'Player behaviour',
           colors: colors,
           infoMessage:
               'Position on the spectrum reflects reactions from others—more dislikes shifts toward Salty.',
@@ -1460,43 +1725,45 @@ Widget _recentMatchDetailRow(
   AppColorTokens colors,
   String label,
   String value, {
-  double labelWidth = 58,
+  bool compact = false,
 }) {
-  return Padding(
-    padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: labelWidth,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colors.textPrimary,
-            ),
-          ),
-        ),
-      ],
-    ),
+  final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+    color: colors.textSecondary,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.2,
+    fontSize: compact ? FontTokens.caption : null,
+  );
+  final valueStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+    color: colors.textPrimary,
+    fontWeight: FontWeight.w600,
+    fontSize: compact ? FontTokens.sm : null,
+    height: compact ? 1.25 : null,
+  );
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(label, style: labelStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      SizedBox(height: compact ? LayoutTokens.gr0 : LayoutTokens.gr1),
+      Text(
+        value,
+        style: valueStyle,
+        maxLines: compact ? 2 : 3,
+        overflow: TextOverflow.ellipsis,
+      ),
+    ],
   );
 }
 
 class _RecentGamesModule extends StatefulWidget {
   final List<MatchRecord> matches;
+  final bool isExampleData;
   final AppColorTokens colors;
   final double listMaxHeight;
 
   const _RecentGamesModule({
     required this.matches,
+    this.isExampleData = false,
     required this.colors,
     required this.listMaxHeight,
   });
@@ -1533,39 +1800,54 @@ class _RecentGamesModuleState extends State<_RecentGamesModule> {
     final titleStyle = TypographyTokens.sectionTitle(c.textPrimary);
 
     Widget titleRow() {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Text(
-              'Recent Games',
-              style: titleStyle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (showFilterMenu)
-            PopupMenuButton<_RecentGamesTimeFilter>(
-              tooltip: 'Filter: ${_filter.menuLabel}',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: kMinInteractiveDimension,
-                minHeight: kMinInteractiveDimension,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  'Recent games',
+                  style: titleStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              onSelected: (v) => setState(() => _filter = v),
-              icon: Icon(
-                Icons.filter_list_rounded,
-                size: 22,
-                color: c.primaryAccent,
-              ),
-              itemBuilder: (context) => [
-                for (final f in _RecentGamesTimeFilter.values)
-                  CheckedPopupMenuItem<_RecentGamesTimeFilter>(
-                    value: f,
-                    checked: f == _filter,
-                    child: Text(f.menuLabel),
+              if (showFilterMenu && !widget.isExampleData)
+                PopupMenuButton<_RecentGamesTimeFilter>(
+                  tooltip: 'Filter: ${_filter.menuLabel}',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: kMinInteractiveDimension,
+                    minHeight: kMinInteractiveDimension,
                   ),
-              ],
+                  onSelected: (v) => setState(() => _filter = v),
+                  icon: Icon(
+                    Icons.filter_list_rounded,
+                    size: 22,
+                    color: c.primaryAccent,
+                  ),
+                  itemBuilder: (context) => [
+                    for (final f in _RecentGamesTimeFilter.values)
+                      CheckedPopupMenuItem<_RecentGamesTimeFilter>(
+                        value: f,
+                        checked: f == _filter,
+                        child: Text(f.menuLabel),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+          if (widget.isExampleData)
+            Padding(
+              padding: const EdgeInsets.only(top: LayoutTokens.gr0),
+              child: Text(
+                'Example matches — play a game to see your real history.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: c.textSecondary,
+                ),
+              ),
             ),
         ],
       );
@@ -1720,13 +2002,50 @@ bool _participantSnapshotIsLocal(
   return p.playerId == 'local';
 }
 
+/// Commander art for recent-game tiles: snapshot URL, then saved deck lookup.
+String? _resolveCommanderImageForRecentCard(
+  WidgetRef ref,
+  MatchParticipantSnapshot? participant,
+  MatchRecord match,
+  PlayerProfile? profile,
+) {
+  if (participant == null) return null;
+
+  final stored = participant.commanderImageUrl?.trim();
+  if (stored != null && stored.isNotEmpty) return stored;
+
+  final commander = participant.commanderName?.trim();
+  if (commander != null && commander.isNotEmpty) {
+    final decks = ref.read(deckRepositoryProvider).getAll();
+    for (final d in decks) {
+      if (d.commanderName.toLowerCase() == commander.toLowerCase()) {
+        final url = d.commanderImageUrl?.trim();
+        if (url != null && url.isNotEmpty) return url;
+      }
+    }
+  }
+
+  if (_participantSnapshotIsLocal(participant, profile)) {
+    final deckId = match.localDeckIdSnapshot?.trim();
+    if (deckId != null && deckId.isNotEmpty) {
+      final deck = ref.read(deckRepositoryProvider).getById(deckId);
+      final url = deck?.commanderImageUrl?.trim();
+      if (url != null && url.isNotEmpty) return url;
+    }
+    final selected = profile?.selectedCommanderImageUrl?.trim();
+    if (selected != null && selected.isNotEmpty) return selected;
+  }
+
+  return null;
+}
+
 Widget _winnerProfileCircle({
   required BuildContext context,
   required MatchParticipantSnapshot? winner,
-  required PlayerProfile? profile,
   required ColorScheme scheme,
   required AppColorTokens colors,
   required double diameter,
+  String? imageUrl,
 }) {
   final initials = winner == null
       ? '?'
@@ -1736,10 +2055,7 @@ Widget _winnerProfileCircle({
               ? winner.commanderName!
               : winner.username,
         );
-  final isLocal =
-      winner != null && _participantSnapshotIsLocal(winner, profile);
-  final url = isLocal ? profile?.profileAvatarImageUrl : null;
-  final trimmed = url?.trim();
+  final trimmed = imageUrl?.trim();
   if (trimmed != null && trimmed.isNotEmpty) {
     return ClipOval(
       child: CachedNetworkImage(
@@ -1858,13 +2174,6 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
       height: 1.25,
       color: colors.textPrimary,
     );
-    final formatFooterStyle = Theme.of(context).textTheme.titleLarge!.copyWith(
-      fontWeight: FontWeight.w900,
-      letterSpacing: -0.35,
-      height: 1.12,
-      color: colors.textPrimary,
-      fontSize: 16,
-    );
     final metaStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
       color: colors.textSecondary,
       fontWeight: FontWeight.w700,
@@ -1904,191 +2213,219 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
 
     final structureLine = _recentMatchStructureLine(m);
 
-    final innerPad = LayoutTokens.gr2;
-    final innerH = math.max(0.0, widget.height - 2 * innerPad);
+    final innerPad = _kBentoCardPaddingPx;
+    final expandedInnerH = math.max(0.0, widget.height - 2 * innerPad);
     final profile = ref.watch(profileProvider).profile;
+    final winner = _winnerParticipantForRecentCard(m, profile);
+    final commanderImageUrl = _resolveCommanderImageForRecentCard(
+      ref,
+      winner,
+      m,
+      profile,
+    );
 
-    Widget summaryColumn() {
-      final winner = _winnerParticipantForRecentCard(m, profile);
-      final heroD = (innerH * 0.36).clamp(58.0, 92.0);
+    Widget summaryView() {
+      const overlayShadow = [
+        Shadow(
+          color: Color(0xCC000000),
+          blurRadius: 8,
+          offset: Offset(0, 1),
+        ),
+      ];
+      final overlayFormatStyle = formatStyle!.copyWith(
+        color: ColorTokens.onAccent,
+        shadows: overlayShadow,
+      );
+      final overlayMetaStyle = metaStyle!.copyWith(
+        color: ColorTokens.onAccent.withValues(alpha: 0.92),
+        shadows: overlayShadow,
+      );
+      final overlayDateStyle = dateStyle!.copyWith(
+        color: ColorTokens.onAccent,
+        shadows: overlayShadow,
+      );
+      final overlayTimeStyle = timeStyle!.copyWith(
+        color: ColorTokens.onAccent.withValues(alpha: 0.88),
+        shadows: overlayShadow,
+      );
 
-      Widget bottomBlock() {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              m.format,
-              style: formatFooterStyle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: LayoutTokens.gr2),
-            Text(playerLine, style: metaStyle),
-            SizedBox(height: LayoutTokens.gr1),
-            Text(dateStr, style: dateStyle),
-            Text(timeStr, style: timeStyle),
-            SizedBox(height: LayoutTokens.gr3),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () {
-                  if (!_expanded) setState(() => _expanded = true);
-                },
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.standard,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: LayoutTokens.gr3,
-                    vertical: LayoutTokens.gr2,
-                  ),
-                  minimumSize: const Size(double.infinity, 48),
-                  tapTargetSize: MaterialTapTargetSize.padded,
-                  shape: const StadiumBorder(),
-                  side: BorderSide(
-                    color: colors.primaryAccent.withValues(alpha: 0.55),
-                    width: 1.25,
-                  ),
-                  foregroundColor: colors.primaryAccent,
-                  backgroundColor: colors.primaryAccent.withValues(alpha: 0.1),
-                ),
-                child: Text(
-                  'Show more',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    letterSpacing: 0.15,
-                    color: colors.primaryAccent,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: LayoutTokens.gr1),
-          ],
-        );
-      }
-
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      return Stack(
+        fit: StackFit.expand,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [resultPill],
-          ),
-          SizedBox(height: LayoutTokens.gr2),
-          Expanded(
-            child: Center(
-              child: _winnerProfileCircle(
-                context: context,
-                winner: winner,
-                profile: profile,
-                scheme: scheme,
-                colors: colors,
-                diameter: heroD,
-              ),
+          _recentMatchCommanderArt(context, commanderImageUrl),
+          _recentMatchCardVignette(expanded: false),
+          Padding(
+            padding: EdgeInsets.all(LayoutTokens.gr2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [resultPill],
+                ),
+                const Spacer(),
+                Text(
+                  m.format,
+                  style: overlayFormatStyle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: LayoutTokens.gr0),
+                Text(
+                  playerLine,
+                  style: overlayMetaStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: LayoutTokens.gr0),
+                Text(
+                  dateStr,
+                  style: overlayDateStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  timeStr,
+                  style: overlayTimeStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: LayoutTokens.gr2),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      if (!_expanded) setState(() => _expanded = true);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.standard,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: LayoutTokens.gr3,
+                        vertical: LayoutTokens.gr2,
+                      ),
+                      minimumSize: const Size(double.infinity, 48),
+                      tapTargetSize: MaterialTapTargetSize.padded,
+                      shape: const StadiumBorder(),
+                      side: BorderSide(
+                        color: colors.primaryAccent.withValues(alpha: 0.55),
+                        width: 1.25,
+                      ),
+                      foregroundColor: colors.primaryAccent,
+                      backgroundColor:
+                          colors.primaryAccent.withValues(alpha: 0.1),
+                    ),
+                    child: Text(
+                      'Show more',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        letterSpacing: 0.15,
+                        color: colors.primaryAccent,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          bottomBlock(),
         ],
       );
     }
 
-    Widget detailsColumn() {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  '$dateStr · $timeStr',
-                  style: Theme.of(context).textTheme.titleSmall!.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.textPrimary,
-                    fontSize: 16,
-                    letterSpacing: -0.15,
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(width: LayoutTokens.gr1),
-              resultPill,
-            ],
-          ),
-          SizedBox(height: LayoutTokens.gr2),
-          Text(m.format, style: formatStyle),
-          SizedBox(height: LayoutTokens.gr0),
-          Text(structureLine, style: structureStyle),
-          SizedBox(height: LayoutTokens.gr2),
-          Divider(
-            height: 1,
-            thickness: 1,
-            color: colors.textSecondary.withValues(alpha: 0.18),
-          ),
-          SizedBox(height: LayoutTokens.gr2),
+    Widget detailsColumn(double maxHeight) {
+      final metaBlocks = <Widget>[
+        _recentMatchDetailRow(
+          context,
+          colors,
+          'Duration',
+          _formatDurationSeconds(secs),
+          compact: true,
+        ),
+        if (m.podNameSnapshot != null && m.podNameSnapshot!.isNotEmpty)
           _recentMatchDetailRow(
             context,
             colors,
-            'Duration',
-            _formatDurationSeconds(secs),
+            'Pod',
+            m.podNameSnapshot!,
+            compact: true,
           ),
-          if (m.podNameSnapshot != null && m.podNameSnapshot!.isNotEmpty)
-            _recentMatchDetailRow(context, colors, 'Pod', m.podNameSnapshot!),
-          if (m.localDeckIdSnapshot != null &&
-              m.localDeckIdSnapshot!.isNotEmpty)
-            _recentMatchDetailRow(
-              context,
-              colors,
-              'Deck',
-              ref
-                      .read(deckRepositoryProvider)
-                      .getById(m.localDeckIdSnapshot!)
-                      ?.displayName ??
-                  m.localDeckIdSnapshot!,
-            ),
-          if (participants.isNotEmpty) ...[
-            SizedBox(height: LayoutTokens.gr3),
+        if (m.localDeckIdSnapshot != null &&
+            m.localDeckIdSnapshot!.isNotEmpty)
+          _recentMatchDetailRow(
+            context,
+            colors,
+            'Deck',
+            ref
+                    .read(deckRepositoryProvider)
+                    .getById(m.localDeckIdSnapshot!)
+                    ?.displayName ??
+                m.localDeckIdSnapshot!,
+            compact: true,
+          ),
+      ];
+
+      Widget? playersBlock;
+      if (participants.isNotEmpty) {
+        playersBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Text(
               'Players',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: colors.textSecondary,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.2,
+                fontSize: FontTokens.caption,
               ),
             ),
-            SizedBox(height: LayoutTokens.gr1),
+            SizedBox(height: LayoutTokens.gr0),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: LayoutTokens.gr1,
+              runSpacing: LayoutTokens.gr1,
               children: participants.map((p) {
+                final chipImageUrl = _resolveCommanderImageForRecentCard(
+                  ref,
+                  p,
+                  m,
+                  profile,
+                );
+                final chipInitials = _recentMatchPlayerInitials(
+                  (p.commanderName != null &&
+                          p.commanderName!.trim().isNotEmpty)
+                      ? p.commanderName!
+                      : p.username,
+                );
                 return Chip(
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  labelPadding: const EdgeInsets.only(left: 2, right: 4),
                   avatar: CircleAvatar(
-                    radius: 12,
+                    radius: 10,
                     backgroundColor: colors.primaryAccent.withValues(
                       alpha: 0.28,
                     ),
-                    child: Text(
-                      _recentMatchPlayerInitials(p.username),
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        color: colors.textPrimary,
-                      ),
-                    ),
+                    backgroundImage:
+                        chipImageUrl != null && chipImageUrl.isNotEmpty
+                            ? CachedNetworkImageProvider(chipImageUrl)
+                            : null,
+                    child: chipImageUrl == null || chipImageUrl.isEmpty
+                        ? Text(
+                            chipInitials,
+                            style: TextStyle(
+                              fontSize: 7,
+                              fontWeight: FontWeight.w800,
+                              color: colors.textPrimary,
+                            ),
+                          )
+                        : null,
                   ),
                   label: Text(
                     p.commanderName ?? p.username,
                     style: TextStyle(
                       color: colors.textPrimary,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
@@ -2102,66 +2439,124 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
               }).toList(),
             ),
           ],
-        ],
+        );
+      }
+
+      final bodyChildren = <Widget>[];
+      for (var i = 0; i < metaBlocks.length; i++) {
+        if (i > 0) bodyChildren.add(SizedBox(height: LayoutTokens.gr2));
+        bodyChildren.add(metaBlocks[i]);
+      }
+      if (playersBlock != null) {
+        if (bodyChildren.isNotEmpty) {
+          bodyChildren.add(SizedBox(height: LayoutTokens.gr2));
+        }
+        bodyChildren.add(playersBlock);
+      }
+
+      return SizedBox(
+        height: maxHeight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Material(
+                color: colors.backgroundSecondary.withValues(alpha: 0.92),
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: IconButton(
+                  onPressed: () => setState(() => _expanded = false),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: colors.textPrimary,
+                  ),
+                  tooltip: 'Close',
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: LayoutTokens.gr0),
+            Text(
+              structureLine,
+              style: structureStyle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: LayoutTokens.gr1),
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: colors.textSecondary.withValues(alpha: 0.18),
+            ),
+            SizedBox(height: LayoutTokens.gr2),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...bodyChildren,
+                  const Spacer(),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
     }
-
-    final inner = Padding(
-      padding: EdgeInsets.all(innerPad),
-      child: SizedBox(
-        height: innerH,
-        width: double.infinity,
-        child: AnimatedCrossFade(
-          firstChild: LayoutBuilder(
-            builder: (context, c) {
-              final h = c.maxHeight.isFinite ? c.maxHeight : innerH;
-              return SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints.tightFor(
-                    width: c.maxWidth,
-                    height: h,
-                  ),
-                  child: summaryColumn(),
-                ),
-              );
-            },
-          ),
-          secondChild: SingleChildScrollView(
-            child: detailsColumn(),
-          ),
-          crossFadeState:
-              _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-          duration: MotionTokens.standard,
-          sizeCurve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-        ),
-      ),
-    );
 
     final card = SizedBox(
       width: widget.width,
       height: widget.height,
       child: Card(
-        clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         color: scheme.surfaceContainerHigh,
         elevation: 1,
         surfaceTintColor: scheme.surfaceTint,
-        shape: RoundedRectangleBorder(
-          borderRadius: RadiusTokens.radiusMd,
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.55),
-          ),
-        ),
+        shape: _profileCarouselCardShape(scheme),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () {
-              setState(() => _expanded = !_expanded);
-            },
-            borderRadius: RadiusTokens.radiusMd,
-            child: inner,
+            onTap: _expanded
+                ? null
+                : () => setState(() => _expanded = true),
+            borderRadius: _kBentoRadius,
+            child: AnimatedCrossFade(
+              firstChild: SizedBox(
+                height: widget.height,
+                width: double.infinity,
+                child: summaryView(),
+              ),
+              secondChild: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _recentMatchCommanderArt(context, commanderImageUrl),
+                  _recentMatchCardVignette(expanded: true),
+                  Padding(
+                    padding: EdgeInsets.all(innerPad),
+                    child: SizedBox(
+                      height: expandedInnerH,
+                      width: double.infinity,
+                      child: ClipRect(
+                        child: detailsColumn(expandedInnerH),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: MotionTokens.standard,
+              sizeCurve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+            ),
           ),
         ),
       ),
@@ -2174,7 +2569,7 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
         label: 'Recent match, $resultLabel, ${m.format}',
         value: '$playerLine. $dateStr $timeStr.',
         hint: _expanded
-            ? 'Collapse match details'
+            ? 'Close button returns to summary'
             : 'Show more for full match details, or tap the card',
         child: card,
       ),
@@ -2187,10 +2582,11 @@ List<MatchRecord> _previewPlaceholderMatches() {
   final now = DateTime.now();
 
   final duel = [
-    const MatchParticipantSnapshot(
+    MatchParticipantSnapshot(
       playerId: 'local',
       username: 'You',
       commanderName: 'The Ur-Dragon',
+      commanderImageUrl: _kMostPlayedPlaceholderImageUrl,
       teamIndex: 0,
     ),
     const MatchParticipantSnapshot(
@@ -2202,16 +2598,20 @@ List<MatchRecord> _previewPlaceholderMatches() {
   ];
 
   final fourPlayer = [
-    const MatchParticipantSnapshot(
+    MatchParticipantSnapshot(
       playerId: 'local',
       username: 'You',
       commanderName: 'Atraxa, Praetors\' Voice',
+      commanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/d/0/d0d33d52-3d28-4635-b985-51e126289259.jpg?1599707796',
       teamIndex: 0,
     ),
-    const MatchParticipantSnapshot(
+    MatchParticipantSnapshot(
       playerId: 'p2',
       username: 'Sam',
       commanderName: 'Yuriko, the Tiger\'s Shadow',
+      commanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/f/e/fe9be3e0-076c-4703-9750-2a6b0a178bc9.jpg?1761053654',
       teamIndex: 0,
     ),
     const MatchParticipantSnapshot(
@@ -2370,7 +2770,8 @@ List<PlayerDeck> _previewPlaceholderDecks() {
       displayName: "Ur-Dragon's Horde",
       commanderName: 'The Ur-Dragon',
       commanderManaCost: '{2}{W}{U}{B}{R}{G}',
-      commanderImageUrl: null,
+      commanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/1/0/10d42b35-844f-4a64-9981-c6118d45e826.jpg?1689999317',
       partnerCommanderName: null,
       partnerCommanderImageUrl: null,
       partnerManaCost: null,
@@ -2383,9 +2784,11 @@ List<PlayerDeck> _previewPlaceholderDecks() {
       displayName: 'Rograkh / Silas artifacts',
       commanderName: 'Rograkh, Son of Rohgahh',
       commanderManaCost: '{R}',
-      commanderImageUrl: null,
+      commanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/a/4/a4fab67f-00c2-4125-9262-d21a29411797.jpg?1769437009',
       partnerCommanderName: 'Silas Renn, Seeker Adept',
-      partnerCommanderImageUrl: null,
+      partnerCommanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/4/e/4e3fe912-1374-47c7-b73f-89ef55c479c1.jpg?1562399367',
       partnerManaCost: '{U}{B}',
       wins: 8,
       losses: 4,
@@ -2396,7 +2799,8 @@ List<PlayerDeck> _previewPlaceholderDecks() {
       displayName: 'Feather storm',
       commanderName: 'Feather, the Redeemed',
       commanderManaCost: '{3}{R/W}{R}',
-      commanderImageUrl: null,
+      commanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/e/4/e4a2d2c6-8eaa-4760-b620-921b807baa2e.jpg?1557577142',
       partnerCommanderName: null,
       partnerCommanderImageUrl: null,
       partnerManaCost: null,
@@ -2409,7 +2813,8 @@ List<PlayerDeck> _previewPlaceholderDecks() {
       displayName: 'Yuriko turns',
       commanderName: 'Yuriko, the Tiger\'s Shadow',
       commanderManaCost: '{1}{U}{B}',
-      commanderImageUrl: null,
+      commanderImageUrl:
+          'https://cards.scryfall.io/art_crop/front/f/e/fe9be3e0-076c-4703-9750-2a6b0a178bc9.jpg?1761053654',
       partnerCommanderName: null,
       partnerCommanderImageUrl: null,
       partnerManaCost: null,
@@ -2420,14 +2825,19 @@ List<PlayerDeck> _previewPlaceholderDecks() {
   ];
 }
 
+PlayerDeck? _previewPlaceholderWorstDeck() =>
+    _pickWorstDeck(_previewPlaceholderDecks());
+
 class _DeckPerformanceSection extends ConsumerStatefulWidget {
   final AppColorTokens colors;
   /// When null, list uses remaining flex height (one-screen layout).
   final double? listMaxHeight;
+  final bool usePlaceholderDecks;
 
   const _DeckPerformanceSection({
     required this.colors,
     this.listMaxHeight,
+    this.usePlaceholderDecks = false,
   });
 
   @override
@@ -2443,16 +2853,16 @@ const double _kDeckPerfCardWidth = LayoutTokens.profileCarouselCardWidth;
 const double _kDeckPerfTitleHeight = 44;
 
 /// Commander portrait in deck perf: scales inside [Expanded]; these clamp size.
-const double _kDeckPerfCommanderPortraitMin = 96;
-const double _kDeckPerfCommanderPortraitMax = 132;
+/// Height is the long edge; width follows 63×88 mm card ratio in [DeckCommanderAvatarCluster].
+const double _kDeckPerfCommanderPortraitMin = 108;
+const double _kDeckPerfCommanderPortraitMax = 168;
 
 /// Horizontal deck tiles only need ~this much vertical space (avatar, text,
 /// mana, WR bar, chips). Parent passes a large [listMaxHeight] for other
 /// modules; without a cap each card stretches and shows empty deck surface.
 const double _kDeckPerfCardIdealHeight = 400;
 
-/// Pixel height for profile horizontal tiles (deck + recent games); mirrors
-/// [_DeckPerformanceSectionState] list row math so both stay aligned.
+/// Pixel height for profile horizontal tiles (deck performance + recent games).
 double _profileSectionHorizontalCardHeight(
   BuildContext context,
   double? listMaxHeight,
@@ -2465,6 +2875,19 @@ double _profileSectionHorizontalCardHeight(
   final double need = _deckPerfCardMinHeightPx(context);
   final double softCap = math.max(_kDeckPerfCardIdealHeight, need);
   return math.max(need, math.min(budget, softCap));
+}
+
+/// Tighter dynamic height for the Player stats carousel only (level, behaviour,
+/// most played). Still scales with viewport; capped lower than deck tiles.
+double _profilePlayerStatsCardHeight(
+  BuildContext context,
+  double? listMaxHeight,
+) {
+  final full = _profileSectionHorizontalCardHeight(context, listMaxHeight);
+  const scale = 0.86;
+  const softCap = 320.0;
+  const floor = 252.0;
+  return (full * scale).clamp(floor, softCap);
 }
 
 class _DeckPerformanceSectionState
@@ -2484,8 +2907,8 @@ class _DeckPerformanceSectionState
       ref.read(deckRepositoryProvider).getAll(),
     )..sort((a, b) => b.gamesPlayed.compareTo(a.gamesPlayed));
 
-    final decks =
-        repoDecks.isEmpty ? _previewPlaceholderDecks() : repoDecks;
+    final isExampleDecks = widget.usePlaceholderDecks || repoDecks.isEmpty;
+    final decks = isExampleDecks ? _previewPlaceholderDecks() : repoDecks;
     final colors = widget.colors;
     final lh = widget.listMaxHeight;
 
@@ -2515,21 +2938,41 @@ class _DeckPerformanceSectionState
     }
 
     Widget titleRow() {
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: Text('Deck performance', style: deckTitleStyle)),
-          IconButton(
-            icon: Icon(
-              Icons.layers_outlined,
-              size: 22,
-              color: colors.primaryAccent,
-            ),
-            tooltip: 'Manage decks',
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            onPressed: () => context.go(AppRoutes.decks),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text('Deck performance', style: deckTitleStyle),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.layers_outlined,
+                  size: 22,
+                  color: colors.primaryAccent,
+                ),
+                tooltip: 'Manage decks',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
+                ),
+                onPressed: () => context.go(AppRoutes.decks),
+              ),
+            ],
           ),
+          if (isExampleDecks)
+            Padding(
+              padding: const EdgeInsets.only(top: LayoutTokens.gr0),
+              child: Text(
+                'Example decks — create a deck to track real performance.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
         ],
       );
     }
@@ -2568,87 +3011,72 @@ class _DeckPerfCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: width,
       height: height,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        margin: EdgeInsets.zero,
-        color: scheme.surfaceContainerHigh,
-        elevation: 1,
-        surfaceTintColor: scheme.surfaceTint,
-        shape: RoundedRectangleBorder(
-          borderRadius: RadiusTokens.radiusMd,
-          side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.55),
-          ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(LayoutTokens.gr2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, c) {
-                    // Primary card height `size`; cluster width scales with partner overlap.
-                    final wRatio = deck.hasPartner
-                        ? (63 / 88) * (1 + 0.35 * 0.58)
-                        : (63 / 88);
-                    final maxByWidth = c.maxWidth / wRatio;
-                    final sz = math
-                        .min(c.maxHeight, maxByWidth)
-                        .clamp(
-                          _kDeckPerfCommanderPortraitMin,
-                          _kDeckPerfCommanderPortraitMax,
-                        );
-                    return Center(
-                      child: DeckCommanderAvatarCluster(
-                        deck: deck,
-                        colors: colors,
-                        size: sz,
-                        portraitStyle: CommanderPortraitStyle.card,
-                      ),
-                    );
-                  },
-                ),
+      child: _BentoCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  // Primary card height `size`; cluster width scales with partner overlap.
+                  final wRatio = deck.hasPartner
+                      ? (63 / 88) * (1 + 0.35 * 0.58)
+                      : (63 / 88);
+                  final maxByWidth = c.maxWidth / wRatio;
+                  final sz = math
+                      .min(c.maxHeight, maxByWidth)
+                      .clamp(
+                        _kDeckPerfCommanderPortraitMin,
+                        _kDeckPerfCommanderPortraitMax,
+                      );
+                  return Center(
+                    child: ResolvedDeckCommanderAvatarCluster(
+                      deck: deck,
+                      colors: colors,
+                      size: sz,
+                      portraitStyle: CommanderPortraitStyle.card,
+                    ),
+                  );
+                },
               ),
-              SizedBox(height: LayoutTokens.gr0),
-              Text(
-                deck.displayName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: LayoutTokens.gr0),
+            Text(
+              deck.displayName,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.textPrimary,
               ),
-              Text(
-                deck.hasPartner
-                    ? '${deck.commanderName} // ${deck.partnerCommanderName}'
-                    : deck.commanderName,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colors.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              deck.hasPartner
+                  ? '${deck.commanderName} // ${deck.partnerCommanderName}'
+                  : deck.commanderName,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.textSecondary,
               ),
-              if (_deckHasManaForProfile(deck)) ...[
-                SizedBox(height: LayoutTokens.gr1),
-                DeckManaCostRows(
-                  commanderManaCost: deck.commanderManaCost,
-                  partnerManaCost: deck.partnerManaCost,
-                  hasPartner: deck.hasPartner,
-                  compact: true,
-                ),
-              ],
-              SizedBox(height: LayoutTokens.gr2),
-              DeckWinLossRatioBar(deck: deck, colors: colors, height: 6),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (_deckHasManaForProfile(deck)) ...[
               SizedBox(height: LayoutTokens.gr1),
-              DeckStatChips(deck: deck, colors: colors, compact: true),
+              DeckManaCostRows(
+                commanderManaCost: deck.commanderManaCost,
+                partnerManaCost: deck.partnerManaCost,
+                hasPartner: deck.hasPartner,
+                compact: true,
+              ),
             ],
-          ),
+            SizedBox(height: LayoutTokens.gr2),
+            DeckWinLossRatioBar(deck: deck, colors: colors, height: 6),
+            SizedBox(height: LayoutTokens.gr1),
+            DeckStatChips(deck: deck, colors: colors, compact: true),
+          ],
         ),
       ),
     );

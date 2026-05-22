@@ -45,9 +45,10 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
       _enteredStackIds.clear();
       return;
     }
-    final added =
-        newItems.length - oldItems.length;
-    if (added > 1) {
+    final oldIds = oldItems.map((i) => i.id).toSet();
+    final newIds = newItems.map((i) => i.id).toSet();
+    final addedIds = newIds.difference(oldIds);
+    if (addedIds.length > 1) {
       _markStackItemsSeen(newItems);
     }
   }
@@ -156,7 +157,7 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                           EdgeInsets.symmetric(horizontal: LayoutTokens.gr0),
                     ),
                     FilterChip(
-                      label: const Text('Countered'),
+                      label: const Text('Resolved / countered'),
                       selected: _showCountered,
                       onSelected: (v) => setState(() => _showCountered = v),
                       visualDensity: VisualDensity.compact,

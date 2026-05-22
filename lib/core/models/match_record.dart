@@ -9,12 +9,14 @@ class MatchParticipantSnapshot {
   final String playerId;
   final String username;
   final String? commanderName;
+  final String? commanderImageUrl;
   final int teamIndex;
 
   const MatchParticipantSnapshot({
     required this.playerId,
     required this.username,
     this.commanderName,
+    this.commanderImageUrl,
     this.teamIndex = 0,
   });
 
@@ -23,6 +25,7 @@ class MatchParticipantSnapshot {
         playerId: json['playerId'] as String,
         username: json['username'] as String,
         commanderName: json['commanderName'] as String?,
+        commanderImageUrl: json['commanderImageUrl'] as String?,
         teamIndex: (json['teamIndex'] as num?)?.toInt() ?? 0,
       );
 
@@ -30,6 +33,7 @@ class MatchParticipantSnapshot {
         'playerId': playerId,
         'username': username,
         'commanderName': commanderName,
+        if (commanderImageUrl != null) 'commanderImageUrl': commanderImageUrl,
         'teamIndex': teamIndex,
       };
 }

@@ -357,11 +357,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
         return p.copyWith(rad: value);
       default:
         final m = Map<String, int>.from(p.extraDials);
-        if (value <= 0) {
-          m.remove(field);
-        } else {
-          m[field] = value;
-        }
+        m[field] = value;
         return p.copyWith(extraDials: m);
     }
   }
@@ -434,6 +430,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
       partnerIndex: partnerIndex,
       toPlayerId: toPlayerId,
       amount: delta,
+      lifeAfter: newLife,
+      totalPartnerDamage: fromDamage[partnerIndex],
     ));
 
     _checkLossConditions();
@@ -546,16 +544,14 @@ class GameStateNotifier extends StateNotifier<GameState> {
             break;
           default:
             final m = Map<String, int>.from(p.extraDials);
-            if (action.previousValue <= 0) {
-              m.remove(action.field);
-            } else {
-              m[action.field] = action.previousValue;
-            }
+            m[action.field] = action.previousValue;
             updated = updated.copyWith(extraDials: m);
         }
         return updated;
       }).toList(),
     );
+
+    _checkLossConditions();
 
     _send(BleMessage(
       type: BleMessageType.undoAction,
@@ -640,18 +636,18 @@ class GameStateNotifier extends StateNotifier<GameState> {
         .toSet();
 
     var alliances = state.alliances
-        .where((a) => !expiredIds.contains(a.proposerId))
+        .where((a) => !expiredIds.any((id) => a.involves(id)))
         .toList();
 
     // Find next living player
-    var nextIndex = (state.activePlayerIndex + 1) % state.turnOrder.length;
-    for (var i = 0; i < state.turnOrder.length; i++) {
-      final pId = state.turnOrder[nextIndex % state.turnOrder.length];
+    final n = state.turnOrder.length;
+    var nextIndex = (state.activePlayerIndex + 1) % n;
+    for (var i = 1; i < n; i++) {
+      final pId = state.turnOrder[nextIndex];
       final p = state.playerById(pId);
       if (p != null && !p.isEliminated) break;
-      nextIndex++;
+      nextIndex = (nextIndex + 1) % n;
     }
-    nextIndex = nextIndex % state.turnOrder.length;
 
     final newRound = nextIndex <= state.activePlayerIndex
         ? state.roundNumber + 1
@@ -1199,17 +1195,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
       players: mergedPlayers,
       turnOrder: playerIds,
       activePlayerIndex: playerIds.indexOf(localId).clamp(0, 3),
-      stackItems: items,
     );
-    _appendGameLog('Loaded example stack (4-player pod)');
-
-    _send(BleMessage.stackUpdate(
-      seqNum: _nextSeq(),
-      payload: {
-        'op': 'replace',
-        'items': items.map((e) => e.toJson()).toList(),
-      },
-    ));
+    _mutateStack(
+      op: 'replace',
+      items: items,
+      log: 'Loaded example stack (4-player pod)',
+    );
   }
 
   /// Removes every stack entry (host or solo only).
@@ -1500,7 +1491,9 @@ class GameStateNotifier extends StateNotifier<GameState> {
   void _applyStateDelta(Map<String, dynamic> payload) {
     final pid = payload['pid'] as String? ?? '';
     final field = payload['field'] as String? ?? '';
-    final newValue = (payload['val'] as num).toInt();
+    final rawVal = payload['val'];
+    if (rawVal == null) return;
+    final newValue = (rawVal as num).toInt();
 
     state = state.copyWith(
       players: state.players.map((p) {
@@ -1518,11 +1511,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
             return p.copyWith(rad: newValue);
           default:
             final m = Map<String, int>.from(p.extraDials);
-            if (newValue <= 0) {
-              m.remove(field);
-            } else {
-              m[field] = newValue;
-            }
+            m[field] = newValue;
             return p.copyWith(extraDials: m);
         }
       }).toList(),
@@ -1551,6 +1540,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final pi = (payload['pi'] as num?)?.toInt() ?? 0;
     final toId = payload['to'] as String? ?? '';
     final amount = (payload['amt'] as num?)?.toInt() ?? 0;
+    final lifeAbs = payload['life'] as num?;
+    final totalDmgAbs = payload['totalDmg'] as num?;
 
     final victim = state.playerById(toId);
     if (victim == null) return;
@@ -1562,11 +1553,19 @@ class GameStateNotifier extends StateNotifier<GameState> {
     while (fromDmg.length <= pi) {
       fromDmg.add(0);
     }
-    fromDmg[pi] += amount;
-    dmg[fromId] = fromDmg;
 
-    final reducesLife = state.commanderDamageReducesLife;
-    final newLife = reducesLife ? victim.life - amount : victim.life;
+    final int partnerTotal;
+    final int newLife;
+    if (lifeAbs != null && totalDmgAbs != null) {
+      partnerTotal = totalDmgAbs.toInt();
+      newLife = lifeAbs.toInt();
+    } else {
+      partnerTotal = fromDmg[pi] + amount;
+      final reducesLife = state.commanderDamageReducesLife;
+      newLife = reducesLife ? victim.life - amount : victim.life;
+    }
+    fromDmg[pi] = partnerTotal;
+    dmg[fromId] = fromDmg;
 
     state = state.copyWith(
       players: state.players.map((p) {
@@ -1619,15 +1618,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
             return p.copyWith(life: prevLife, commanderDamage: dmg);
           default:
             final m = Map<String, int>.from(p.extraDials);
-            if (prevValue <= 0) {
-              m.remove(field);
-            } else {
-              m[field] = prevValue;
-            }
+            m[field] = prevValue;
             return p.copyWith(extraDials: m);
         }
       }).toList(),
     );
+    _checkLossConditions();
   }
 
   void _applyProliferate() {

@@ -2,11 +2,15 @@ import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../ui/tokens/opacity_tokens.dart';
 
+import '../../core/game/scryfall_service.dart';
 import '../../core/models/player_deck.dart';
+import '../../core/persistence/providers.dart';
 import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/color_tokens.dart';
+import '../utils/commander_image_resolver.dart';
 
 /// How commander art is framed in a list row.
 enum CommanderPortraitStyle {
@@ -25,20 +29,26 @@ class DeckCommanderAvatarCluster extends StatelessWidget {
     required this.colors,
     this.size = 56,
     this.portraitStyle = CommanderPortraitStyle.circle,
+    this.primaryImageUrl,
+    this.partnerImageUrl,
   });
 
   final PlayerDeck deck;
   final AppColorTokens colors;
   final double size;
   final CommanderPortraitStyle portraitStyle;
+  /// Resolved art URL; falls back to [PlayerDeck.commanderImageUrl].
+  final String? primaryImageUrl;
+  /// Resolved partner art URL; falls back to [PlayerDeck.partnerCommanderImageUrl].
+  final String? partnerImageUrl;
 
   /// Standard playing-card aspect (width : height) for Magic cards.
   static const double _cardAspectWidthOverHeight = 63 / 88;
 
   @override
   Widget build(BuildContext context) {
-    final primaryUrl = deck.commanderImageUrl;
-    final partnerUrl = deck.partnerCommanderImageUrl;
+    final primaryUrl = primaryImageUrl ?? deck.commanderImageUrl;
+    final partnerUrl = partnerImageUrl ?? deck.partnerCommanderImageUrl;
     final hasPartner = deck.hasPartner;
 
     if (portraitStyle == CommanderPortraitStyle.card) {
@@ -254,6 +264,141 @@ class DeckCommanderAvatarCluster extends StatelessWidget {
         size: height * 0.32,
         color: colors.textMuted,
       ),
+    );
+  }
+}
+
+/// Deck commander portraits with profile fallbacks and one-shot Scryfall lookup.
+class ResolvedDeckCommanderAvatarCluster extends ConsumerStatefulWidget {
+  const ResolvedDeckCommanderAvatarCluster({
+    super.key,
+    required this.deck,
+    required this.colors,
+    this.size = 56,
+    this.portraitStyle = CommanderPortraitStyle.circle,
+  });
+
+  final PlayerDeck deck;
+  final AppColorTokens colors;
+  final double size;
+  final CommanderPortraitStyle portraitStyle;
+
+  @override
+  ConsumerState<ResolvedDeckCommanderAvatarCluster> createState() =>
+      _ResolvedDeckCommanderAvatarClusterState();
+}
+
+class _ResolvedDeckCommanderAvatarClusterState
+    extends ConsumerState<ResolvedDeckCommanderAvatarCluster> {
+  String? _primaryUrl;
+  String? _partnerUrl;
+  bool _fetchStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _applySyncResolve();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchMissingFromScryfall());
+  }
+
+  @override
+  void didUpdateWidget(ResolvedDeckCommanderAvatarCluster oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.deck.id != widget.deck.id ||
+        oldWidget.deck.commanderImageUrl != widget.deck.commanderImageUrl ||
+        oldWidget.deck.partnerCommanderImageUrl !=
+            widget.deck.partnerCommanderImageUrl) {
+      _fetchStarted = false;
+      _applySyncResolve();
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _fetchMissingFromScryfall());
+    }
+  }
+
+  void _applySyncResolve() {
+    final profile = ref.read(profileRepositoryProvider).getProfile();
+    _primaryUrl = resolveDeckCommanderImageUrl(
+      deck: widget.deck,
+      profile: profile,
+    );
+    _partnerUrl = resolveDeckPartnerImageUrl(
+      deck: widget.deck,
+      profile: profile,
+    );
+  }
+
+  Future<void> _fetchMissingFromScryfall() async {
+    if (_fetchStarted) return;
+    final needPrimary = _primaryUrl == null || _primaryUrl!.isEmpty;
+    final needPartner = widget.deck.hasPartner &&
+        (_partnerUrl == null || _partnerUrl!.isEmpty);
+    if (!needPrimary && !needPartner) return;
+
+    _fetchStarted = true;
+    final service = ref.read(scryfallServiceProvider);
+    var primary = _primaryUrl;
+    var partner = _partnerUrl;
+
+    if (needPrimary) {
+      final card =
+          await service.fetchCardByName(widget.deck.commanderName);
+      primary = card?.imageUrl?.trim();
+    }
+    if (needPartner && widget.deck.partnerCommanderName != null) {
+      final card = await service.fetchCardByName(
+        widget.deck.partnerCommanderName!,
+      );
+      partner = card?.imageUrl?.trim();
+    }
+
+    if (!mounted) return;
+    if ((primary != null && primary.isNotEmpty) ||
+        (partner != null && partner.isNotEmpty)) {
+      setState(() {
+        if (primary != null && primary.isNotEmpty) _primaryUrl = primary;
+        if (partner != null && partner.isNotEmpty) _partnerUrl = partner;
+      });
+      await _persistFetchedUrls(primary: primary, partner: partner);
+    }
+  }
+
+  Future<void> _persistFetchedUrls({
+    String? primary,
+    String? partner,
+  }) async {
+    if (isPreviewPlaceholderDeck(widget.deck)) return;
+    final repo = ref.read(deckRepositoryProvider);
+    final deck = repo.getById(widget.deck.id);
+    if (deck == null) return;
+    var changed = false;
+    if (primary != null &&
+        primary.isNotEmpty &&
+        (deck.commanderImageUrl == null || deck.commanderImageUrl!.isEmpty)) {
+      deck.commanderImageUrl = primary;
+      changed = true;
+    }
+    if (partner != null &&
+        partner.isNotEmpty &&
+        (deck.partnerCommanderImageUrl == null ||
+            deck.partnerCommanderImageUrl!.isEmpty)) {
+      deck.partnerCommanderImageUrl = partner;
+      changed = true;
+    }
+    if (changed) {
+      await repo.save(deck);
+      bumpDeckListRevision(ref);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DeckCommanderAvatarCluster(
+      deck: widget.deck,
+      colors: widget.colors,
+      size: widget.size,
+      portraitStyle: widget.portraitStyle,
+      primaryImageUrl: _primaryUrl,
+      partnerImageUrl: _partnerUrl,
     );
   }
 }

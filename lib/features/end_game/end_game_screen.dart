@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 
+import '../../core/bluetooth/ble_providers.dart';
 import '../../core/game/game_providers.dart';
 import '../../core/game/game_state.dart';
 import '../../core/game/lobby_state.dart';
@@ -49,6 +50,11 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
     if (_saved) return;
     _saved = true;
 
+    final pending = ref.read(pendingFeedbackProvider);
+    if (pending != null && mounted) {
+      setState(() => _feedbackSubmitted = true);
+    }
+
     try {
       final game = ref.read(gameProvider);
       final lobby = ref.read(lobbyProvider);
@@ -60,8 +66,6 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
         startTime: game.gameStartTime ?? DateTime.now(),
       );
 
-      // Use pending feedback from concede flow if present
-      final pending = ref.read(pendingFeedbackProvider);
       if (pending != null && result.matchId.isNotEmpty) {
         await service.saveFeedback(GameFeedback(
           matchId: result.matchId,
@@ -220,9 +224,14 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
     );
   }
 
-  void _doRematch(BuildContext context, WidgetRef ref, GameState game) {
+  Future<void> _doRematch(
+    BuildContext context,
+    WidgetRef ref,
+    GameState game,
+  ) async {
     ref.read(gameProvider.notifier).proposeRematch();
-    // Navigate back to lobby — lobby state still has all players
+    await endSession(ref);
+    if (!context.mounted) return;
     context.go(AppRoutes.lobby);
   }
 
@@ -525,7 +534,7 @@ class _FeedbackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final others = game.players
-        .where((p) => p.playerId != game.localPlayerId && !p.isEliminated)
+        .where((p) => p.playerId != game.localPlayerId)
         .toList();
 
     if (feedbackSubmitted) {

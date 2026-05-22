@@ -80,6 +80,8 @@ class BleMessage {
     required int partnerIndex,
     required String toPlayerId,
     required int amount,
+    required int lifeAfter,
+    required int totalPartnerDamage,
   }) =>
       BleMessage(
         type: BleMessageType.commanderDamage,
@@ -88,6 +90,8 @@ class BleMessage {
           'pi': partnerIndex,
           'to': toPlayerId,
           'amt': amount,
+          'life': lifeAfter,
+          'totalDmg': totalPartnerDamage,
         },
         seqNum: seqNum,
       );

@@ -49,8 +49,8 @@ extension GamePhaseX on GamePhase {
   String get streamlinedDisplayName => switch (this) {
         GamePhase.untap => 'Untap',
         GamePhase.upkeep => 'Upkeep',
-        GamePhase.draw => 'Upkeep',
-        GamePhase.preCombatMain => 'Upkeep',
+        GamePhase.draw => 'Draw',
+        GamePhase.preCombatMain => 'Main',
         GamePhase.beginningOfCombat => 'Combat Phase',
         GamePhase.declareAttackers => 'Combat Phase',
         GamePhase.declareBlockers => 'Combat Phase',
@@ -65,8 +65,8 @@ extension GamePhaseX on GamePhase {
   String get streamlinedShortLabel => switch (this) {
         GamePhase.untap => 'Untap',
         GamePhase.upkeep => 'Upkeep',
-        GamePhase.draw => 'Upkeep',
-        GamePhase.preCombatMain => 'Upkeep',
+        GamePhase.draw => 'Draw',
+        GamePhase.preCombatMain => 'Main',
         GamePhase.beginningOfCombat => 'Combat',
         GamePhase.declareAttackers => 'Combat',
         GamePhase.declareBlockers => 'Combat',

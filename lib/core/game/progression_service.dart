@@ -11,6 +11,7 @@ import '../persistence/match_repository.dart';
 import '../persistence/profile_repository.dart';
 import '../persistence/providers.dart';
 import 'game_state.dart';
+import 'player_game_state.dart';
 import 'game_format.dart';
 import 'lobby_state.dart';
 
@@ -104,6 +105,7 @@ class ProgressionService {
           'playerId': p.playerId,
           'username': p.username,
           'commanderName': p.commanderName,
+          'commanderImageUrl': p.commanderImageUrl,
           'teamIndex': team,
         };
       }).toList(),
@@ -125,7 +127,7 @@ class ProgressionService {
       durationSeconds: durationSeconds,
       participantsJson: participantsJson,
       podNameSnapshot: lobbyState.podNameSnapshot,
-      locationSnapshot: null,
+      locationSnapshot: lobbyState.locationLabelSnapshot,
       localDeckIdSnapshot: local.selectedDeckId,
     ));
 
@@ -138,6 +140,7 @@ class ProgressionService {
     final deckId = local.selectedDeckId;
     if (deckId != null && deckId.isNotEmpty) {
       await _deckRepo.recordMatchResult(deckId, won);
+      await _backfillDeckCommanderArt(deckId, local);
     }
 
     // ── Check achievements ────────────────────────────────────────────────
@@ -170,6 +173,31 @@ class ProgressionService {
         profile.username,
       );
     }
+  }
+
+  Future<void> _backfillDeckCommanderArt(
+    String deckId,
+    PlayerGameState local,
+  ) async {
+    final deck = _deckRepo.getById(deckId);
+    if (deck == null) return;
+    var changed = false;
+    final cmdUrl = local.commanderImageUrl;
+    if (cmdUrl != null &&
+        cmdUrl.trim().isNotEmpty &&
+        (deck.commanderImageUrl == null || deck.commanderImageUrl!.isEmpty)) {
+      deck.commanderImageUrl = cmdUrl.trim();
+      changed = true;
+    }
+    final partnerUrl = local.partnerCommanderImageUrl;
+    if (partnerUrl != null &&
+        partnerUrl.trim().isNotEmpty &&
+        (deck.partnerCommanderImageUrl == null ||
+            deck.partnerCommanderImageUrl!.isEmpty)) {
+      deck.partnerCommanderImageUrl = partnerUrl.trim();
+      changed = true;
+    }
+    if (changed) await _deckRepo.save(deck);
   }
 
   Future<List<String>> _checkAchievements(

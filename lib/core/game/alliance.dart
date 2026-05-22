@@ -56,7 +56,8 @@ class Alliance {
   bool isExpiredAtTurnEnd(int currentTurnIndex, int currentRound) {
     switch (duration) {
       case AllianceDuration.endOfTurn:
-        return currentTurnIndex == formedAtTurnIndex;
+        return currentTurnIndex == formedAtTurnIndex
+            && currentRound == formedAtRound;
       case AllianceDuration.endOfRound:
         return currentRound > formedAtRound;
       case AllianceDuration.manual:

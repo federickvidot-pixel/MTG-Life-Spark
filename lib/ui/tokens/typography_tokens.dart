@@ -22,11 +22,20 @@ class TypographyTokens {
         color: ColorTokens.textPrimary,
       );
 
-  /// Section headers — profile carousels, lobby blocks, decks (20dp w800).
+  /// Module headers — profile sections, lobby blocks, decks screen (20dp w800).
   static TextStyle sectionTitle(Color primary) => GoogleFonts.lato(
         fontSize: FontTokens.headline,
         fontWeight: FontWeight.w800,
         letterSpacing: -0.2,
+        height: 1.2,
+        color: primary,
+      );
+
+  /// In-card titles — bento carousel tiles (16dp w800).
+  static TextStyle cardTitle(Color primary) => GoogleFonts.lato(
+        fontSize: FontTokens.title,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.15,
         height: 1.2,
         color: primary,
       );
