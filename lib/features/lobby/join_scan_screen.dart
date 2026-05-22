@@ -308,6 +308,7 @@ class _WaitingRoomViewState extends ConsumerState<_WaitingRoomView> {
   Widget build(BuildContext context) {
     ref.listen<LobbyState>(lobbyProvider, (previous, next) {
       if (next.isGameStarted && !(previous?.isGameStarted ?? false)) {
+        if (!context.mounted) return;
         context.go(AppRoutes.game);
       }
     });

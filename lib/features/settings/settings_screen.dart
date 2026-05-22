@@ -144,7 +144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _SettingTile(
             title: 'Feedback',
             subtitle: 'Send us your thoughts and suggestions',
-            onTap: () => context.push(AppRoutes.feedback),
+            onTap: () => context.push('feedback'),
           ),
           _SettingTile(
             title: 'View Tutorial Again',
@@ -152,7 +152,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () {
               _settings.onboardingCompleted = false;
               _save().then((_) {
-                if (context.mounted) context.push(AppRoutes.onboarding);
+                if (context.mounted) context.go(AppRoutes.onboarding);
               });
             },
           ),

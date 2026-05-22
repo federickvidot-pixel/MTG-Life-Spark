@@ -271,6 +271,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
       partnerIndex: partnerIndex,
       toPlayerId: toPlayerId,
       amount: delta,
+      lifeAfter: newLife,
+      totalPartnerDamage: fromDamage[partnerIndex],
     ));
 
     _checkLossConditions();
@@ -377,6 +379,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
         return updated;
       }).toList(),
     );
+
+    _checkLossConditions();
 
     _send(BleMessage(
       type: BleMessageType.undoAction,
@@ -1001,7 +1005,9 @@ class GameStateNotifier extends StateNotifier<GameState> {
   void _applyStateDelta(Map<String, dynamic> payload) {
     final pid = payload['pid'] as String? ?? '';
     final field = payload['field'] as String? ?? '';
-    final newValue = (payload['val'] as num).toInt();
+    final rawVal = payload['val'];
+    if (rawVal == null) return;
+    final newValue = (rawVal as num).toInt();
 
     state = state.copyWith(
       players: state.players.map((p) {
@@ -1030,6 +1036,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final pi = (payload['pi'] as num?)?.toInt() ?? 0;
     final toId = payload['to'] as String? ?? '';
     final amount = (payload['amt'] as num?)?.toInt() ?? 0;
+    final lifeAbs = payload['life'] as num?;
+    final totalDmgAbs = payload['totalDmg'] as num?;
 
     final victim = state.playerById(toId);
     if (victim == null) return;
@@ -1041,11 +1049,19 @@ class GameStateNotifier extends StateNotifier<GameState> {
     while (fromDmg.length <= pi) {
       fromDmg.add(0);
     }
-    fromDmg[pi] += amount;
-    dmg[fromId] = fromDmg;
 
-    final reducesLife = state.commanderDamageReducesLife;
-    final newLife = reducesLife ? victim.life - amount : victim.life;
+    final int partnerTotal;
+    final int newLife;
+    if (lifeAbs != null && totalDmgAbs != null) {
+      partnerTotal = totalDmgAbs.toInt();
+      newLife = lifeAbs.toInt();
+    } else {
+      partnerTotal = fromDmg[pi] + amount;
+      final reducesLife = state.commanderDamageReducesLife;
+      newLife = reducesLife ? victim.life - amount : victim.life;
+    }
+    fromDmg[pi] = partnerTotal;
+    dmg[fromId] = fromDmg;
 
     state = state.copyWith(
       players: state.players.map((p) {
@@ -1101,6 +1117,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
         }
       }).toList(),
     );
+    _checkLossConditions();
   }
 
   void _applyProliferate() {

@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/persistence/providers.dart';
@@ -37,6 +38,27 @@ class AppRoutes {
   static const commanderSelect = '/commander-select';
   static const game = '/game';
   static const endGame = '/end-game';
+}
+
+Widget _buildCommanderSelect(GoRouterState state) {
+  final extra = state.extra;
+  final String playerId;
+  final String? newDeckDisplayName;
+  final String? editDeckId;
+  if (extra is Map) {
+    playerId = extra['playerId'] as String? ?? '';
+    newDeckDisplayName = extra['newDeckDisplayName'] as String?;
+    editDeckId = extra['editDeckId'] as String?;
+  } else {
+    playerId = extra as String? ?? '';
+    newDeckDisplayName = null;
+    editDeckId = null;
+  }
+  return CommanderSelectScreen(
+    playerId: playerId,
+    newDeckDisplayName: newDeckDisplayName,
+    editDeckId: editDeckId,
+  );
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -87,27 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     routes: [
                       GoRoute(
                         path: 'commander',
-                        builder: (context, state) {
-                          final extra = state.extra;
-                          final String playerId;
-                          final String? newDeckDisplayName;
-                          final String? editDeckId;
-                          if (extra is Map) {
-                            playerId = extra['playerId'] as String? ?? '';
-                            newDeckDisplayName =
-                                extra['newDeckDisplayName'] as String?;
-                            editDeckId = extra['editDeckId'] as String?;
-                          } else {
-                            playerId = extra as String? ?? '';
-                            newDeckDisplayName = null;
-                            editDeckId = null;
-                          }
-                          return CommanderSelectScreen(
-                            playerId: playerId,
-                            newDeckDisplayName: newDeckDisplayName,
-                            editDeckId: editDeckId,
-                          );
-                        },
+                        builder: (context, state) => _buildCommanderSelect(state),
                       ),
                     ],
                   ),
@@ -145,26 +147,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.commanderSelect,
-        builder: (context, state) {
-          final extra = state.extra;
-          final String playerId;
-          final String? newDeckDisplayName;
-          final String? editDeckId;
-          if (extra is Map) {
-            playerId = extra['playerId'] as String? ?? '';
-            newDeckDisplayName = extra['newDeckDisplayName'] as String?;
-            editDeckId = extra['editDeckId'] as String?;
-          } else {
-            playerId = extra as String? ?? '';
-            newDeckDisplayName = null;
-            editDeckId = null;
-          }
-          return CommanderSelectScreen(
-            playerId: playerId,
-            newDeckDisplayName: newDeckDisplayName,
-            editDeckId: editDeckId,
-          );
-        },
+        builder: (context, state) => _buildCommanderSelect(state),
       ),
       GoRoute(
         path: AppRoutes.game,
@@ -186,7 +169,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (hasProfile &&
           !settings.onboardingCompleted &&
           path != AppRoutes.onboarding &&
-          path != AppRoutes.profileSetup) {
+          path != AppRoutes.profileSetup &&
+          path != AppRoutes.game &&
+          path != AppRoutes.endGame &&
+          !path.startsWith('${AppRoutes.lobby}/')) {
         return AppRoutes.onboarding;
       }
       if (path == AppRoutes.splash && hasProfile && settings.onboardingCompleted) {

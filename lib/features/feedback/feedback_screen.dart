@@ -30,7 +30,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
     setState(() => _sending = true);
 
-    final subject = Uri.encodeComponent('MGT Life Spark Feedback');
+    final subject = Uri.encodeComponent('MTG Life Spark Feedback');
     final body = Uri.encodeComponent(msg);
     final uri = Uri.parse(
       'mailto:feedback@mgtlifespark.app?subject=$subject&body=$body',
