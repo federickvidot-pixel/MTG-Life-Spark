@@ -69,7 +69,7 @@ class BleHostService implements BleService {
         'serviceUuid': kBleServiceUuid.toString(),
         'txCharUuid': kBleTxCharUuid.toString(),
         'rxCharUuid': kBleRxCharUuid.toString(),
-        'localName': 'MGT Life Spark',
+        'localName': 'MTG Life Spark',
       });
       _ready = true;
     } on PlatformException catch (e) {

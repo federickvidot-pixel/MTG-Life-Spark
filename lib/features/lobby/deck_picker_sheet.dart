@@ -75,7 +75,7 @@ Future<void> showDeckPickerSheet(
                           Navigator.pop(ctx);
                           ctx.go(AppRoutes.decks);
                         },
-                        child: const Text('Open Decks'),
+                        child: Text('Open Decks'),
                       ),
                     ],
                   ),

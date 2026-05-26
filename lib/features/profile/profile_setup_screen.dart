@@ -82,7 +82,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                 color: AppTheme.card,
                                 borderRadius: RadiusTokens.radiusChip,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.shield,
                                 size: 48,
                                 color: AppTheme.accent,
@@ -90,7 +90,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                             ),
                             SizedBox(height: LayoutTokens.gr4),
                             Text(
-                              'MGT Life Spark',
+                              'MTG Life Spark',
                               style: Theme.of(context).textTheme.headlineLarge,
                             ),
                             SizedBox(height: LayoutTokens.gr1),
@@ -144,7 +144,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                                   height: 24,
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : const Text('Enter the Battlefield'),
+                              : Text('Enter the Battlefield'),
                         ),
                       ),
                       SizedBox(height: LayoutTokens.gr5),

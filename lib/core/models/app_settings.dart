@@ -35,6 +35,10 @@ class AppSettings extends HiveObject {
   @HiveField(9, defaultValue: true)
   bool useDarkTheme;
 
+  /// Persisted color scheme id: `violet` | `crimson` | `slate` | `forest`.
+  @HiveField(10, defaultValue: 'violet')
+  String colorSchemeId;
+
   AppSettings({
     this.hapticEnabled = true,
     this.soundEnabled = true,
@@ -46,5 +50,6 @@ class AppSettings extends HiveObject {
     this.keepDisplayAwake = true,
     this.hideSystemBars = false,
     this.useDarkTheme = true,
+    this.colorSchemeId = 'violet',
   });
 }

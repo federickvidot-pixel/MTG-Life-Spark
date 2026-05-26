@@ -35,8 +35,8 @@
     html, body {
       margin: 0;
       height: 100%;
-      background: #0e0e0e;
-      color: #f5f5f5;
+      background: #12121a;
+      color: #ffffff;
       font-family: system-ui, -apple-system, sans-serif;
     }
     #app-loading {
@@ -51,7 +51,7 @@
       width: 36px;
       height: 36px;
       border: 3px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #d41414;
+      border-top-color: #9b6dff;
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
     }
@@ -101,9 +101,9 @@
         if (hint) {
           hint.hidden = false;
           hint.textContent =
-            'Still loading… On phone, first open can take 1–2 minutes. Keep this tab open.';
+            'Still loading… First open on phone can take 30–60s in release mode. Avoid debug builds on mobile.';
         }
-      }, 45000);
+      }, 20000);
     })();
   </script>
 </body>

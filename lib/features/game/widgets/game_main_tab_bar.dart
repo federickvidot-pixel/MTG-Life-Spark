@@ -10,12 +10,12 @@ class GameMainTabBarStrip extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onSelected,
-    this.accentColor = AppTheme.accent,
+    this.accentColor,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelected;
-  final Color accentColor;
+  final Color? accentColor;
 
   static const _segments = <(int, String, IconData)>[
     (0, 'Play', Icons.sports_esports_rounded),
@@ -26,6 +26,7 @@ class GameMainTabBarStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dividerColor = AppTheme.textSecondary.withValues(alpha: 0.12);
+    final resolvedAccent = accentColor ?? AppTheme.accent;
 
     return SizedBox(
       height: LayoutTokens.minTapTarget,
@@ -40,7 +41,7 @@ class GameMainTabBarStrip extends StatelessWidget {
                 label: _segments[i].$2,
                 icon: _segments[i].$3,
                 selected: selectedIndex == _segments[i].$1,
-                accentColor: accentColor,
+                accentColor: resolvedAccent,
                 onTap: () => onSelected(_segments[i].$1),
               ),
             ),

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../core/game/gameplay_dial_ids.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/color_tokens.dart';
 import 'game_modal_chrome.dart';
 import '../../../shared/widgets/game_icon.dart';
 import '../../../ui/tokens/layout_tokens.dart';
@@ -128,9 +129,9 @@ class GameplayDialsStripWidget extends StatelessWidget {
       'energy' => GameIcon.energy(size: size, color: AppTheme.accentGold),
       'experience' => GameIcon.experience(
         size: size,
-        color: const Color(0xFF9C7AFF),
+        color: ColorTokens.brandPurple,
       ),
-      'rad' => GameIcon.radiation(size: size, color: const Color(0xFF66FF66)),
+      'rad' => GameIcon.radiation(size: size, color: ColorTokens.success),
       _ => Icon(
         _iconForField(field),
         size: size,
@@ -252,8 +253,8 @@ class GameplayDialsStripWidget extends StatelessWidget {
         children: [
           TextField(
             controller: keyCtl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: AppTheme.textPrimary),
+            decoration: InputDecoration(
               labelText: 'Id (letters/numbers)',
               labelStyle: TextStyle(color: AppTheme.textSecondary),
             ),
@@ -261,8 +262,8 @@ class GameplayDialsStripWidget extends StatelessWidget {
           SizedBox(height: LayoutTokens.gr2),
           TextField(
             controller: labelCtl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: AppTheme.textPrimary),
+            decoration: InputDecoration(
               labelText: 'Label',
               labelStyle: TextStyle(color: AppTheme.textSecondary),
             ),
@@ -335,7 +336,7 @@ class GameplayDialsStripWidget extends StatelessWidget {
                   ),
                   title: Text(
                     _labelFor(player, id),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -491,11 +492,14 @@ class GameplayDialsStripWidget extends StatelessWidget {
         );
         final metrics = _DialMetrics.scale(shortest);
 
+        final badgePad =
+            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0.0;
+
         return Padding(
           padding: EdgeInsets.fromLTRB(
-            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0,
-            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0,
-            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0,
+            badgePad,
+            math.max(badgePad, LayoutTokens.gr1),
+            badgePad,
             LayoutTokens.gr0,
           ),
           child: LayoutBuilder(

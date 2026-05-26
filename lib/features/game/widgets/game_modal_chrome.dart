@@ -14,7 +14,7 @@ abstract final class GameModalChrome {
           ? LayoutTokens.gr3
           : LayoutTokens.gr4;
 
-  static TextStyle get dialogTitleStyle => const TextStyle(
+  static TextStyle get dialogTitleStyle => TextStyle(
         color: AppTheme.textPrimary,
         fontSize: FontTokens.title,
         fontWeight: FontWeight.w700,
@@ -26,7 +26,7 @@ abstract final class GameModalChrome {
         height: 1.4,
       );
 
-  static TextStyle get sheetTitleStyle => const TextStyle(
+  static TextStyle get sheetTitleStyle => TextStyle(
         color: AppTheme.textPrimary,
         fontSize: FontTokens.title,
         fontWeight: FontWeight.w700,
@@ -243,7 +243,7 @@ Future<bool?> showGameChoiceDialog({
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               secondaryLabel,
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
             ),
           ),
         FilledButton(

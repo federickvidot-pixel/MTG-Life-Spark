@@ -6,8 +6,8 @@ import '../tokens/radius_tokens.dart';
 import '../tokens/spacing_tokens.dart';
 import 'app_color_tokens.dart';
 
-/// M3 dark/light themes: neutral surfaces, brand red primary, semantic green/amber/red.
-/// Shell chrome uses primary tints only — orange is reserved for in-game [ColorTokens.emphasis].
+/// M3 dark/light themes: purple-tinted neutrals, violet primary, semantic status colors.
+/// Shell chrome uses primary purple tints — lilac [ColorTokens.emphasis] for in-game highlights.
 /// Typography uses **Lato** (Google Fonts) across display through label roles.
 class AppTheme {
   AppTheme._();
@@ -25,7 +25,7 @@ class AppTheme {
       scaffoldBackgroundColor: ColorTokens.backgroundPrimary,
 
       // ── Full M3 ColorScheme ────────────────────────────────────────────
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.dark(
         primary: ColorTokens.primaryAccent,
         onPrimary: ColorTokens.onAccent,
         primaryContainer: ColorTokens.darkPrimaryContainer,
@@ -80,7 +80,7 @@ class AppTheme {
       ),
 
       // Divider — replaces deprecated dividerColor
-      dividerTheme: const DividerThemeData(
+      dividerTheme: DividerThemeData(
         color: ColorTokens.borderSubtle,
         thickness: 1,
         space: 1,
@@ -99,11 +99,11 @@ class AppTheme {
           color: ColorTokens.textPrimary,
           letterSpacing: 0.2,
         ),
-        iconTheme: const IconThemeData(color: ColorTokens.textPrimary),
+        iconTheme: IconThemeData(color: ColorTokens.textPrimary),
       ),
 
       // Icon
-      iconTheme: const IconThemeData(
+      iconTheme: IconThemeData(
         color: ColorTokens.textPrimary,
         size: 24,
       ),
@@ -133,12 +133,12 @@ class AppTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(
-              color: ColorTokens.brandRed,
+            return IconThemeData(
+              color: ColorTokens.primaryAccent,
               size: 24,
             );
           }
-          return const IconThemeData(
+          return IconThemeData(
             color: ColorTokens.textMuted,
             size: 24,
           );
@@ -186,7 +186,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: ColorTokens.textPrimary,
-          side: const BorderSide(color: ColorTokens.borderSubtle),
+          side: BorderSide(color: ColorTokens.borderSubtle),
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(
             borderRadius: RadiusTokens.radiusLg,
@@ -237,28 +237,28 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: ColorTokens.borderSubtle,
             width: 1,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: ColorTokens.primaryAccent,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(color: ColorTokens.danger, width: 1),
+          borderSide: BorderSide(color: ColorTokens.danger, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(color: ColorTokens.danger, width: 2),
+          borderSide: BorderSide(color: ColorTokens.danger, width: 2),
         ),
-        labelStyle: const TextStyle(color: ColorTokens.textSecondary),
-        hintStyle: const TextStyle(color: ColorTokens.textMuted),
+        labelStyle: TextStyle(color: ColorTokens.textSecondary),
+        hintStyle: TextStyle(color: ColorTokens.textMuted),
         prefixIconColor: ColorTokens.textSecondary,
         suffixIconColor: ColorTokens.textSecondary,
       ),
@@ -268,18 +268,18 @@ class AppTheme {
         backgroundColor: ColorTokens.surface,
         selectedColor: ColorTokens.darkPrimaryContainer,
         disabledColor: ColorTokens.darkSurfaceContainerLow,
-        labelStyle: const TextStyle(
+        labelStyle: TextStyle(
           color: ColorTokens.textPrimary,
           fontSize: 12,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.5,
         ),
-        secondaryLabelStyle: const TextStyle(
+        secondaryLabelStyle: TextStyle(
           color: ColorTokens.darkOnPrimaryContainer,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
-        side: const BorderSide(color: ColorTokens.borderSubtle),
+        side: BorderSide(color: ColorTokens.borderSubtle),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -308,7 +308,7 @@ class AppTheme {
       // SnackBar
       snackBarTheme: SnackBarThemeData(
         backgroundColor: ColorTokens.surfaceElevated,
-        contentTextStyle: const TextStyle(color: ColorTokens.textPrimary),
+        contentTextStyle: TextStyle(color: ColorTokens.textPrimary),
         actionTextColor: ColorTokens.primaryAccent,
         shape: RoundedRectangleBorder(borderRadius: RadiusTokens.radiusMd),
         behavior: SnackBarBehavior.floating,
@@ -316,7 +316,7 @@ class AppTheme {
       ),
 
       // ListTile
-      listTileTheme: const ListTileThemeData(
+      listTileTheme: ListTileThemeData(
         tileColor: Colors.transparent,
         textColor: ColorTokens.textPrimary,
         iconColor: ColorTokens.textSecondary,
@@ -350,7 +350,7 @@ class AppTheme {
           return Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(Colors.white),
-        side: const BorderSide(color: ColorTokens.borderSubtle, width: 1.5),
+        side: BorderSide(color: ColorTokens.borderSubtle, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
@@ -365,7 +365,7 @@ class AppTheme {
       ),
 
       // Badge
-      badgeTheme: const BadgeThemeData(
+      badgeTheme: BadgeThemeData(
         backgroundColor: ColorTokens.primaryAccent,
         textColor: Colors.white,
         smallSize: 8,
@@ -384,14 +384,14 @@ class AppTheme {
           borderRadius: RadiusTokens.radiusSm,
           border: Border.all(color: ColorTokens.borderSubtle),
         ),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           color: ColorTokens.textPrimary,
           fontSize: 12,
         ),
       ),
 
       useMaterial3: true,
-      extensions: const [AppColorTokens.dark],
+      extensions: [AppColorTokens.fromPalette(ColorTokens.palette)],
     );
   }
 
@@ -408,7 +408,7 @@ class AppTheme {
       scaffoldBackgroundColor: ColorTokens.lightBackgroundPrimary,
 
       // ── Full M3 ColorScheme ────────────────────────────────────────────
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme.light(
         primary: ColorTokens.lightPrimaryAccent,
         onPrimary: ColorTokens.onAccent,
         primaryContainer: ColorTokens.lightPrimaryContainer,
@@ -461,7 +461,7 @@ class AppTheme {
         ),
       ),
 
-      dividerTheme: const DividerThemeData(
+      dividerTheme: DividerThemeData(
         color: ColorTokens.lightBorderSubtle,
         thickness: 1,
         space: 1,
@@ -479,10 +479,10 @@ class AppTheme {
           color: ColorTokens.lightTextPrimary,
           letterSpacing: 0.2,
         ),
-        iconTheme: const IconThemeData(color: ColorTokens.lightTextPrimary),
+        iconTheme: IconThemeData(color: ColorTokens.lightTextPrimary),
       ),
 
-      iconTheme: const IconThemeData(
+      iconTheme: IconThemeData(
         color: ColorTokens.lightTextPrimary,
         size: 24,
       ),
@@ -511,12 +511,12 @@ class AppTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(
+            return IconThemeData(
               color: ColorTokens.lightPrimaryAccent,
               size: 24,
             );
           }
-          return const IconThemeData(
+          return IconThemeData(
             color: ColorTokens.lightTextMuted,
             size: 24,
           );
@@ -561,7 +561,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: ColorTokens.lightTextPrimary,
-          side: const BorderSide(color: ColorTokens.lightBorderSubtle),
+          side: BorderSide(color: ColorTokens.lightBorderSubtle),
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(
             borderRadius: RadiusTokens.radiusLg,
@@ -609,28 +609,28 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: ColorTokens.lightBorderSubtle,
             width: 1,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: ColorTokens.lightPrimaryAccent,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(color: ColorTokens.danger, width: 1),
+          borderSide: BorderSide(color: ColorTokens.danger, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: RadiusTokens.radiusMd,
-          borderSide: const BorderSide(color: ColorTokens.danger, width: 2),
+          borderSide: BorderSide(color: ColorTokens.danger, width: 2),
         ),
-        labelStyle: const TextStyle(color: ColorTokens.lightTextSecondary),
-        hintStyle: const TextStyle(color: ColorTokens.lightTextMuted),
+        labelStyle: TextStyle(color: ColorTokens.lightTextSecondary),
+        hintStyle: TextStyle(color: ColorTokens.lightTextMuted),
         prefixIconColor: ColorTokens.lightTextSecondary,
         suffixIconColor: ColorTokens.lightTextSecondary,
       ),
@@ -639,18 +639,18 @@ class AppTheme {
         backgroundColor: ColorTokens.lightSurface,
         selectedColor: ColorTokens.lightPrimaryContainer,
         disabledColor: ColorTokens.lightSurfaceElevated,
-        labelStyle: const TextStyle(
+        labelStyle: TextStyle(
           color: ColorTokens.lightTextPrimary,
           fontSize: 12,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.5,
         ),
-        secondaryLabelStyle: const TextStyle(
+        secondaryLabelStyle: TextStyle(
           color: ColorTokens.lightOnPrimaryContainer,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
-        side: const BorderSide(color: ColorTokens.lightBorderSubtle),
+        side: BorderSide(color: ColorTokens.lightBorderSubtle),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
@@ -678,14 +678,14 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: ColorTokens.lightSurfaceElevated,
         contentTextStyle:
-            const TextStyle(color: ColorTokens.lightTextPrimary),
+            TextStyle(color: ColorTokens.lightTextPrimary),
         actionTextColor: ColorTokens.lightPrimaryAccent,
         shape: RoundedRectangleBorder(borderRadius: RadiusTokens.radiusMd),
         behavior: SnackBarBehavior.floating,
         elevation: 4,
       ),
 
-      listTileTheme: const ListTileThemeData(
+      listTileTheme: ListTileThemeData(
         tileColor: Colors.transparent,
         textColor: ColorTokens.lightTextPrimary,
         iconColor: ColorTokens.lightTextSecondary,
@@ -717,7 +717,7 @@ class AppTheme {
           return Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(Colors.white),
-        side: const BorderSide(color: ColorTokens.lightBorderSubtle, width: 1.5),
+        side: BorderSide(color: ColorTokens.lightBorderSubtle, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
@@ -730,7 +730,7 @@ class AppTheme {
         }),
       ),
 
-      badgeTheme: const BadgeThemeData(
+      badgeTheme: BadgeThemeData(
         backgroundColor: ColorTokens.lightPrimaryAccent,
         textColor: Colors.white,
         smallSize: 8,
@@ -748,14 +748,14 @@ class AppTheme {
           borderRadius: RadiusTokens.radiusSm,
           border: Border.all(color: ColorTokens.lightBorderSubtle),
         ),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           color: ColorTokens.lightTextPrimary,
           fontSize: 12,
         ),
       ),
 
       useMaterial3: true,
-      extensions: const [AppColorTokens.light],
+      extensions: [AppColorTokens.fromPalette(ColorTokens.palette)],
     );
   }
 

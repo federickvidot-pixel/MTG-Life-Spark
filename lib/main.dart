@@ -19,6 +19,7 @@ import 'core/persistence/profile_repository.dart';
 import 'core/debug/dismiss_web_splash.dart';
 import 'shared/theme/theme_provider.dart';
 import 'shared/utils/app_router.dart';
+import 'ui/tokens/color_tokens.dart';
 
 Future<void> main() async {
   runZonedGuarded(() async {
@@ -66,17 +67,17 @@ class _AppBootstrapState extends State<_AppBootstrap> {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           home: Scaffold(
-            backgroundColor: const Color(0xFF0e0e0e),
+            backgroundColor: ColorTokens.backgroundPrimary,
             body: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.red.shade700),
+                  CircularProgressIndicator(color: ColorTokens.brandPurple),
                   const SizedBox(height: 16),
                   Text(
-                    'Loading MGT Life Spark…',
+                    'Loading MTG Life Spark…',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
+                      color: ColorTokens.textPrimary.withValues(alpha: 0.75),
                       fontSize: 14,
                     ),
                   ),
@@ -100,20 +101,45 @@ class _ErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        backgroundColor: Colors.grey[900],
+        backgroundColor: ColorTokens.backgroundPrimary,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Startup Error', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red[300])),
+                Text(
+                  'Startup Error',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: ColorTokens.danger,
+                  ),
+                ),
                 const SizedBox(height: 16),
-                Text(message, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                Text(
+                  message,
+                  style: TextStyle(
+                    color: ColorTokens.textPrimary,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 24),
-                Text('Stack trace:', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                Text(
+                  'Stack trace:',
+                  style: TextStyle(
+                    color: ColorTokens.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                SelectableText(stack, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                SelectableText(
+                  stack,
+                  style: TextStyle(
+                    color: ColorTokens.textMuted,
+                    fontSize: 10,
+                  ),
+                ),
               ],
             ),
           ),
@@ -124,7 +150,10 @@ class _ErrorApp extends StatelessWidget {
 }
 
 Future<void> _initHive() async {
-  await Hive.initFlutter();
+  await _withStartupTimeout(
+    'Opening local storage',
+    Hive.initFlutter(),
+  );
 
   // Register all adapters
   Hive.registerAdapter(PlayerProfileAdapter());
@@ -136,14 +165,19 @@ Future<void> _initHive() async {
   Hive.registerAdapter(PlayerDeckAdapter());
 
   // Open all boxes up front
-  await Hive.openBox<PlayerProfile>('playerProfile');
-  await Hive.openBox<MatchRecord>('matchHistory');
-  await Hive.openBox<CommanderStats>('commanderStats');
-  await Hive.openBox<AchievementRecord>('achievements');
-  await Hive.openBox<AppSettings>('appSettings');
-  await Hive.openBox<String>('matchFeedback');
-  await Hive.openBox<PodPreset>('podPresets');
-  await Hive.openBox<PlayerDeck>('playerDecks');
+  await _withStartupTimeout(
+    'Loading profile data',
+    Future.wait([
+      Hive.openBox<PlayerProfile>('playerProfile'),
+      Hive.openBox<MatchRecord>('matchHistory'),
+      Hive.openBox<CommanderStats>('commanderStats'),
+      Hive.openBox<AchievementRecord>('achievements'),
+      Hive.openBox<AppSettings>('appSettings'),
+      Hive.openBox<String>('matchFeedback'),
+      Hive.openBox<PodPreset>('podPresets'),
+      Hive.openBox<PlayerDeck>('playerDecks'),
+    ]),
+  );
 
   // Ensure default settings exist
   final settingsBox = Hive.box<AppSettings>('appSettings');
@@ -151,11 +185,22 @@ Future<void> _initHive() async {
     await settingsBox.put('settings', AppSettings());
   }
 
-  // Warm Lato before first themed frame (avoids text layout jank).
-  GoogleFonts.pendingFonts([GoogleFonts.lato()]);
+  // Warm fonts after first paint — never block startup on mobile networks.
+  unawaited(GoogleFonts.pendingFonts([GoogleFonts.lato()]));
 
   // Non-blocking maintenance — keeps first paint fast on web/mobile.
   unawaited(_deferredStartupMaintenance());
+}
+
+Future<T> _withStartupTimeout<T>(String label, Future<T> future) {
+  return future.timeout(
+    const Duration(seconds: 45),
+    onTimeout: () => throw TimeoutException(
+      '$label timed out after 45s. '
+      'On phone, use the release dev server (not debug). '
+      'If this persists, clear site data for this URL in browser settings.',
+    ),
+  );
 }
 
 Future<void> _deferredStartupMaintenance() async {
@@ -226,7 +271,7 @@ class MgtLifeSparkApp extends ConsumerWidget {
     final theme = ref.watch(effectiveThemeProvider);
 
     return MaterialApp.router(
-      title: 'MGT Life Spark',
+      title: 'MTG Life Spark',
       theme: theme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,

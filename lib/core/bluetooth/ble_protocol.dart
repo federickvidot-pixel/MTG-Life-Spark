@@ -4,7 +4,7 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 /// Host rejects clients on mismatch with a REJECT message.
 const kBleProtocolVersion = '1.0';
 
-/// Custom GATT service UUID for MGT Life Spark.
+/// Custom GATT service UUID for MTG Life Spark.
 final kBleServiceUuid = Uuid.parse('19B10000-E8F2-537E-4F6C-D104768A1214');
 
 /// TX characteristic: host → clients (NOTIFY).

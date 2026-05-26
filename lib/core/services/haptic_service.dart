@@ -6,9 +6,12 @@ import '../persistence/providers.dart';
 /// Thin wrapper around Flutter's built-in HapticFeedback.
 /// Respects the user's haptic preference from AppSettings.
 class HapticService {
-  bool _enabled = true;
+  HapticService(this._ref);
 
-  void setEnabled(bool enabled) => _enabled = enabled;
+  final Ref _ref;
+
+  bool get _enabled =>
+      _ref.read(settingsRepositoryProvider).settings.hapticEnabled;
 
   /// Light tap — use for counter increments, life +1.
   Future<void> light() async {
@@ -36,8 +39,5 @@ class HapticService {
 }
 
 final hapticServiceProvider = Provider<HapticService>((ref) {
-  final settings = ref.read(settingsRepositoryProvider).settings;
-  final service = HapticService();
-  service.setEnabled(settings.hapticEnabled);
-  return service;
+  return HapticService(ref);
 });

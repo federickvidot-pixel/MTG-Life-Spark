@@ -5,6 +5,7 @@ import '../../../core/game/game_providers.dart';
 import '../../../core/game/game_state.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../core/game/stack_item.dart';
+import '../../../core/services/haptic_service.dart';
 import 'commander_damage_panel.dart';
 import 'gameplay_dials_strip_widget.dart';
 import 'life_counter_widget.dart';
@@ -133,6 +134,7 @@ class ScopedLifeCounter extends ConsumerWidget {
           commanderColorIdentity: player.commanderColorIdentity,
           isEliminated: isEliminated,
           onLifeChange: onLifeChange,
+          onHaptic: () => ref.read(hapticServiceProvider).light(),
         ),
       ),
     );

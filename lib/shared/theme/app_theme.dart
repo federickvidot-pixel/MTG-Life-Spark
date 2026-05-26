@@ -9,18 +9,17 @@ abstract class AppTheme {
   static ThemeData dark() => ui_theme.AppTheme.dark();
   static ThemeData light() => ui_theme.AppTheme.light();
 
-  static const Color primary = ColorTokens.backgroundPrimary;
-  static const Color surface = ColorTokens.backgroundSecondary;
-  static const Color card = ColorTokens.surface;
-  static const Color accent = ColorTokens.primaryAccent;
-  /// In-game warm highlight (monarch, timers). Maps to [ColorTokens.emphasis].
-  static const Color accentGold = ColorTokens.emphasis;
-  static const Color textPrimary = ColorTokens.textPrimary;
-  static const Color textSecondary = ColorTokens.textSecondary;
-  static const Color danger = ColorTokens.danger;
-  static const Color dangerAmber = ColorTokens.warning;
-  static const Color success = ColorTokens.success;
-  static const List<Color> playerPalette = ColorTokens.playerPalette;
+  static Color get primary => ColorTokens.backgroundPrimary;
+  static Color get surface => ColorTokens.backgroundSecondary;
+  static Color get card => ColorTokens.surface;
+  static Color get accent => ColorTokens.primaryAccent;
+  static Color get accentGold => ColorTokens.emphasis;
+  static Color get textPrimary => ColorTokens.textPrimary;
+  static Color get textSecondary => ColorTokens.textSecondary;
+  static Color get danger => ColorTokens.danger;
+  static Color get dangerAmber => ColorTokens.warning;
+  static Color get success => ColorTokens.success;
+  static List<Color> get playerPalette => ColorTokens.playerPalette;
 
   static Color playerColor(int index) => ColorTokens.playerColor(index);
 }

@@ -31,6 +31,7 @@ class LifeCounterWidget extends StatefulWidget {
   final List<String> commanderColorIdentity;
   final bool isEliminated;
   final void Function(int delta) onLifeChange;
+  final VoidCallback? onHaptic;
 
   const LifeCounterWidget({
     super.key,
@@ -38,6 +39,7 @@ class LifeCounterWidget extends StatefulWidget {
     required this.playerColor,
     this.commanderColorIdentity = const [],
     required this.onLifeChange,
+    this.onHaptic,
     this.isEliminated = false,
   });
 
@@ -96,7 +98,11 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
     setState(() => _lastDelta = delta);
     _deltaAnim.forward(from: 0);
     widget.onLifeChange(delta);
-    HapticFeedback.lightImpact();
+    if (widget.onHaptic != null) {
+      widget.onHaptic!();
+    } else {
+      HapticFeedback.lightImpact();
+    }
   }
 
   void _startHold(int direction) {
@@ -137,8 +143,9 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
 
   Color get _lifeColor {
     if (widget.isEliminated) return AppTheme.textSecondary;
-    if (widget.life <= 5) return AppTheme.textSecondary;
-    return widget.playerColor;
+    if (widget.life <= 5) return AppTheme.danger;
+    if (widget.life <= 10) return AppTheme.accentGold;
+    return AppTheme.textPrimary;
   }
 
   Color get _deltaColor =>
@@ -152,7 +159,6 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
       builder: (context, constraints) {
         final halo = CommanderIdentityColors.emphasisBorder(
           widget.commanderColorIdentity,
-          widget.playerColor,
         );
 
         return Container(
@@ -161,7 +167,6 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
             gradient: LinearGradient(
               colors: CommanderIdentityColors.gameplayGradient(
                 widget.commanderColorIdentity,
-                widget.playerColor,
               ),
             ),
             boxShadow: [
@@ -566,7 +571,7 @@ class _LifeInputDialogState extends State<_LifeInputDialog> {
                               ),
                             ),
                             onPressed: _input.isNotEmpty ? _confirm : null,
-                            child: const Icon(
+                            child: Icon(
                               Icons.check,
                               color: ColorTokens.onAccent,
                               size: LayoutTokens.gr3,

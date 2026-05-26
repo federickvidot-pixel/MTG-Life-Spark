@@ -171,7 +171,7 @@ class _StackCardPickerDialogState extends ConsumerState<_StackCardPickerDialog> 
                 hintText: 'e.g. Lightning Bolt',
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
@@ -205,7 +205,7 @@ class _StackCardPickerDialogState extends ConsumerState<_StackCardPickerDialog> 
         FilledButton(
           onPressed: canAdd ? _confirm : null,
           child: _confirming
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
@@ -213,7 +213,7 @@ class _StackCardPickerDialogState extends ConsumerState<_StackCardPickerDialog> 
                     color: AppTheme.textPrimary,
                   ),
                 )
-              : const Text('Add'),
+              : Text('Add'),
         ),
       ],
     );
@@ -257,7 +257,7 @@ class _StackCardPickerDialogState extends ConsumerState<_StackCardPickerDialog> 
 
     return ListView.separated(
       itemCount: _results.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) => Divider(height: 1),
       itemBuilder: (context, index) {
         final card = _results[index];
         final isSelected = _selected?.name == card.name;

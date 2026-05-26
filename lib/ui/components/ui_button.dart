@@ -56,7 +56,7 @@ class UiButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: RadiusTokens.radiusLg,
             ),
-            textStyle: const TextStyle(
+            textStyle: TextStyle(
               fontSize: FontTokens.bodyLg,
               fontWeight: FontWeight.w700,
             ),
@@ -85,7 +85,7 @@ class UiButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: RadiusTokens.radiusLg,
             ),
-            textStyle: const TextStyle(
+            textStyle: TextStyle(
               fontSize: FontTokens.bodyLg,
               fontWeight: FontWeight.w700,
             ),
@@ -110,7 +110,7 @@ class UiButton extends StatelessWidget {
         label: loading ? const SizedBox.shrink() : Text(label, overflow: TextOverflow.ellipsis, maxLines: 1),
         style: TextButton.styleFrom(
           foregroundColor: colors.textPrimary,
-          textStyle: const TextStyle(
+          textStyle: TextStyle(
             fontSize: FontTokens.bodyLg,
             fontWeight: FontWeight.w700,
           ),

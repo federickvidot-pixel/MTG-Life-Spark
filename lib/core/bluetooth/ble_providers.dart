@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../game/game_providers.dart';
+import '../game/lobby_state.dart';
 import '../network/ws_client_service.dart';
 import '../network/ws_host_service.dart';
 import '../persistence/providers.dart';
@@ -73,4 +75,11 @@ Future<void> endSession(WidgetRef ref) async {
   await service?.dispose();
   ref.read(bleServiceProvider.notifier).state = null;
   ref.read(bleRoleProvider.notifier).state = BleRole.none;
+}
+
+/// Ends the network session and clears in-memory game/lobby state.
+Future<void> quitActiveGame(WidgetRef ref) async {
+  await endSession(ref);
+  ref.read(gameProvider.notifier).reset();
+  ref.read(lobbyProvider.notifier).reset();
 }

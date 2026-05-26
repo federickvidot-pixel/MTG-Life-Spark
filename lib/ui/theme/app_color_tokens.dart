@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../tokens/app_color_palettes.dart';
 import '../tokens/color_tokens.dart';
 
 /// Theme-aware color tokens. Use [AppColorTokens.of] in widgets instead of raw hex.
-///
-/// Covers shell UI (surfaces, text, border, primary) plus semantic status colors.
 class AppColorTokens extends ThemeExtension<AppColorTokens> {
   const AppColorTokens({
     required this.backgroundPrimary,
@@ -36,46 +35,30 @@ class AppColorTokens extends ThemeExtension<AppColorTokens> {
   final Color success;
   final Color warning;
   final Color error;
-  /// Warm in-game highlight (monarch, timers). Same as [ColorTokens.emphasis].
   final Color emphasis;
 
   static AppColorTokens of(BuildContext context) {
     return Theme.of(context).extension<AppColorTokens>()!;
   }
 
-  static const AppColorTokens dark = AppColorTokens(
-    backgroundPrimary: ColorTokens.backgroundPrimary,
-    backgroundSecondary: ColorTokens.backgroundSecondary,
-    surface: ColorTokens.surface,
-    surfaceElevated: ColorTokens.surfaceElevated,
-    borderSubtle: ColorTokens.borderSubtle,
-    textPrimary: ColorTokens.textPrimary,
-    textSecondary: ColorTokens.textSecondary,
-    textMuted: ColorTokens.textMuted,
-    primaryAccent: ColorTokens.primaryAccent,
-    onAccent: ColorTokens.onAccent,
-    success: ColorTokens.success,
-    warning: ColorTokens.warning,
-    error: ColorTokens.danger,
-    emphasis: ColorTokens.emphasis,
-  );
-
-  static const AppColorTokens light = AppColorTokens(
-    backgroundPrimary: ColorTokens.lightBackgroundPrimary,
-    backgroundSecondary: ColorTokens.lightBackgroundSecondary,
-    surface: ColorTokens.lightSurface,
-    surfaceElevated: ColorTokens.lightSurfaceElevated,
-    borderSubtle: ColorTokens.lightBorderSubtle,
-    textPrimary: ColorTokens.lightTextPrimary,
-    textSecondary: ColorTokens.lightTextSecondary,
-    textMuted: ColorTokens.lightTextMuted,
-    primaryAccent: ColorTokens.lightPrimaryAccent,
-    onAccent: ColorTokens.onAccent,
-    success: ColorTokens.success,
-    warning: ColorTokens.warning,
-    error: ColorTokens.danger,
-    emphasis: ColorTokens.emphasis,
-  );
+  static AppColorTokens fromPalette(AppColorPalette palette) {
+    return AppColorTokens(
+      backgroundPrimary: palette.backgroundPrimary,
+      backgroundSecondary: palette.backgroundSecondary,
+      surface: palette.surface,
+      surfaceElevated: palette.surfaceElevated,
+      borderSubtle: palette.borderSubtle,
+      textPrimary: palette.textPrimary,
+      textSecondary: palette.textSecondary,
+      textMuted: palette.textMuted,
+      primaryAccent: palette.brandAccent,
+      onAccent: ColorTokens.onAccent,
+      success: ColorTokens.success,
+      warning: ColorTokens.warning,
+      error: ColorTokens.danger,
+      emphasis: palette.emphasis,
+    );
+  }
 
   @override
   AppColorTokens copyWith({

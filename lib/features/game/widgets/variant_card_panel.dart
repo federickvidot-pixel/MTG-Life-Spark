@@ -215,7 +215,7 @@ class _VariantTile extends StatelessWidget {
                             fit: BoxFit.cover,
                             placeholder: (_, __) => Container(
                               color: AppTheme.surface,
-                              child: const Center(
+                              child: Center(
                                 child: Icon(
                                   Icons.image_outlined,
                                   color: AppTheme.textSecondary,
@@ -225,7 +225,7 @@ class _VariantTile extends StatelessWidget {
                             ),
                             errorWidget: (_, __, ___) => Container(
                               color: AppTheme.surface,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.broken_image_outlined,
                                 color: AppTheme.textSecondary,
                               ),
@@ -233,7 +233,7 @@ class _VariantTile extends StatelessWidget {
                           )
                         : Container(
                             color: AppTheme.surface,
-                            child: const Icon(
+                            child: Icon(
                               Icons.help_outline,
                               color: AppTheme.textSecondary,
                             ),
@@ -255,7 +255,7 @@ class _VariantTile extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -266,7 +266,7 @@ class _VariantTile extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         card.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -279,7 +279,7 @@ class _VariantTile extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           card.oracleText!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 12,
                           ),
@@ -292,7 +292,7 @@ class _VariantTile extends StatelessWidget {
                 ),
                 // Advance button
                 IconButton(
-                  icon: const Icon(Icons.skip_next),
+                  icon: Icon(Icons.skip_next),
                   onPressed: onAdvance,
                   tooltip: 'Next card',
                   color: AppTheme.accent,
@@ -354,7 +354,7 @@ class _VariantTile extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   card.oracleText!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 16,
                     height: 1.4,

@@ -94,7 +94,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           SizedBox(height: LayoutTokens.gr4),
           UiButton(
             label: 'Send Feedback',
-            icon: _sending ? null : const Icon(Icons.send_outlined, size: 20),
+            icon: _sending ? null : Icon(Icons.send_outlined, size: 20),
             loading: _sending,
             onPressed: _sendFeedback,
           ),
@@ -116,7 +116,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           UiButton(
             label: 'Rate on Play Store',
             variant: UiButtonVariant.secondary,
-            icon: const Icon(Icons.star_outline, size: 20),
+            icon: Icon(Icons.star_outline, size: 20),
             onPressed: _openPlayStore,
           ),
           SizedBox(height: LayoutTokens.gr5),

@@ -17,6 +17,7 @@ import '../../shared/theme/app_theme.dart';
 import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
 import '../../ui/tokens/radius_tokens.dart';
+import '../game/widgets/game_modal_chrome.dart';
 
 String? _hiveManaCost(String? raw) {
   final n = normalizeScryfallManaCost(raw);
@@ -242,7 +243,7 @@ class _CommanderSelectScreenState
           if (_canConfirm)
             TextButton(
               onPressed: _confirm,
-              child: const Text(
+              child: Text(
                 'Confirm',
                 style: TextStyle(
                     color: AppTheme.accent, fontWeight: FontWeight.bold),
@@ -274,7 +275,7 @@ class _CommanderSelectScreenState
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: FilterChip(
-                  label: const Text('Partner commander'),
+                  label: Text('Partner commander'),
                   selected: _hasPartner,
                   onSelected: (v) {
                     setState(() {
@@ -300,10 +301,10 @@ class _CommanderSelectScreenState
                     ? 'Search for partner commander…'
                     : 'Search for a commander…',
                 prefixIcon:
-                    const Icon(Icons.search, color: AppTheme.textSecondary),
+                    Icon(Icons.search, color: AppTheme.textSecondary),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear,
+                        icon: Icon(Icons.clear,
                             color: AppTheme.textSecondary),
                         onPressed: () {
                           _searchController.clear();
@@ -329,7 +330,7 @@ class _CommanderSelectScreenState
 
   Widget _buildResults() {
     if (_loading) {
-      return const Center(
+      return Center(
           child: CircularProgressIndicator(color: AppTheme.accent));
     }
     if (_error != null) {
@@ -337,13 +338,13 @@ class _CommanderSelectScreenState
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(_error!,
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
               textAlign: TextAlign.center),
         ),
       );
     }
     if (_results.isEmpty && _searchController.text.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Type a commander name to search the Scryfall database.',
           style: TextStyle(color: AppTheme.textSecondary),
@@ -394,68 +395,72 @@ class _SelectionPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(LayoutTokens.gr3, LayoutTokens.gr2, LayoutTokens.gr3, LayoutTokens.gr1),
+      padding: EdgeInsets.fromLTRB(
+        LayoutTokens.gr3,
+        LayoutTokens.gr2,
+        LayoutTokens.gr3,
+        LayoutTokens.gr1,
+      ),
       color: AppTheme.surface,
-      child: Row(
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          if (primary != null) _MiniCard(card: primary!, label: 'Commander'),
-          if (hasPartner) ...[
-            const SizedBox(width: 8),
-            if (partner != null)
-              _MiniCard(card: partner!, label: 'Partner')
-            else
-              GestureDetector(
-                onTap: onPickPartner,
-                child: Container(
-                  width: 56,
-                  height: 78,
-                  decoration: BoxDecoration(
-                    color: pickingPartner
-                        ? AppTheme.accent.withValues(alpha: 0.15)
-                        : AppTheme.card,
-                    borderRadius: RadiusTokens.radiusControlMd,
-                    border: Border.all(
-                      color: pickingPartner
-                          ? AppTheme.accent
-                          : AppTheme.textSecondary.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.add,
+          Row(
+            children: [
+              if (primary != null) _MiniCard(card: primary!, label: 'Commander'),
+              if (hasPartner) ...[
+                const SizedBox(width: 8),
+                if (partner != null)
+                  _MiniCard(card: partner!, label: 'Partner')
+                else
+                  GestureDetector(
+                    onTap: onPickPartner,
+                    child: Container(
+                      width: 56,
+                      height: 78,
+                      decoration: BoxDecoration(
                         color: pickingPartner
-                            ? AppTheme.accent
-                            : AppTheme.textSecondary,
-                        size: 20,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Partner',
-                        style: TextStyle(
+                            ? AppTheme.accent.withValues(alpha: 0.15)
+                            : AppTheme.card,
+                        borderRadius: RadiusTokens.radiusControlMd,
+                        border: Border.all(
                           color: pickingPartner
                               ? AppTheme.accent
-                              : AppTheme.textSecondary,
-                          fontSize: FontTokens.hudXs,
+                              : AppTheme.textSecondary.withValues(alpha: 0.4),
                         ),
                       ),
-                    ],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add,
+                            color: pickingPartner
+                                ? AppTheme.accent
+                                : AppTheme.textSecondary,
+                            size: 20,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Partner',
+                            style: TextStyle(
+                              color: pickingPartner
+                                  ? AppTheme.accent
+                                  : AppTheme.textSecondary,
+                              fontSize: FontTokens.hudXs,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ),
-          ],
-          const Spacer(),
-          if (hasPartner && partner == null)
-            Flexible(
-              child: TextButton(
-                onPressed: onPickPartner,
-                child: Text(
-                  pickingPartner ? 'Cancel' : 'Add Partner',
-                  style: const TextStyle(color: AppTheme.accent, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              ],
+            ],
+          ),
+          if (pickingPartner && onPickPartner != null)
+            Positioned(
+              top: -LayoutTokens.gr1,
+              right: -LayoutTokens.gr0,
+              child: GameDialogCloseButton(onPressed: onPickPartner!),
             ),
         ],
       ),
@@ -489,7 +494,7 @@ class _MiniCard extends StatelessWidget {
         Text(
           label,
           style:
-              const TextStyle(
+              TextStyle(
                   color: AppTheme.textSecondary, fontSize: FontTokens.hudXs),
         ),
       ],
@@ -500,7 +505,7 @@ class _MiniCard extends StatelessWidget {
         width: 56,
         height: 78,
         color: AppTheme.card,
-        child: const Icon(Icons.style, color: AppTheme.textSecondary),
+        child: Icon(Icons.style, color: AppTheme.textSecondary),
       );
 }
 
@@ -551,7 +556,7 @@ class _CommanderCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: card.imageUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => const Center(
+                        placeholder: (_, __) => Center(
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: AppTheme.accent),
                         ),
@@ -575,14 +580,14 @@ class _CommanderCard extends StatelessWidget {
                     card.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   if (card.isPartner)
-                    const Text(
+                    Text(
                       'Partner',
                       style: TextStyle(
                           color: AppTheme.accentGold, fontSize: FontTokens.hudXs),
@@ -592,7 +597,7 @@ class _CommanderCard extends StatelessWidget {
             ),
             if (isSelected)
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppTheme.accent,
                   borderRadius:
                       BorderRadius.vertical(bottom: Radius.circular(10)),

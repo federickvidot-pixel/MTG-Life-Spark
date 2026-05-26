@@ -210,7 +210,7 @@ Future<void> showProposeAllianceSheet({
                   FilledButton(
                     style: GameUiTokens.sheetPrimaryButton(AppTheme.accentGold),
                     onPressed: sendWhisper,
-                    child: const Text('Send'),
+                    child: Text('Send'),
                   ),
                 ],
               ),
@@ -252,7 +252,7 @@ Future<void> showAllianceInviteDialog({
             ref.read(gameProvider.notifier).respondToAlliance(localId, false);
             Navigator.pop(dialogContext);
           },
-          child: const Text('Decline'),
+          child: Text('Decline'),
         ),
         FilledButton(
           style: GameUiTokens.sheetPrimaryButton(AppTheme.accentGold),
@@ -261,7 +261,7 @@ Future<void> showAllianceInviteDialog({
             ref.read(gameProvider.notifier).respondToAlliance(localId, true);
             Navigator.pop(dialogContext);
           },
-          child: const Text('Accept'),
+          child: Text('Accept'),
         ),
       ],
     ),
@@ -294,7 +294,7 @@ Future<void> showAllianceFormedDialog({
       actions: [
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Understood'),
+          child: Text('Understood'),
         ),
       ],
     ),
@@ -310,14 +310,14 @@ Future<void> showAllianceRevealedDialog({
     context: context,
     builder: (dialogContext) => AlertDialog(
       backgroundColor: AppTheme.card,
-      title: const Text('Alliance revealed'),
+      title: Text('Alliance revealed'),
       content: Text(
         '$playerA and $playerB have revealed their secret alliance to the table.',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('OK'),
+          child: Text('OK'),
         ),
       ],
     ),
@@ -340,7 +340,7 @@ Future<void> showAllianceBetrayalDialog({
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('OK'),
+          child: Text('OK'),
         ),
       ],
     ),
@@ -370,10 +370,14 @@ class OverviewPlayerMarkerBadges extends StatelessWidget {
 
     if (badges.isEmpty) return const SizedBox.shrink();
 
-    return Wrap(
-      spacing: LayoutTokens.gr0,
-      runSpacing: LayoutTokens.gr0,
-      children: badges,
+    return Padding(
+      padding: EdgeInsets.only(top: LayoutTokens.gr0 + 1),
+      child: Wrap(
+        spacing: LayoutTokens.gr0 + 2,
+        runSpacing: LayoutTokens.gr0,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: badges,
+      ),
     );
   }
 

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/persistence/providers.dart';
+import '../../core/game/game_providers.dart';
+import '../../core/game/lobby_state.dart';
 import '../../features/game_lobby/game_lobby_screen.dart';
 import '../../features/profile/profile_setup_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -28,12 +30,10 @@ class AppRoutes {
   static const lobbyHost = '/lobby/host';
   static const lobbyJoin = '/lobby/join';
   static const settings = '/settings';
-  /// Primary route for deck library (shell tab). Prefer over legacy [profileDecks].
+  /// Primary route for deck library (shell tab).
   static const decks = '/decks';
   static const profileBanner = '/home/banner';
   static const profilePods = '/home/pods';
-  /// Legacy path; use [decks]. Kept so old links can redirect if added later.
-  static const profileDecks = '/decks';
   static const feedback = '/settings/feedback';
   static const commanderSelect = '/commander-select';
   static const game = '/game';
@@ -61,9 +61,23 @@ Widget _buildCommanderSelect(GoRouterState state) {
   );
 }
 
+/// Notifies [GoRouter] when auth/profile/settings state changes.
+class _RouterRefreshNotifier extends ChangeNotifier {
+  _RouterRefreshNotifier(this._ref) {
+    _ref.listen<int>(profileRevisionProvider, (_, __) => notifyListeners());
+    _ref.listen<int>(settingsRevisionProvider, (_, __) => notifyListeners());
+  }
+
+  final Ref _ref;
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = _RouterRefreshNotifier(ref);
+  ref.onDispose(refresh.dispose);
+
   return GoRouter(
     initialLocation: AppRoutes.home,
+    refreshListenable: refresh,
     routes: [
       GoRoute(
         path: AppRoutes.profileSetup,
@@ -178,6 +192,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (path == AppRoutes.splash && hasProfile && settings.onboardingCompleted) {
         return AppRoutes.home;
+      }
+      if (path == AppRoutes.game) {
+        final lobby = ref.read(lobbyProvider);
+        final game = ref.read(gameProvider);
+        final hasLobbyPlayers = lobby.players.isNotEmpty;
+        final hasLocalPlayer = game.localPlayer != null;
+        if (!hasLobbyPlayers && !hasLocalPlayer) {
+          return AppRoutes.lobby;
+        }
       }
       return null;
     },

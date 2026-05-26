@@ -6,7 +6,10 @@ import 'package:uuid/uuid.dart';
 import '../bluetooth/ble_message.dart';
 import '../bluetooth/ble_protocol.dart';
 import '../bluetooth/ble_providers.dart';
+import '../models/player_profile.dart';
 import '../persistence/providers.dart';
+import '../../shared/utils/commander_image_resolver.dart';
+import '../persistence/deck_repository.dart';
 import 'alliance.dart';
 import 'alliance_ui_events.dart';
 import 'game_log_entry.dart';
@@ -104,6 +107,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
   void initFromLobby(LobbyState lobby) {
     final profile = _ref.read(profileRepositoryProvider).getProfile();
+    final deckRepo = _ref.read(deckRepositoryProvider);
     final localPlayerId = profile?.username ?? '';
     final isHost = _ref.read(bleRoleProvider) == BleRole.host;
 
@@ -112,6 +116,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
               slot: slot,
               startingLife: lobby.config.startingLife,
             ))
+        .map((p) => _enrichPlayerCommanderArt(p, profile, deckRepo))
         .toList();
 
     final singlePlayer = players.length == 1;
@@ -153,6 +158,52 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
     _listenToBle();
     _startAllianceDeliveryTimer();
+  }
+
+  PlayerGameState _enrichPlayerCommanderArt(
+    PlayerGameState player,
+    PlayerProfile? profile,
+    DeckRepository deckRepo,
+  ) {
+    final commanderUrl = resolvePlayerCommanderImageUrl(
+      commanderName: player.commanderName,
+      commanderImageUrl: player.commanderImageUrl,
+      selectedDeckId: player.selectedDeckId,
+      profile: profile,
+      deckRepo: deckRepo,
+    );
+    final partnerUrl = resolvePlayerPartnerImageUrl(
+      partnerCommanderName: player.partnerCommanderName,
+      partnerCommanderImageUrl: player.partnerCommanderImageUrl,
+      selectedDeckId: player.selectedDeckId,
+      profile: profile,
+      deckRepo: deckRepo,
+    );
+    if (commanderUrl == player.commanderImageUrl &&
+        partnerUrl == player.partnerCommanderImageUrl) {
+      return player;
+    }
+    return player.copyWith(
+      commanderImageUrl: commanderUrl ?? player.commanderImageUrl,
+      partnerCommanderImageUrl: partnerUrl ?? player.partnerCommanderImageUrl,
+    );
+  }
+
+  /// Backfill commander art after a Scryfall lookup (in-game HUD, damage panel).
+  void patchCommanderArt(
+    String playerId, {
+    String? commanderImageUrl,
+    String? partnerCommanderImageUrl,
+  }) {
+    final players = state.players.map((p) {
+      if (p.playerId != playerId) return p;
+      return p.copyWith(
+        commanderImageUrl: commanderImageUrl ?? p.commanderImageUrl,
+        partnerCommanderImageUrl:
+            partnerCommanderImageUrl ?? p.partnerCommanderImageUrl,
+      );
+    }).toList();
+    state = state.copyWith(players: players);
   }
 
   void _startAllianceDeliveryTimer() {
@@ -298,6 +349,10 @@ class GameStateNotifier extends StateNotifier<GameState> {
       newValue: newValue,
       delta: delta,
     ));
+
+    if (field == 'poison' && delta > 0) {
+      _ref.read(profileRepositoryProvider).addPoisonDealt(delta);
+    }
 
     _checkLossConditions();
   }
@@ -2133,6 +2188,20 @@ class GameStateNotifier extends StateNotifier<GameState> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Clears game state when leaving a session.
+  void reset() {
+    _messageSub?.cancel();
+    _timeoutTimer?.cancel();
+    _turnLimitTimer?.cancel();
+    _allianceDeliveryTimer?.cancel();
+    _messageSub = null;
+    _timeoutTimer = null;
+    _turnLimitTimer = null;
+    _allianceDeliveryTimer = null;
+    _seqNum = 0;
+    state = GameState.empty();
   }
 
   @override

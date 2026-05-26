@@ -154,7 +154,7 @@ class _PhasePickerSheetState extends State<PhasePickerSheet> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context),
                   style: GameUiTokens.sheetCancelButton,
-                  child: const Text('Cancel'),
+                  child: Text('Cancel'),
                 ),
               ),
               SizedBox(width: LayoutTokens.gr2),

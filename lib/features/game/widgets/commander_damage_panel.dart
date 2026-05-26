@@ -981,7 +981,6 @@ class _DamageTrack extends StatelessWidget {
           children: [
             _DmgStepButton(
               icon: Icons.remove_rounded,
-              label: '−1',
               isAdd: false,
               onTap: onRemove,
             ),
@@ -1008,7 +1007,6 @@ class _DamageTrack extends StatelessWidget {
             ),
             _DmgStepButton(
               icon: Icons.add_rounded,
-              label: '+1',
               isAdd: true,
               onTap: onAdd,
             ),
@@ -1021,13 +1019,11 @@ class _DamageTrack extends StatelessWidget {
 
 class _DmgStepButton extends StatelessWidget {
   final IconData icon;
-  final String label;
   final bool isAdd;
   final VoidCallback? onTap;
 
   const _DmgStepButton({
     required this.icon,
-    required this.label,
     required this.isAdd,
     this.onTap,
   });
@@ -1048,7 +1044,7 @@ class _DmgStepButton extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
-      label: label,
+      label: isAdd ? 'Increase commander damage' : 'Decrease commander damage',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -1078,21 +1074,7 @@ class _DmgStepButton extends StatelessWidget {
                     ]
                   : null,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 22, color: iconColor),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: iconColor,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ),
+            child: Icon(icon, size: 22, color: iconColor),
           ),
         ),
       ),

@@ -68,7 +68,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       appBar: UiAppBar(
         title: 'Host Lobby',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back),
           onPressed: () async {
             await endSession(ref);
             if (context.mounted) context.pop();
@@ -530,7 +530,7 @@ class _SlotReadyButton extends ConsumerWidget {
         final notifier = ref.read(lobbyProvider.notifier);
         notifier.setReady(slot.playerId, ready: !slot.isReady);
       },
-      icon: const Icon(Icons.check_rounded, size: 24),
+      icon: Icon(Icons.check_rounded, size: 24),
     );
   }
 }
@@ -581,7 +581,7 @@ class _SlotActionButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(LayoutTokens.gr1),
         ),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           fontSize: FontTokens.sm,
           fontWeight: FontWeight.w600,
         ),
@@ -668,14 +668,14 @@ class _PartnerChip extends ConsumerWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(LayoutTokens.gr1),
         ),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           fontSize: FontTokens.sm,
           fontWeight: FontWeight.w600,
         ),
       ),
       onPressed:
           () => ref.read(lobbyProvider.notifier).togglePartner(slot.playerId),
-      child: const Text(
+      child: Text(
         'Partner',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -933,7 +933,7 @@ class _StartingLifeDropdown extends StatelessWidget {
                   Navigator.pop(ctx);
                 }
               },
-              child: const Text('OK'),
+              child: Text('OK'),
             ),
           ],
         );

@@ -2,6 +2,10 @@
 
 part of 'player_deck.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class PlayerDeckAdapter extends TypeAdapter<PlayerDeck> {
   @override
   final int typeId = 6;
@@ -10,7 +14,7 @@ class PlayerDeckAdapter extends TypeAdapter<PlayerDeck> {
   PlayerDeck read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
-      for (var i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return PlayerDeck(
       id: fields[0] as String,
@@ -19,14 +23,12 @@ class PlayerDeckAdapter extends TypeAdapter<PlayerDeck> {
       commanderImageUrl: fields[3] as String?,
       partnerCommanderName: fields[4] as String?,
       partnerCommanderImageUrl: fields[5] as String?,
-      wins: (fields[6] as num?)?.toInt() ?? 0,
-      losses: (fields[7] as num?)?.toInt() ?? 0,
-      gamesPlayed: (fields[8] as num?)?.toInt() ?? 0,
+      wins: fields[6] as int,
+      losses: fields[7] as int,
+      gamesPlayed: fields[8] as int,
       commanderManaCost: fields[9] as String?,
       partnerManaCost: fields[10] as String?,
-      commanderColorIdentity: fields[11] != null
-          ? List<String>.from(fields[11] as List)
-          : [],
+      commanderColorIdentity: (fields[11] as List).cast<String>(),
     );
   }
 

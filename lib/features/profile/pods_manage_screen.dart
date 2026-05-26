@@ -75,16 +75,16 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete pod?'),
+        title: Text('Delete pod?'),
         content: Text('Remove “${pod.name}”?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -98,6 +98,7 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(podPresetsRevisionProvider, (_, __) => _reload());
     final colors = AppColorTokens.of(context);
     final repo = ref.read(podRepositoryProvider);
 
@@ -197,11 +198,11 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
                   children: [
                     TextButton.icon(
                       onPressed: () => _editPod(repo, pod),
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Edit'),
+                      icon: Icon(Icons.edit_outlined, size: 18),
+                      label: Text('Edit'),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline),
+                      icon: Icon(Icons.delete_outline),
                       onPressed: () => _confirmDelete(repo, pod),
                       color: colors.primaryAccent,
                     ),
@@ -214,8 +215,8 @@ class _PodsManageScreenState extends ConsumerState<PodsManageScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _editPod(repo, null),
-        icon: const Icon(Icons.add),
-        label: const Text('Add pod'),
+        icon: Icon(Icons.add),
+        label: Text('Add pod'),
       ),
     );
   }
@@ -323,7 +324,7 @@ class _PodEditorDialogState extends State<_PodEditorDialog> {
                   ),
                   IconButton(
                     onPressed: _addMember,
-                    icon: const Icon(Icons.person_add_outlined),
+                    icon: Icon(Icons.person_add_outlined),
                     tooltip: 'Add player',
                   ),
                 ],
@@ -346,7 +347,7 @@ class _PodEditorDialogState extends State<_PodEditorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text('Cancel'),
         ),
         FilledButton(
           onPressed: () {
@@ -354,7 +355,7 @@ class _PodEditorDialogState extends State<_PodEditorDialog> {
             if (name.isEmpty) return;
             Navigator.pop(context, (name: name, members: List<String>.from(_members)));
           },
-          child: const Text('Save'),
+          child: Text('Save'),
         ),
       ],
     );

@@ -11,7 +11,116 @@ import '../../shared/widgets/deck_tile_visual.dart';
 import '../../shared/widgets/mana_cost_pips.dart';
 import '../../ui/theme/app_color_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
+import '../../ui/tokens/radius_tokens.dart';
 import '../../ui/components/ui_app_bar.dart';
+import '../game/widgets/game_modal_chrome.dart';
+
+ButtonStyle _deckActionButtonStyle(
+  AppColorTokens colors, {
+  Color? foreground,
+  Color? border,
+  bool expanded = false,
+}) {
+  return OutlinedButton.styleFrom(
+    foregroundColor: foreground ?? colors.textPrimary,
+    backgroundColor: colors.surface.withValues(alpha: 0.35),
+    side: BorderSide(
+      color: border ?? colors.borderSubtle,
+      width: 1.25,
+    ),
+    padding: EdgeInsets.symmetric(
+      horizontal: LayoutTokens.gr2,
+      vertical: LayoutTokens.gr2,
+    ),
+    minimumSize: Size(expanded ? double.infinity : 0, LayoutTokens.minTapTarget),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    shape: RoundedRectangleBorder(
+      borderRadius: RadiusTokens.radiusControlMd,
+    ),
+    textStyle: TextStyle(
+      fontSize: FontTokens.caption,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.1,
+    ),
+  );
+}
+
+class _DeckCardActions extends StatelessWidget {
+  const _DeckCardActions({
+    required this.colors,
+    required this.onCommanders,
+    required this.onRename,
+    required this.onDelete,
+  });
+
+  final AppColorTokens colors;
+  final VoidCallback onCommanders;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Divider(
+          height: LayoutTokens.gr3,
+          thickness: 1,
+          color: colors.borderSubtle.withValues(alpha: 0.65),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onCommanders,
+                icon: Icon(
+                  Icons.style_outlined,
+                  size: 18,
+                  color: colors.primaryAccent,
+                ),
+                label: const Text('Commanders'),
+                style: _deckActionButtonStyle(
+                  colors,
+                  foreground: colors.primaryAccent,
+                  border: colors.primaryAccent.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            SizedBox(width: LayoutTokens.gr1),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onRename,
+                icon: Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: colors.textPrimary,
+                ),
+                label: const Text('Rename'),
+                style: _deckActionButtonStyle(colors),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: LayoutTokens.gr1),
+        OutlinedButton.icon(
+          onPressed: onDelete,
+          icon: Icon(
+            Icons.delete_outline,
+            size: 18,
+            color: colors.error,
+          ),
+          label: const Text('Delete deck'),
+          style: _deckActionButtonStyle(
+            colors,
+            foreground: colors.error,
+            border: colors.error.withValues(alpha: 0.45),
+            expanded: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class DecksManageScreen extends ConsumerStatefulWidget {
   const DecksManageScreen({super.key});
@@ -49,7 +158,10 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
       builder: (ctx) {
         final colors = AppColorTokens.of(ctx);
         return AlertDialog(
-          title: Text('Deck name', style: TextStyle(color: colors.textPrimary)),
+          title: GameDialogTitleRow(
+            title: 'Deck name',
+            onClose: () => Navigator.pop(ctx),
+          ),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -60,17 +172,13 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
             style: TextStyle(color: colors.textPrimary),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
             FilledButton(
               onPressed: () {
                 final t = controller.text.trim();
                 if (t.isEmpty) return;
                 Navigator.pop(ctx, t);
               },
-              child: const Text('Next'),
+              child: Text('Next'),
             ),
           ],
         );
@@ -111,24 +219,23 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
       builder: (ctx) {
         final colors = AppColorTokens.of(ctx);
         return AlertDialog(
-          title: Text('Rename deck', style: TextStyle(color: colors.textPrimary)),
+          title: GameDialogTitleRow(
+            title: 'Rename deck',
+            onClose: () => Navigator.pop(ctx),
+          ),
           content: TextField(
             controller: controller,
             autofocus: true,
             style: TextStyle(color: colors.textPrimary),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
             FilledButton(
               onPressed: () {
                 final t = controller.text.trim();
                 if (t.isEmpty) return;
                 Navigator.pop(ctx, t);
               },
-              child: const Text('Save'),
+              child: Text('Save'),
             ),
           ],
         );
@@ -145,18 +252,17 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete deck?'),
+        title: GameDialogTitleRow(
+          title: 'Delete deck?',
+          onClose: () => Navigator.pop(ctx, false),
+        ),
         content: Text(
           'Remove “${deck.displayName}”? Stats for this deck will be deleted.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -170,6 +276,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(deckListRevisionProvider, (_, __) => _reload());
     final colors = AppColorTokens.of(context);
     final repo = ref.read(deckRepositoryProvider);
 
@@ -193,8 +300,9 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
           final deck = _decks[i - 1];
           return Card(
             margin: EdgeInsets.only(bottom: LayoutTokens.gr2),
+            clipBehavior: Clip.antiAlias,
             child: Padding(
-              padding: EdgeInsets.all(LayoutTokens.gr2),
+              padding: EdgeInsets.all(LayoutTokens.gr3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -204,7 +312,7 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                       ResolvedDeckCommanderAvatarCluster(
                         deck: deck,
                         colors: colors,
-                        size: 56,
+                        size: 60,
                       ),
                       SizedBox(width: LayoutTokens.gr2),
                       Expanded(
@@ -216,7 +324,8 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                               style: TextStyle(
                                 color: colors.textPrimary,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 16,
+                                fontSize: FontTokens.body,
+                                height: 1.25,
                               ),
                             ),
                             SizedBox(height: LayoutTokens.gr0),
@@ -227,7 +336,10 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                               style: TextStyle(
                                 color: colors.textSecondary,
                                 fontSize: FontTokens.hudSm,
+                                height: 1.35,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             if (_deckHasMana(deck)) ...[
                               SizedBox(height: LayoutTokens.gr1),
@@ -254,24 +366,11 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: LayoutTokens.gr2),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => _editCommanders(deck),
-                        child: const Text('Commanders'),
-                      ),
-                      TextButton(
-                        onPressed: () => _renameDeck(repo, deck),
-                        child: const Text('Rename'),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'Delete',
-                        onPressed: () => _confirmDelete(repo, deck),
-                        icon: Icon(Icons.delete_outline, color: colors.textSecondary),
-                      ),
-                    ],
+                  _DeckCardActions(
+                    colors: colors,
+                    onCommanders: () => _editCommanders(deck),
+                    onRename: () => _renameDeck(repo, deck),
+                    onDelete: () => _confirmDelete(repo, deck),
                   ),
                 ],
               ),
@@ -281,8 +380,8 @@ class _DecksManageScreenState extends ConsumerState<DecksManageScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _promptNewDeckName,
-        icon: const Icon(Icons.add),
-        label: const Text('Add deck'),
+        icon: Icon(Icons.add),
+        label: Text('Add deck'),
       ),
     );
   }

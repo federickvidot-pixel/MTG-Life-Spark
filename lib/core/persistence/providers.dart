@@ -81,3 +81,14 @@ final achievementRepositoryProvider = Provider<AchievementRepository>((ref) {
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository();
 });
+
+/// Bumped when app settings change so router redirect and UI refresh.
+final settingsRevisionProvider = StateProvider<int>((ref) => 0);
+
+void bumpSettingsRevision(WidgetRef ref) {
+  ref.read(settingsRevisionProvider.notifier).state++;
+}
+
+void bumpSettingsRevisionRef(Ref ref) {
+  ref.read(settingsRevisionProvider.notifier).state++;
+}

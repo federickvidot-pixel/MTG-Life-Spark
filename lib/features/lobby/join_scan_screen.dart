@@ -88,7 +88,7 @@ class _JoinScanScreenState extends ConsumerState<JoinScanScreen> {
 
     // Expected format: mgtlifespark://<ip>:<port>
     if (!raw.startsWith('mgtlifespark://')) {
-      _showSnackbar('Not a valid MGT Life Spark QR code.', isError: true);
+      _showSnackbar('Not a valid MTG Life Spark QR code.', isError: true);
       return;
     }
 
@@ -171,7 +171,7 @@ class _JoinScanScreenState extends ConsumerState<JoinScanScreen> {
       appBar: UiAppBar(
         title: 'Join a Game',
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back),
           onPressed: () async {
             await endSession(ref);
             if (context.mounted) context.go(AppRoutes.home);
@@ -222,7 +222,7 @@ class _QrScanView extends StatelessWidget {
           bottom: 48,
           left: 0,
           right: 0,
-          child: const Text(
+          child: Text(
             'Point the camera at the host\'s QR code',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -261,7 +261,7 @@ class _PermissionDeniedView extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => openAppSettings(),
-              child: const Text('Open Settings'),
+              child: Text('Open Settings'),
             ),
           ],
         ),
@@ -345,11 +345,11 @@ class _WaitingRoomViewState extends ConsumerState<_WaitingRoomView> {
                       if (profile == null) return;
                       showDeckPickerSheet(context, ref, profile.username);
                     },
-                    child: const Text('Deck'),
+                    child: Text('Deck'),
                   ),
                   OutlinedButton.icon(
-                    icon: const Icon(Icons.style),
-                    label: const Text('Commander'),
+                    icon: Icon(Icons.style),
+                    label: Text('Commander'),
                     onPressed: () {
                       final profile =
                           ref.read(profileRepositoryProvider).getProfile();

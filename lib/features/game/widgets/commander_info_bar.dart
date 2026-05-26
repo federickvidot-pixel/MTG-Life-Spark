@@ -1,11 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../../../ui/tokens/color_tokens.dart';
 
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
+import '../../../ui/tokens/color_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import '../../../ui/tokens/radius_tokens.dart';
+import 'resolved_commander_avatar.dart';
 
 /// Top bar of the personal view: commander avatar (tap to cast), tax, round.
 class CommanderInfoBar extends StatelessWidget {
@@ -54,8 +54,10 @@ class CommanderInfoBar extends StatelessWidget {
       child: Row(
         children: [
           _CastableCommanderAvatar(
+            playerId: player.playerId,
+            commanderName: player.commanderName,
             imageUrl: player.commanderImageUrl,
-            name: player.commanderName,
+            selectedDeckId: player.selectedDeckId,
             playerColor: player.playerColor,
             size: avatarSize,
             enabled: !player.isEliminated,
@@ -64,11 +66,14 @@ class CommanderInfoBar extends StatelessWidget {
 
           if (player.hasPartner && player.partnerCommanderName != null) ...[
             SizedBox(width: gap),
-            _CommanderAvatar(
+            ResolvedCommanderAvatar(
+              playerId: player.playerId,
+              commanderName: player.partnerCommanderName,
               imageUrl: player.partnerCommanderImageUrl,
-              name: player.partnerCommanderName,
+              selectedDeckId: player.selectedDeckId,
               playerColor: player.playerColor,
               size: partnerSize,
+              isPartner: true,
             ),
           ],
 
@@ -151,16 +156,20 @@ class CommanderInfoBar extends StatelessWidget {
 
 /// Primary commander art: tap to cast (replaces separate Cast control).
 class _CastableCommanderAvatar extends StatelessWidget {
+  final String playerId;
+  final String? commanderName;
   final String? imageUrl;
-  final String? name;
+  final String? selectedDeckId;
   final Color playerColor;
   final double size;
   final bool enabled;
   final VoidCallback onCast;
 
   const _CastableCommanderAvatar({
+    required this.playerId,
+    required this.commanderName,
     required this.imageUrl,
-    required this.name,
+    required this.selectedDeckId,
     required this.playerColor,
     required this.size,
     required this.enabled,
@@ -187,9 +196,11 @@ class _CastableCommanderAvatar extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
-                    child: _CommanderAvatar(
+                    child: ResolvedCommanderAvatar(
+                      playerId: playerId,
+                      commanderName: commanderName,
                       imageUrl: imageUrl,
-                      name: name,
+                      selectedDeckId: selectedDeckId,
                       playerColor: playerColor,
                       size: size,
                     ),
@@ -234,48 +245,6 @@ class _CastableCommanderAvatar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _CommanderAvatar extends StatelessWidget {
-  final String? imageUrl;
-  final String? name;
-  final Color playerColor;
-  final double size;
-
-  const _CommanderAvatar({
-    required this.imageUrl,
-    required this.name,
-    required this.playerColor,
-    this.size = 48,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: RadiusTokens.radiusControlMd,
-        child: CachedNetworkImage(
-          imageUrl: imageUrl!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorWidget: (context, url, error) => _placeholder(),
-        ),
-      );
-    }
-    return _placeholder();
-  }
-
-  Widget _placeholder() => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: playerColor.withValues(alpha: 0.15),
-          borderRadius: RadiusTokens.radiusControlMd,
-          border: Border.all(color: playerColor.withValues(alpha: 0.5)),
-        ),
-        child: Icon(Icons.style, color: playerColor, size: size * 0.5),
-      );
 }
 
 class _CommanderTaxBadge extends StatelessWidget {

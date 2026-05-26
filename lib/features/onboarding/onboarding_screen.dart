@@ -21,12 +21,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   int _currentPage = 0;
 
-  static const _slides = [
+  static final _slides = [
     _OnboardingSlide(
       icon: Icons.wifi_tethering,
       title: 'Host or Join',
       body:
-          'One player hosts — others scan and connect over Bluetooth. No internet needed. Works for 4 to 6 players at the same table.',
+          'One player hosts a game — others scan a QR code on the same Wi‑Fi network. No internet account needed. Works for 4 to 6 players at the same table.',
       color: AppTheme.accent,
     ),
     _OnboardingSlide(
@@ -137,7 +137,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: RadiusTokens.radiusLg,
                     ),
-                    textStyle: const TextStyle(
+                    textStyle: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),

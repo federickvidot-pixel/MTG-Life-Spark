@@ -31,6 +31,7 @@ class EndGameScreen extends ConsumerStatefulWidget {
 
 class _EndGameScreenState extends ConsumerState<EndGameScreen> {
   bool _saved = false;
+  bool _saveFailed = false;
   ProgressResult? _result;
   bool _saving = true;
   bool _feedbackSubmitted = false;
@@ -48,7 +49,11 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
 
   Future<void> _saveMatch() async {
     if (_saved) return;
-    _saved = true;
+
+    setState(() {
+      _saving = true;
+      _saveFailed = false;
+    });
 
     final pending = ref.read(pendingFeedbackProvider);
     if (pending != null && mounted) {
@@ -81,6 +86,7 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
 
       bumpProfileRevision(ref);
       bumpDeckListRevision(ref);
+      _saved = true;
 
       if (mounted) {
         setState(() {
@@ -91,7 +97,10 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _saveFailed = true;
+        });
       }
     }
   }
@@ -108,7 +117,7 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
       backgroundColor: AppTheme.primary,
       body: SafeArea(
         child: _saving
-            ? const Center(
+            ? Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -121,7 +130,45 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
                   ],
                 ),
               )
-            : SingleChildScrollView(
+            : _saveFailed
+                ? Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(LayoutTokens.gr4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error_outline, color: AppTheme.accent, size: 48),
+                          SizedBox(height: LayoutTokens.gr3),
+                          Text(
+                            'Could not save match results.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: FontTokens.body,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: LayoutTokens.gr2),
+                          Text(
+                            'Your stats may not have updated. Try again.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                          SizedBox(height: LayoutTokens.gr4),
+                          FilledButton(
+                            onPressed: _saveMatch,
+                            child: Text('Retry'),
+                          ),
+                          SizedBox(height: LayoutTokens.gr2),
+                          TextButton(
+                            onPressed: () => context.go(AppRoutes.home),
+                            child: Text('Continue without saving'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(
                 child: Column(
                   children: [
                     SizedBox(height: LayoutTokens.gr4),
@@ -187,7 +234,7 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Final Standings',
                             style: TextStyle(
                               color: AppTheme.textSecondary,
@@ -212,7 +259,6 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
                     _ActionButtons(
                       isHost: game.isHost,
                       onHome: () => context.go(AppRoutes.home),
-                      onProfile: () => context.go(AppRoutes.home),
                       onRematch: () => _doRematch(context, ref, game),
                     ),
 
@@ -230,9 +276,11 @@ class _EndGameScreenState extends ConsumerState<EndGameScreen> {
     GameState game,
   ) async {
     ref.read(gameProvider.notifier).proposeRematch();
+    ref.read(gameProvider.notifier).reset();
+    ref.read(lobbyProvider.notifier).reset();
     await endSession(ref);
     if (!context.mounted) return;
-    context.go(AppRoutes.lobby);
+    context.go(game.isHost ? AppRoutes.lobbyHost : AppRoutes.lobby);
   }
 
   Future<void> _submitFeedback(GameState game) async {
@@ -262,7 +310,7 @@ class _WinnerBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (winner == null) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.all(24),
         child: Text(
           'Game Over — No Winner',
@@ -282,7 +330,7 @@ class _WinnerBanner extends StatelessWidget {
         children: [
           Text(
             isLocalWinner ? '🏆 You Win!' : '🎉 Winner',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.accentGold,
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -319,7 +367,7 @@ class _WinnerBanner extends StatelessWidget {
                       winner!.username.isNotEmpty
                           ? winner!.username[0].toUpperCase()
                           : '?',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: ColorTokens.onAccent,
                           fontSize: 40,
                           fontWeight: FontWeight.bold),
@@ -336,7 +384,7 @@ class _WinnerBanner extends StatelessWidget {
                 winner!.username.isNotEmpty
                     ? winner!.username[0].toUpperCase()
                     : '?',
-                style: const TextStyle(
+                style: TextStyle(
                     color: ColorTokens.onAccent,
                     fontSize: 40,
                     fontWeight: FontWeight.bold),
@@ -355,7 +403,7 @@ class _WinnerBanner extends StatelessWidget {
           if (winner!.commanderName != null)
             Text(
               winner!.commanderName!,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppTheme.textSecondary, fontSize: 13),
             ),
         ],
@@ -396,7 +444,7 @@ class _LevelUpCard extends StatelessWidget {
               'assets/animations/level_up.json',
               repeat: true,
               errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.arrow_upward,
+                  Icon(Icons.arrow_upward,
                       size: 48, color: AppTheme.accentGold),
             ),
           ),
@@ -404,7 +452,7 @@ class _LevelUpCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'RANK UP!',
                 style: TextStyle(
                   color: AppTheme.accentGold,
@@ -415,14 +463,14 @@ class _LevelUpCard extends StatelessWidget {
               ),
               Text(
                 'Rank ${result.oldLevel} → ${result.newLevel}',
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary, fontSize: 14),
               ),
               if (wizardRankTitle(result.oldLevel) !=
                   wizardRankTitle(result.newLevel))
                 Text(
                   '${wizardRankTitle(result.oldLevel)} → ${wizardRankTitle(result.newLevel)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppTheme.textSecondary, fontSize: 12),
                 ),
             ],
@@ -452,14 +500,14 @@ class _XpCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.star, color: AppTheme.accentGold, size: 24),
+          Icon(Icons.star, color: AppTheme.accentGold, size: 24),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '+${result.xpGained} XP',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.accentGold,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -467,7 +515,7 @@ class _XpCard extends StatelessWidget {
               ),
               Text(
                 isWinner ? 'Win bonus included' : 'Participation XP',
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textSecondary, fontSize: FontTokens.hudXs),
               ),
             ],
@@ -478,14 +526,14 @@ class _XpCard extends StatelessWidget {
             children: [
               Text(
                 'Rank ${result.newLevel}',
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600),
               ),
               Text(
                 wizardRankTitle(result.newLevel),
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: FontTokens.hudXs,
                     fontWeight: FontWeight.w500),
@@ -551,7 +599,7 @@ class _FeedbackCard extends StatelessWidget {
           children: [
             Icon(Icons.check_circle, color: AppTheme.success, size: 28),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Thanks! Your feedback has been recorded.',
                 style: TextStyle(
@@ -629,7 +677,7 @@ class _FeedbackCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999)),
               ),
-              child: const Text('Submit Feedback'),
+              child: Text('Submit Feedback'),
             ),
           ),
         ],
@@ -671,7 +719,7 @@ class _PlayerFeedbackRow extends StatelessWidget {
           Expanded(
             child: Text(
               player.username,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: FontTokens.hudSm,
                 fontWeight: FontWeight.w500,
@@ -735,7 +783,7 @@ class _VoteDropdown extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.textSecondary,
             fontSize: FontTokens.hudXs,
             fontWeight: FontWeight.w600,
@@ -746,7 +794,7 @@ class _VoteDropdown extends StatelessWidget {
           value: selectedId,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 12,
             ),
@@ -786,7 +834,7 @@ class _VoteDropdown extends StatelessWidget {
                       SizedBox(width: LayoutTokens.gr1),
                       Text(
                         p.username,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: FontTokens.hudSm,
                         ),
@@ -830,7 +878,7 @@ class _AchievementsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '🏅 New Achievements',
             style: TextStyle(
               color: AppTheme.success,
@@ -844,18 +892,18 @@ class _AchievementsCard extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(def.icon,
-                        style: const TextStyle(fontSize: 18)),
+                        style: TextStyle(fontSize: 18)),
                     SizedBox(width: LayoutTokens.gr1),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(def.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textPrimary,
                                 fontSize: FontTokens.hudSm,
                                 fontWeight: FontWeight.w600)),
                         Text(def.description,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 10)),
                       ],
@@ -930,7 +978,7 @@ class _FinalPlayerRow extends StatelessWidget {
                   ),
                 ),
                 if (isLocal)
-                  const Text(' (you)',
+                  Text(' (you)',
                       style: TextStyle(
                           color: AppTheme.textSecondary, fontSize: 10)),
               ],
@@ -940,7 +988,7 @@ class _FinalPlayerRow extends StatelessWidget {
             Flexible(
               child: Text(
                 p.commanderName!,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textSecondary, fontSize: 10),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -983,13 +1031,11 @@ class _FinalPlayerRow extends StatelessWidget {
 class _ActionButtons extends StatelessWidget {
   final bool isHost;
   final VoidCallback onHome;
-  final VoidCallback onProfile;
   final VoidCallback onRematch;
 
   const _ActionButtons({
     required this.isHost,
     required this.onHome,
-    required this.onProfile,
     required this.onRematch,
   });
 
@@ -1003,8 +1049,8 @@ class _ActionButtons extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                icon: const Icon(Icons.replay, size: 18),
-                label: const Text('Rematch'),
+                icon: Icon(Icons.replay, size: 18),
+                label: Text('Rematch'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accent,
                   foregroundColor: ColorTokens.onAccent,
@@ -1019,27 +1065,11 @@ class _ActionButtons extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              icon: const Icon(Icons.person_outline, size: 18),
-              label: const Text('View Profile'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.accent,
-                side: const BorderSide(color: AppTheme.accent),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999)),
-              ),
-              onPressed: onProfile,
-            ),
-          ),
-          SizedBox(height: LayoutTokens.gr2),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.home_outlined, size: 18),
-              label: const Text('Back to Home'),
+              icon: Icon(Icons.home_outlined, size: 18),
+              label: Text('Back to Home'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.textSecondary,
-                side: const BorderSide(color: AppTheme.surface),
+                side: BorderSide(color: AppTheme.surface),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999)),

@@ -1,3 +1,4 @@
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../ui/components/ui_app_bar.dart';
 import '../../ui/components/ui_dialog.dart';
 import '../../ui/components/ui_surface.dart';
 import '../../ui/theme/app_color_tokens.dart';
+import '../../ui/tokens/app_color_palettes.dart';
 import '../../ui/tokens/color_tokens.dart';
 import '../../ui/tokens/font_tokens.dart';
 import '../../ui/tokens/layout_tokens.dart';
@@ -33,6 +35,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _save() async {
     await ref.read(settingsRepositoryProvider).update(_settings);
+    bumpSettingsRevision(ref);
     if (!mounted) return;
     setState(() {});
   }
@@ -93,14 +96,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           SizedBox(height: LayoutTokens.gr4),
           _SectionHeader('Appearance'),
-          _SwitchTile(
-            title: 'Dark theme',
-            subtitle: 'Use dark mode. Light mode when off. In-game Day/Night also controls this.',
-            value: ref.watch(themePreferenceProvider),
-            onChanged: (v) {
-              ref.read(themePreferenceProvider.notifier).setUseDarkTheme(v);
+          _ColorSchemePicker(
+            selected: ref.watch(colorSchemePreferenceProvider),
+            onSelected: (id) {
+              ref.read(colorSchemePreferenceProvider.notifier).setColorScheme(id);
             },
-            icon: Icons.dark_mode_outlined,
           ),
           SizedBox(height: LayoutTokens.gr4),
           _SectionHeader('Feel'),
@@ -195,9 +195,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _clearCache() async {
-    if (mounted) {
+    try {
+      await DefaultCacheManager().emptyCache();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Image cache cleared.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not clear image cache.')),
       );
     }
   }
@@ -222,6 +229,115 @@ class _SectionHeader extends StatelessWidget {
           fontSize: FontTokens.sm,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorSchemePicker extends StatelessWidget {
+  const _ColorSchemePicker({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final AppColorSchemeId selected;
+  final ValueChanged<AppColorSchemeId> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
+      child: UiSurface(
+        padding: EdgeInsets.all(LayoutTokens.gr3),
+        borderRadius: RadiusTokens.radiusMd,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Color scheme',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            SizedBox(height: LayoutTokens.gr1),
+            Text(
+              'Choose the accent palette used across the app shell and game chrome.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            SizedBox(height: LayoutTokens.gr3),
+            ...AppColorPalettes.all.map((palette) {
+              final isSelected = palette.id == selected;
+              return Padding(
+                padding: EdgeInsets.only(bottom: LayoutTokens.gr2),
+                child: InkWell(
+                  borderRadius: RadiusTokens.radiusMd,
+                  onTap: () => onSelected(palette.id),
+                  child: Container(
+                    padding: EdgeInsets.all(LayoutTokens.gr3),
+                    decoration: BoxDecoration(
+                      borderRadius: RadiusTokens.radiusMd,
+                      border: Border.all(
+                        color: isSelected
+                            ? palette.previewAccent
+                            : ColorTokens.borderSubtle,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      color: palette.previewBackground.withValues(alpha: 0.35),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: palette.previewBackground,
+                            borderRadius: RadiusTokens.radiusSm,
+                            border: Border.all(
+                              color: palette.previewAccent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: palette.previewAccent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: LayoutTokens.gr3),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                palette.label,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                palette.description,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          Icon(
+                            Icons.check_circle,
+                            color: palette.previewAccent,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );

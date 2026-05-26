@@ -60,8 +60,8 @@ class StackHelpSheet extends StatelessWidget {
           SizedBox(height: LayoutTokens.gr4),
           FilledButton.icon(
             onPressed: () => _openArticle(context),
-            icon: const Icon(Icons.open_in_new_rounded, size: 18),
-            label: const Text('Read more on Magic.com'),
+            icon: Icon(Icons.open_in_new_rounded, size: 18),
+            label: Text('Read more on Magic.com'),
           ),
         ],
       ),

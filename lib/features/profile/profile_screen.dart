@@ -34,7 +34,7 @@ const double _kBentoCardBorderAlpha = 0.55;
 
 /// When true, profile sections show rich sample data for layout review.
 /// Set to false once you want only real Hive data.
-const bool _kProfileForcePlaceholderPreview = true;
+const bool _kProfileForcePlaceholderPreview = false;
 
 /// Bundled MTG art when no custom banner is set (from project mana assets).
 const String _kDefaultBannerPlaceholderAsset = 'assets/mana/MYB/fullManaCost.png';
@@ -110,12 +110,13 @@ Widget _recentMatchCommanderArt(BuildContext context, String? imageUrl) {
   return _defaultBannerFill(context);
 }
 
-/// Bottom-weighted vignette for text over commander art on recent match cards.
-Widget _recentMatchCardVignette({required bool expanded}) {
+/// Dark tint over commander art for text legibility on recent match cards.
+Widget _recentMatchCardVignette({bool expanded = false}) {
   if (expanded) {
     return Stack(
       fit: StackFit.expand,
       children: [
+        ColoredBox(color: Colors.black.withValues(alpha: 0.38)),
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -146,33 +147,40 @@ Widget _recentMatchCardVignette({required bool expanded}) {
       ],
     );
   }
-  // Bottom-only scrim with a long, soft feather into the art.
-  return Align(
-    alignment: Alignment.bottomCenter,
-    child: FractionallySizedBox(
-      heightFactor: 0.68,
-      widthFactor: 1,
-      alignment: Alignment.bottomCenter,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.black.withValues(alpha: 0.04),
-              Colors.black.withValues(alpha: 0.14),
-              Colors.black.withValues(alpha: 0.32),
-              Colors.black.withValues(alpha: 0.58),
-              Colors.black.withValues(alpha: 0.82),
-            ],
-            stops: const [0.0, 0.18, 0.38, 0.58, 0.78, 1.0],
+  return Stack(
+    fit: StackFit.expand,
+    children: [
+      ColoredBox(color: Colors.black.withValues(alpha: 0.50)),
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: FractionallySizedBox(
+          heightFactor: 0.58,
+          widthFactor: 1,
+          alignment: Alignment.bottomCenter,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.12),
+                  Colors.black.withValues(alpha: 0.28),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
           ),
         ),
       ),
-    ),
+    ],
   );
 }
+
+const List<Shadow> _recentMatchOverlayShadow = [
+  Shadow(color: Color(0xF0000000), blurRadius: 16, offset: Offset(0, 2)),
+  Shadow(color: Color(0xB3000000), blurRadius: 6, offset: Offset(0, 1)),
+];
 
 /// Shared [Card] chrome for profile carousel tiles.
 RoundedRectangleBorder _profileCarouselCardShape(ColorScheme scheme) {
@@ -410,7 +418,7 @@ class _ProfileHeroCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.wallpaper_outlined,
                             color: ColorTokens.onAccent,
                             size: 18,
@@ -1176,7 +1184,7 @@ void _showBentoSectionInfo(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('OK'),
+          child: Text('OK'),
         ),
       ],
     ),
@@ -2184,11 +2192,6 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
       color: colors.textPrimary,
       height: 1.2,
     );
-    final timeStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: colors.textSecondary,
-      fontWeight: FontWeight.w600,
-      height: 1.25,
-    );
 
     final resultPill = Container(
       padding: EdgeInsets.symmetric(
@@ -2196,15 +2199,21 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
         vertical: LayoutTokens.gr1,
       ),
       decoration: BoxDecoration(
-        color: resultColor.withValues(alpha: 0.15),
+        color: Colors.black.withValues(alpha: 0.48),
         borderRadius: RadiusTokens.radiusSm,
+        border: Border.all(
+          color: resultColor.withValues(alpha: 0.65),
+          width: 1,
+        ),
       ),
       child: Text(
         resultLabel,
         style: TextStyle(
           color: resultColor,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           fontSize: FontTokens.caption,
+          letterSpacing: 0.15,
+          shadows: _recentMatchOverlayShadow,
         ),
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
@@ -2225,28 +2234,25 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
     );
 
     Widget summaryView() {
-      const overlayShadow = [
-        Shadow(
-          color: Color(0xCC000000),
-          blurRadius: 8,
-          offset: Offset(0, 1),
-        ),
-      ];
       final overlayFormatStyle = formatStyle!.copyWith(
-        color: ColorTokens.onAccent,
-        shadows: overlayShadow,
+        color: Colors.white,
+        fontSize: 17,
+        fontWeight: FontWeight.w900,
+        height: 1.32,
+        letterSpacing: -0.2,
+        shadows: _recentMatchOverlayShadow,
       );
       final overlayMetaStyle = metaStyle!.copyWith(
-        color: ColorTokens.onAccent.withValues(alpha: 0.92),
-        shadows: overlayShadow,
+        color: Colors.white.withValues(alpha: 0.94),
+        fontSize: 13,
+        height: 1.35,
+        shadows: _recentMatchOverlayShadow,
       );
       final overlayDateStyle = dateStyle!.copyWith(
-        color: ColorTokens.onAccent,
-        shadows: overlayShadow,
-      );
-      final overlayTimeStyle = timeStyle!.copyWith(
-        color: ColorTokens.onAccent.withValues(alpha: 0.88),
-        shadows: overlayShadow,
+        color: Colors.white,
+        fontSize: 14,
+        height: 1.3,
+        shadows: _recentMatchOverlayShadow,
       );
 
       return Stack(
@@ -2255,7 +2261,7 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
           _recentMatchCommanderArt(context, commanderImageUrl),
           _recentMatchCardVignette(expanded: false),
           Padding(
-            padding: EdgeInsets.all(LayoutTokens.gr2),
+            padding: EdgeInsets.all(LayoutTokens.gr3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -2270,27 +2276,21 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: LayoutTokens.gr0),
+                SizedBox(height: LayoutTokens.gr1),
                 Text(
                   playerLine,
                   style: overlayMetaStyle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: LayoutTokens.gr0),
+                SizedBox(height: LayoutTokens.gr1),
                 Text(
-                  dateStr,
+                  '$dateStr · $timeStr',
                   style: overlayDateStyle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  timeStr,
-                  style: overlayTimeStyle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: LayoutTokens.gr2),
+                SizedBox(height: LayoutTokens.gr3),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -2303,24 +2303,24 @@ class _RecentMatchCardState extends ConsumerState<_RecentMatchCard> {
                         horizontal: LayoutTokens.gr3,
                         vertical: LayoutTokens.gr2,
                       ),
-                      minimumSize: const Size(double.infinity, 48),
+                      minimumSize: const Size(double.infinity, 44),
                       tapTargetSize: MaterialTapTargetSize.padded,
                       shape: const StadiumBorder(),
                       side: BorderSide(
-                        color: colors.primaryAccent.withValues(alpha: 0.55),
+                        color: Colors.white.withValues(alpha: 0.72),
                         width: 1.25,
                       ),
-                      foregroundColor: colors.primaryAccent,
-                      backgroundColor:
-                          colors.primaryAccent.withValues(alpha: 0.1),
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.black.withValues(alpha: 0.38),
                     ),
                     child: Text(
                       'Show more',
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        letterSpacing: 0.15,
-                        color: colors.primaryAccent,
+                        fontSize: 15,
+                        letterSpacing: 0.2,
+                        color: Colors.white,
+                        shadows: _recentMatchOverlayShadow,
                       ),
                     ),
                   ),

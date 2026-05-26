@@ -34,11 +34,11 @@ class PlayerProfileAdapter extends TypeAdapter<PlayerProfile> {
       currentWinStreak: fields[14] as int,
       totalGamesPlayed: fields[15] as int,
       profileAvatarImageUrl: fields[16] as String?,
-      likesReceived: fields[17] as int? ?? 0,
-      dislikesReceived: fields[18] as int? ?? 0,
-      honorsMvpReceived: fields[19] as int? ?? 0,
-      honorsTeamPlayerReceived: fields[20] as int? ?? 0,
-      honorsUnderdogReceived: fields[21] as int? ?? 0,
+      likesReceived: fields[17] as int,
+      dislikesReceived: fields[18] as int,
+      honorsMvpReceived: fields[19] as int,
+      honorsTeamPlayerReceived: fields[20] as int,
+      honorsUnderdogReceived: fields[21] as int,
       profileBannerImageUrl: fields[22] as String?,
     );
   }

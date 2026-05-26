@@ -11,6 +11,7 @@ import '../models/player_deck.dart';
 import '../models/pod_preset.dart';
 import '../persistence/providers.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../shared/utils/commander_image_resolver.dart';
 import 'game_format.dart';
 
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -212,9 +213,10 @@ class LobbyNotifier extends StateNotifier<LobbyState> {
       isReady: false,
     );
 
-    state = state.copyWith(
+    state = LobbyState(
       isHost: true,
       players: [hostSlot],
+      config: state.config,
     );
 
     _listenToBle();
@@ -222,8 +224,21 @@ class LobbyNotifier extends StateNotifier<LobbyState> {
 
   /// Call when a client joins an existing session.
   void initAsClient() {
-    state = state.copyWith(isHost: false);
+    state = state.copyWith(
+      isHost: false,
+      isGameStarted: false,
+    );
     _listenToBle();
+  }
+
+  /// Clears lobby state when leaving a game or session.
+  void reset() {
+    _messageSub?.cancel();
+    _connectionSub?.cancel();
+    _messageSub = null;
+    _connectionSub = null;
+    _seqNum = 0;
+    state = const LobbyState();
   }
 
   void _listenToBle() {
@@ -286,13 +301,25 @@ class LobbyNotifier extends StateNotifier<LobbyState> {
 
   /// Apply a saved deck: fills commanders and tags the slot for win/loss tracking.
   void applyDeck({required String playerId, required PlayerDeck deck}) {
+    final profile = _ref.read(profileRepositoryProvider).getProfile();
+    final commanderImageUrl = resolveDeckCommanderImageUrl(
+          deck: deck,
+          profile: profile,
+        ) ??
+        deck.commanderImageUrl;
+    final partnerCommanderImageUrl = resolveDeckPartnerImageUrl(
+          deck: deck,
+          profile: profile,
+        ) ??
+        deck.partnerCommanderImageUrl;
+
     final players = state.players.map((p) {
       if (p.playerId != playerId) return p;
       return p.copyWith(
         commanderName: deck.commanderName,
-        commanderImageUrl: deck.commanderImageUrl,
+        commanderImageUrl: commanderImageUrl,
         partnerCommanderName: deck.partnerCommanderName,
-        partnerCommanderImageUrl: deck.partnerCommanderImageUrl,
+        partnerCommanderImageUrl: partnerCommanderImageUrl,
         hasPartner: deck.hasPartner,
         selectedDeckId: deck.id,
         commanderColorIdentity: List<String>.from(deck.commanderColorIdentity),

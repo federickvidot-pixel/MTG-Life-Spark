@@ -1,59 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/game/game_providers.dart';
-import '../../core/game/game_state.dart';
 import '../../core/persistence/providers.dart';
 import '../../core/persistence/settings_repository.dart';
+import '../../ui/tokens/app_color_palettes.dart';
+import '../../ui/tokens/color_tokens.dart';
 import 'app_theme.dart';
 
-/// User's theme preference (persisted). Updated by Settings and Day/Night.
-final themePreferenceProvider =
-    StateNotifierProvider<ThemePreferenceNotifier, bool>((ref) {
+/// User's color scheme preference (persisted). Violet, Crimson, or Slate.
+final colorSchemePreferenceProvider =
+    StateNotifierProvider<ColorSchemePreferenceNotifier, AppColorSchemeId>(
+        (ref) {
   final repo = ref.read(settingsRepositoryProvider);
-  return ThemePreferenceNotifier(repo.settings.useDarkTheme, repo);
+  final initial = AppColorPalettes.parse(repo.settings.colorSchemeId);
+  ColorTokens.applyScheme(initial);
+  return ColorSchemePreferenceNotifier(initial, repo);
 });
 
-class ThemePreferenceNotifier extends StateNotifier<bool> {
-  ThemePreferenceNotifier(super.initial, this._repo);
+class ColorSchemePreferenceNotifier extends StateNotifier<AppColorSchemeId> {
+  ColorSchemePreferenceNotifier(super.initial, this._repo);
 
   final SettingsRepository _repo;
 
-  Future<void> setUseDarkTheme(bool value) async {
-    state = value;
+  Future<void> setColorScheme(AppColorSchemeId id) async {
+    if (state == id) return;
+    state = id;
+    ColorTokens.applyScheme(id);
+    _invalidateThemeCache();
     final s = _repo.settings;
-    s.useDarkTheme = value;
+    s.colorSchemeId = AppColorPalettes.storageKey(id);
     await _repo.update(s);
   }
 }
 
 ThemeData? _cachedDarkTheme;
-ThemeData? _cachedLightTheme;
+AppColorSchemeId? _cachedSchemeId;
 
-ThemeData _darkTheme() => _cachedDarkTheme ??= AppTheme.dark();
-ThemeData _lightTheme() => _cachedLightTheme ??= AppTheme.light();
+void _invalidateThemeCache() {
+  _cachedDarkTheme = null;
+  _cachedSchemeId = null;
+}
 
-/// Effective theme: when in game, Day/Night overrides settings.
-/// Day → light, Night → dark, None → use settings.
-///
-/// Watches only day/night + in-game flag — not life/counters/phases.
-final effectiveThemeProvider = Provider<ThemeData>((ref) {
-  final useDarkTheme = ref.watch(themePreferenceProvider);
-  final inGame = ref.watch(
-    gameProvider.select((g) => g.players.isNotEmpty),
-  );
-  final dayNight = ref.watch(gameProvider.select((g) => g.dayNight));
-
-  if (inGame) {
-    switch (dayNight) {
-      case DayNightState.day:
-        return _lightTheme();
-      case DayNightState.night:
-        return _darkTheme();
-      case DayNightState.none:
-        return useDarkTheme ? _darkTheme() : _lightTheme();
-    }
+ThemeData _darkTheme(AppColorSchemeId schemeId) {
+  if (_cachedDarkTheme != null && _cachedSchemeId == schemeId) {
+    return _cachedDarkTheme!;
   }
+  ColorTokens.applyScheme(schemeId);
+  _cachedSchemeId = schemeId;
+  return _cachedDarkTheme = AppTheme.dark();
+}
 
-  return useDarkTheme ? _darkTheme() : _lightTheme();
+/// Effective theme — always dark, tinted by the selected color scheme.
+final effectiveThemeProvider = Provider<ThemeData>((ref) {
+  final schemeId = ref.watch(colorSchemePreferenceProvider);
+  return _darkTheme(schemeId);
 });

@@ -156,7 +156,7 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                   runSpacing: LayoutTokens.gr0,
                   children: [
                     FilterChip(
-                      label: const Text('By player'),
+                      label: Text('By player'),
                       selected: _sortMode == StackSortMode.apnap,
                       onSelected: (v) => setState(
                         () => _sortMode = v
@@ -171,7 +171,7 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                       ),
                     ),
                     FilterChip(
-                      label: const Text('Resolved / countered'),
+                      label: Text('Resolved / countered'),
                       selected: _showCountered,
                       onSelected: (v) => setState(() => _showCountered = v),
                       visualDensity: VisualDensity.compact,
@@ -228,8 +228,8 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                   children: [
                     TextButton.icon(
                       onPressed: () => _confirmClearAll(context, notifier),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      label: const Text('Clear all'),
+                      icon: Icon(Icons.delete_outline_rounded, size: 18),
+                      label: Text('Clear all'),
                     ),
                   ],
                 ),
@@ -446,7 +446,7 @@ class _TipBanner extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                   ),
-                  child: const Text('Hide tip'),
+                  child: Text('Hide tip'),
                 ),
               ),
             ],
@@ -495,8 +495,8 @@ class _EmptyStackState extends StatelessWidget {
             SizedBox(height: LayoutTokens.gr4),
             FilledButton.icon(
               onPressed: onPutOnStack,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Add spell'),
+              icon: Icon(Icons.add_rounded),
+              label: Text('Add spell'),
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: RadiusTokens.radiusControlSm,
@@ -507,8 +507,8 @@ class _EmptyStackState extends StatelessWidget {
               SizedBox(height: LayoutTokens.gr2),
               OutlinedButton.icon(
                 onPressed: onLoadExample,
-                icon: const Icon(Icons.science_outlined),
-                label: const Text('Load 4-player example'),
+                icon: Icon(Icons.science_outlined),
+                label: Text('Load 4-player example'),
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: RadiusTokens.radiusControlSm,
@@ -1022,8 +1022,8 @@ class _StackItemCard extends ConsumerWidget {
             SizedBox(height: LayoutTokens.gr1),
             if (item.isActive)
               ListTile(
-                leading: const Icon(Icons.reply_rounded),
-                title: const Text('In response to…'),
+                leading: Icon(Icons.reply_rounded),
+                title: Text('In response to…'),
                 onTap: () => Navigator.pop(ctx, 'respond'),
               ),
             if (notifier.canChangeStackItemStatus(item) &&
@@ -1047,14 +1047,14 @@ class _StackItemCard extends ConsumerWidget {
               ),
             if (item.isActive && notifier.canChangeStackItemStatus(item))
               ListTile(
-                leading: const Icon(Icons.block_rounded),
-                title: const Text('Mark countered'),
+                leading: Icon(Icons.block_rounded),
+                title: Text('Mark countered'),
                 onTap: () => Navigator.pop(ctx, 'countered'),
               ),
             if (notifier.canEditStackItem(item))
               ListTile(
-                leading: const Icon(Icons.edit_rounded),
-                title: const Text('Rename'),
+                leading: Icon(Icons.edit_rounded),
+                title: Text('Rename'),
                 onTap: () => Navigator.pop(ctx, 'rename'),
               ),
           ],

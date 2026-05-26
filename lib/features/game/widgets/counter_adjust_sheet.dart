@@ -86,7 +86,7 @@ class _CounterAdjustSheetState extends State<CounterAdjustSheet> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: GameUiTokens.sheetSecondaryButton,
-            child: const Text('Done'),
+            child: Text('Done'),
           ),
         ],
       ),
@@ -123,7 +123,7 @@ class _AdjBtn extends StatelessWidget {
             child: Center(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textPrimary,
