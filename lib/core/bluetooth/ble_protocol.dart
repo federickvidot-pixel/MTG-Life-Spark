@@ -54,6 +54,8 @@ enum BleMessageType {
   alliancePropose,
   allianceRespond,
   allianceBreak,
+  allianceReveal,
+  allianceDeclined,
   monarchChange,
   initiativeChange,
   dayNightChange,

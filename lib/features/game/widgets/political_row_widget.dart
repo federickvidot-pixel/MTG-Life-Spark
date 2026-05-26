@@ -8,122 +8,161 @@ import '../../../shared/theme/theme_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/font_tokens.dart';
 import '../../../ui/tokens/color_tokens.dart';
-import '../../../ui/tokens/opacity_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import 'game_modal_chrome.dart';
-import '../../../ui/tokens/spacing_tokens.dart';
 import '../../../ui/tokens/radius_tokens.dart';
 
+/// Truncates long player names for compact overview chips.
+String overviewShortPlayerName(String name, {int maxChars = 9}) {
+  final trimmed = name.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  return '${trimmed.substring(0, maxChars - 1)}…';
+}
+
+/// Monarch, Initiative, and Day/Night controls for the overview board.
 class PoliticalRowWidget extends ConsumerWidget {
   final GameState game;
-  final bool overviewStyle;
 
   const PoliticalRowWidget({
     super.key,
     required this.game,
-    this.overviewStyle = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(gameProvider.notifier);
+    final dayNightLabel = switch (game.dayNight) {
+      DayNightState.day => 'Day',
+      DayNightState.night => 'Night',
+      DayNightState.none => '—',
+    };
 
-    final row = Row(
-      children: [
-        Expanded(
-          child: _PoliticalBadge(
-            icon: '👑',
-            label: 'Monarch',
-            holderId: game.monarchPlayerId,
-            players: game.players,
-            canAssign: game.isHost,
-            overviewStyle: overviewStyle,
-            onTap:
-                game.isHost
-                    ? () => _showAssignPicker(
-                      context,
-                      ref,
-                      'Assign Monarch',
-                      game.monarchPlayerId,
-                      (pid) => notifier.setMonarch(pid),
-                    )
-                    : null,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.accentGold.withValues(alpha: 0.14),
+            AppTheme.card,
+          ],
+        ),
+        borderRadius: RadiusTokens.radiusMd,
+        border: Border.all(
+          color: AppTheme.accentGold.withValues(alpha: 0.45),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.accentGold.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(LayoutTokens.gr2 + 2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.public, color: AppTheme.accentGold, size: 18),
+                SizedBox(width: LayoutTokens.gr1),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Table politics',
+                        style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: FontTokens.hudSm,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: LayoutTokens.gr0 - 1),
+                      Text(
+                        'Monarch · Initiative · $dayNightLabel',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: FontTokens.hudXs,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: LayoutTokens.gr2),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _PoliticalBadge(
+                      label: 'Monarch',
+                      icon: '👑',
+                      holderId: game.monarchPlayerId,
+                      players: game.players,
+                      canAssign: game.isHost,
+                      onTap: game.isHost
+                          ? () => _showAssignPicker(
+                                context,
+                                ref,
+                                'Assign Monarch',
+                                game.monarchPlayerId,
+                                (pid) => notifier.setMonarch(pid),
+                              )
+                          : null,
+                    ),
+                  ),
+                  SizedBox(width: LayoutTokens.gr1),
+                  Expanded(
+                    child: _PoliticalBadge(
+                      label: 'Initiative',
+                      icon: '⚔️',
+                      holderId: game.initiativePlayerId,
+                      players: game.players,
+                      canAssign: game.isHost,
+                      onTap: game.isHost
+                          ? () => _showAssignPicker(
+                                context,
+                                ref,
+                                'Assign Initiative',
+                                game.initiativePlayerId,
+                                (pid) => notifier.setInitiative(pid),
+                              )
+                          : null,
+                    ),
+                  ),
+                  SizedBox(width: LayoutTokens.gr1),
+                  Expanded(
+                    child: _DayNightToggle(
+                      dayNight: game.dayNight,
+                      isHost: game.isHost,
+                      onTap: game.isHost
+                          ? () {
+                              final next = _nextDayNight(game.dayNight);
+                              notifier.setDayNight(next);
+                              if (next == DayNightState.day ||
+                                  next == DayNightState.night) {
+                                ref
+                                    .read(themePreferenceProvider.notifier)
+                                    .setUseDarkTheme(next == DayNightState.night);
+                              }
+                            }
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        SizedBox(width: LayoutTokens.gr1),
-        Expanded(
-          child: _PoliticalBadge(
-            icon: '⚔️',
-            label: 'Initiative',
-            holderId: game.initiativePlayerId,
-            players: game.players,
-            canAssign: game.isHost,
-            overviewStyle: overviewStyle,
-            onTap:
-                game.isHost
-                    ? () => _showAssignPicker(
-                      context,
-                      ref,
-                      'Assign Initiative',
-                      game.initiativePlayerId,
-                      (pid) => notifier.setInitiative(pid),
-                    )
-                    : null,
-          ),
-        ),
-        SizedBox(width: LayoutTokens.gr1),
-        Expanded(
-          child: _DayNightToggle(
-            dayNight: game.dayNight,
-            isHost: game.isHost,
-            overviewStyle: overviewStyle,
-            onTap:
-                game.isHost
-                    ? () {
-                      final next = _nextDayNight(game.dayNight);
-                      notifier.setDayNight(next);
-                      if (next == DayNightState.day ||
-                          next == DayNightState.night) {
-                        ref
-                            .read(themePreferenceProvider.notifier)
-                            .setUseDarkTheme(next == DayNightState.night);
-                      }
-                    }
-                    : null,
-          ),
-        ),
-      ],
-    );
-
-    if (!overviewStyle) {
-      return Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: SpacingTokens.md,
-          vertical: SpacingTokens.sm,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: RadiusTokens.radiusPill,
-        ),
-        child: row,
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Game markers',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: FontTokens.label,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
-          ),
-        ),
-        SizedBox(height: LayoutTokens.gr1),
-        row,
-      ],
+      ),
     );
   }
 
@@ -149,195 +188,91 @@ class PoliticalRowWidget extends ConsumerWidget {
     showGameBottomSheet<void>(
       context: context,
       builder: (_) => _PlayerPickerSheet(
-            title: title,
-            players: game.players.where((p) => !p.isEliminated).toList(),
-            currentHolderId: currentHolderId,
-            onSelected: (pid) {
-              Navigator.pop(context);
-              onAssign(pid);
-            },
-          ),
+        title: title,
+        players: game.players.where((p) => !p.isEliminated).toList(),
+        currentHolderId: currentHolderId,
+        onSelected: (pid) {
+          Navigator.pop(context);
+          onAssign(pid);
+        },
+      ),
     );
   }
 }
 
 class _PoliticalBadge extends StatelessWidget {
-  final String icon;
   final String label;
+  final String icon;
   final String? holderId;
   final List<PlayerGameState> players;
   final bool canAssign;
-  final bool overviewStyle;
   final VoidCallback? onTap;
 
   const _PoliticalBadge({
-    required this.icon,
     required this.label,
+    required this.icon,
     required this.holderId,
     required this.players,
     required this.canAssign,
-    this.overviewStyle = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final holder =
-        holderId != null
-            ? players.where((p) => p.playerId == holderId).firstOrNull
-            : null;
+    final holder = holderId != null
+        ? players.where((p) => p.playerId == holderId).firstOrNull
+        : null;
     final hasHolder = holder != null;
 
-    if (overviewStyle) {
-      return _OverviewFilledMarkerButton(
-        enabled: canAssign,
-        onPressed: canAssign ? onTap : null,
-        filled: hasHolder,
-        fillColor:
-            hasHolder
-                ? AppTheme.accentGold.withValues(alpha: 0.85)
-                : AppTheme.surface,
-        foregroundColor:
-            hasHolder ? AppTheme.primary : AppTheme.textSecondary,
-        label: label,
-        value: holder?.username ?? 'None',
-      );
-    }
-
-    final borderColor =
-        hasHolder
-            ? AppTheme.accentGold.withValues(alpha: OpacityTokens.half)
-            : AppTheme.surface;
-    final holderColor =
-        hasHolder ? AppTheme.accentGold : AppTheme.textSecondary;
-
-    final child = GestureDetector(
-      onTap: canAssign ? onTap : null,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: LayoutTokens.minTapTarget),
-        padding: const EdgeInsets.symmetric(
-          horizontal: LayoutTokens.gr1,
-          vertical: LayoutTokens.gr1,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.card,
-          borderRadius: RadiusTokens.radiusPill,
-          border: Border.all(color: borderColor),
-        ),
-        child: Row(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: LayoutTokens.gr1),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: FontTokens.xs,
-                    ),
-                  ),
-                  Text(
-                    holder?.username ?? 'None',
-                    style: TextStyle(
-                      color: holderColor,
-                      fontSize: FontTokens.hudXs,
-                      fontWeight:
-                          hasHolder ? FontWeight.bold : FontWeight.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            if (canAssign)
-              Icon(
-                Icons.edit,
-                size: 12,
-                color: AppTheme.textSecondary.withValues(alpha: OpacityTokens.half),
-              ),
-          ],
-        ),
-      ),
+    return _OverviewFilledMarkerButton(
+      enabled: canAssign,
+      onPressed: canAssign ? onTap : null,
+      filled: hasHolder,
+      fillColor: hasHolder
+          ? AppTheme.accentGold.withValues(alpha: 0.88)
+          : AppTheme.surface.withValues(alpha: 0.9),
+      foregroundColor: hasHolder ? AppTheme.primary : AppTheme.textSecondary,
+      label: '$icon $label',
+      value: holder != null
+          ? overviewShortPlayerName(holder.username)
+          : 'None',
     );
-    return IgnorePointer(ignoring: !canAssign, child: child);
   }
 }
 
 class _DayNightToggle extends StatelessWidget {
   final DayNightState dayNight;
   final bool isHost;
-  final bool overviewStyle;
   final VoidCallback? onTap;
 
   const _DayNightToggle({
     required this.dayNight,
     required this.isHost,
-    this.overviewStyle = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (dayNight) {
-      DayNightState.none => ('Day/Night', AppTheme.textSecondary),
-      DayNightState.day => ('Day', AppTheme.accentGold),
-      DayNightState.night => ('Night', AppTheme.accent),
+    final (label, icon, color) = switch (dayNight) {
+      DayNightState.none => ('Day/Night', '🌓', AppTheme.textSecondary),
+      DayNightState.day => ('Day', '☀️', AppTheme.accentGold),
+      DayNightState.night => ('Night', '🌙', AppTheme.accent),
     };
     final isActive = dayNight != DayNightState.none;
 
-    if (overviewStyle) {
-      return _OverviewFilledMarkerButton(
-        enabled: isHost,
-        onPressed: isHost ? onTap : null,
-        filled: isActive,
-        fillColor:
-            isActive ? color.withValues(alpha: 0.85) : AppTheme.surface,
-        foregroundColor: isActive ? AppTheme.primary : AppTheme.textSecondary,
-        label: 'Day / Night',
-        value: label,
-      );
-    }
-
-    final borderColor =
-        isActive ? color.withValues(alpha: OpacityTokens.half) : AppTheme.surface;
-    final icon = switch (dayNight) {
-      DayNightState.none => '🌓',
-      DayNightState.day => '☀️',
-      DayNightState.night => '🌙',
-    };
-
-    final child = GestureDetector(
-      onTap: isHost ? onTap : null,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: LayoutTokens.gr2,
-          vertical: LayoutTokens.gr1,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.card,
-          borderRadius: RadiusTokens.radiusPill,
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 18)),
-            Text(label, style: TextStyle(color: color, fontSize: FontTokens.xs)),
-          ],
-        ),
-      ),
+    return _OverviewFilledMarkerButton(
+      enabled: isHost,
+      onPressed: isHost ? onTap : null,
+      filled: isActive,
+      fillColor:
+          isActive ? color.withValues(alpha: 0.88) : AppTheme.surface.withValues(alpha: 0.9),
+      foregroundColor: isActive ? AppTheme.primary : AppTheme.textSecondary,
+      label: '$icon Day/Night',
+      value: label,
     );
-    return IgnorePointer(ignoring: !isHost, child: child);
   }
 }
 
-/// Overview row: text-only [FilledButton] for monarch, initiative, day/night.
 class _OverviewFilledMarkerButton extends StatelessWidget {
   final bool enabled;
   final VoidCallback? onPressed;
@@ -362,41 +297,52 @@ class _OverviewFilledMarkerButton extends StatelessWidget {
     return FilledButton(
       onPressed: enabled ? onPressed : null,
       style: FilledButton.styleFrom(
-        minimumSize: const Size(0, LayoutTokens.minTapTarget),
-        padding: const EdgeInsets.symmetric(
-          horizontal: LayoutTokens.gr1,
+        minimumSize: const Size(0, LayoutTokens.minTapTarget - 4),
+        padding: EdgeInsets.symmetric(
+          horizontal: LayoutTokens.gr0 + 2,
           vertical: LayoutTokens.gr1,
         ),
         backgroundColor: fillColor,
         foregroundColor: foregroundColor,
         disabledBackgroundColor: AppTheme.surface.withValues(alpha: 0.6),
-        disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: OpacityTokens.half),
-        elevation: filled ? 0 : 0,
+        disabledForegroundColor:
+            AppTheme.textSecondary.withValues(alpha: 0.5),
+        elevation: filled ? 1 : 0,
         shape: RoundedRectangleBorder(
           borderRadius: RadiusTokens.radiusControlMd,
+          side: BorderSide(
+            color: filled
+                ? AppTheme.accentGold.withValues(alpha: 0.35)
+                : AppTheme.textSecondary.withValues(alpha: 0.15),
+          ),
         ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: FontTokens.caption,
-              fontWeight: FontWeight.w600,
+              fontSize: FontTokens.hudXs,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
             ),
           ),
-          SizedBox(height: LayoutTokens.gr0),
+          SizedBox(height: LayoutTokens.gr0 - 1),
           Text(
             value,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: FontTokens.sm,
-              fontWeight: FontWeight.w700,
+              fontSize: FontTokens.hudXs,
+              fontWeight: FontWeight.w800,
               color: foregroundColor,
+              height: 1.15,
             ),
           ),
         ],
@@ -420,31 +366,16 @@ class _PlayerPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        SpacingTokens.lg,
-        SpacingTokens.md,
-        SpacingTokens.lg,
-        SpacingTokens.xl,
-      ),
+    return GameSheetBody(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: LayoutTokens.gr3,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: LayoutTokens.gr2),
+          GameSheetHeader(title: title),
           ListTile(
-            tileColor:
-                currentHolderId == null
-                    ? AppTheme.accent.withValues(alpha: 0.1)
-                    : AppTheme.surface,
+            tileColor: currentHolderId == null
+                ? AppTheme.accent.withValues(alpha: 0.1)
+                : AppTheme.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(RadiusTokens.sm),
             ),
@@ -454,15 +385,14 @@ class _PlayerPickerSheet extends StatelessWidget {
             ),
             onTap: () => onSelected(null),
           ),
-          const SizedBox(height: LayoutTokens.gr1),
+          SizedBox(height: LayoutTokens.gr1),
           ...players.map(
             (p) => Padding(
-              padding: const EdgeInsets.only(bottom: LayoutTokens.gr1),
+              padding: EdgeInsets.only(bottom: LayoutTokens.gr1),
               child: ListTile(
-                tileColor:
-                    p.playerId == currentHolderId
-                        ? p.playerColor.withValues(alpha: 0.15)
-                        : AppTheme.surface,
+                tileColor: p.playerId == currentHolderId
+                    ? p.playerColor.withValues(alpha: 0.15)
+                    : AppTheme.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(RadiusTokens.sm),
                 ),
@@ -484,14 +414,13 @@ class _PlayerPickerSheet extends StatelessWidget {
                   p.username,
                   style: const TextStyle(color: AppTheme.textPrimary),
                 ),
-                trailing:
-                    p.playerId == currentHolderId
-                        ? const Icon(
-                          Icons.check_circle,
-                          color: AppTheme.success,
-                          size: 18,
-                        )
-                        : null,
+                trailing: p.playerId == currentHolderId
+                    ? const Icon(
+                        Icons.check_circle,
+                        color: AppTheme.success,
+                        size: 18,
+                      )
+                    : null,
                 onTap: () => onSelected(p.playerId),
               ),
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import 'game_modal_chrome.dart';
+import 'game_ui_tokens.dart';
 
 Future<void> showCounterAdjustSheet(
   BuildContext context, {
@@ -58,9 +59,7 @@ class _CounterAdjustSheetState extends State<CounterAdjustSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const GameSheetHandle(),
-          SizedBox(height: LayoutTokens.gr2),
-          Text(widget.title, style: GameModalChrome.sheetTitleStyle),
+          GameSheetHeader(title: widget.title),
           SizedBox(height: LayoutTokens.gr3),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -86,10 +85,8 @@ class _CounterAdjustSheetState extends State<CounterAdjustSheet> {
           SizedBox(height: LayoutTokens.gr3),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Done',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
+            style: GameUiTokens.sheetSecondaryButton,
+            child: const Text('Done'),
           ),
         ],
       ),
@@ -105,28 +102,32 @@ class _AdjBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: LayoutTokens.minTapTarget,
-          height: LayoutTokens.minTapTarget,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppTheme.textSecondary.withValues(alpha: 0.5),
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: LayoutTokens.minTapTarget,
+            height: LayoutTokens.minTapTarget,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppTheme.textSecondary.withValues(alpha: 0.5),
+              ),
+              color: AppTheme.surface,
             ),
-            color: AppTheme.surface,
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+            child: Center(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
               ),
             ),
           ),

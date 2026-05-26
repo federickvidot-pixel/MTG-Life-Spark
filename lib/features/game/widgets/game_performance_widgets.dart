@@ -4,8 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/game/game_providers.dart';
 import '../../../core/game/game_state.dart';
 import '../../../core/game/player_game_state.dart';
+import '../../../core/game/stack_item.dart';
+import 'commander_damage_panel.dart';
 import 'gameplay_dials_strip_widget.dart';
 import 'life_counter_widget.dart';
+
+/// HUD header rebuild trigger — keeps commander bar live on every tab.
+int gameHudHeaderRebuildFingerprint(GameState game) {
+  final local = game.localPlayer;
+  final opponents =
+      game.players.where((p) => p.playerId != game.localPlayerId).toList();
+  return Object.hash(
+    game.roundNumber,
+    game.activePlayerId,
+    local?.commanderCastCount,
+    local?.allyPlayerId,
+    local?.commanderName,
+    local?.hasPartner,
+    local?.isEliminated,
+    local?.totalCommanderDamageReceived,
+    local != null ? maxCommanderDamageTrack(local, opponents) : 0,
+    Object.hashAll(local?.commanderColorIdentity ?? const []),
+  );
+}
 
 /// Play-tab rebuild trigger — excludes life so life taps stay scoped to [ScopedLifeCounter].
 int playTabRebuildFingerprint(GameState game) {
@@ -16,15 +37,39 @@ int playTabRebuildFingerprint(GameState game) {
     game.isHost,
     game.timeoutActive,
     game.isLocalPlayersTurn,
-    game.monarchPlayerId,
-    game.initiativePlayerId,
     game.pendingProposalFor(local?.playerId ?? ''),
     game.turnStartTime,
     game.turnTimeLimitSeconds,
     game.trackTurnDuration,
     local?.isEliminated,
-    local?.totalCommanderDamageReceived,
     localPlayerDialFingerprint(local),
+    gameHudHeaderRebuildFingerprint(game),
+  );
+}
+
+/// Stack-tab rebuild trigger — stack list + player metadata for filters.
+int stackTabRebuildFingerprint(GameState game) {
+  return Object.hash(
+    game.isHost,
+    game.localPlayerId,
+    Object.hashAll(
+      game.stackItems.map(
+        (StackItem i) => Object.hash(
+          i.id,
+          i.name,
+          i.playerId,
+          i.parentId,
+          i.status,
+          i.createdAt,
+        ),
+      ),
+    ),
+    Object.hashAll(
+      game.players.map(
+        (PlayerGameState p) =>
+            Object.hash(p.playerId, p.username, p.playerColor, p.isEliminated),
+      ),
+    ),
   );
 }
 
@@ -109,8 +154,8 @@ class ScopedGameplayDials extends ConsumerWidget {
   final String playerId;
   final void Function(String field, int delta) onAdjustCounter;
   final void Function(String field, int absoluteValue) onSetCounterAbsolute;
-  final void Function(String dialKey, String label) onRegisterCustomDial;
-  final void Function(String field) onAddDialToStrip;
+  final bool Function(String dialKey, String label) onRegisterCustomDial;
+  final bool Function(String field) onAddDialToStrip;
   final void Function(String field) onRemoveDialFromStrip;
 
   @override
@@ -125,7 +170,7 @@ class ScopedGameplayDials extends ConsumerWidget {
 
     return RepaintBoundary(
       child: GameplayDialsStripWidget(
-        player: player,
+        getPlayer: () => ref.read(gameProvider).playerById(playerId)!,
         isEliminated: player.isEliminated,
         onAdjustCounter: onAdjustCounter,
         onSetCounterAbsolute: onSetCounterAbsolute,

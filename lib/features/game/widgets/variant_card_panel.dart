@@ -155,10 +155,7 @@ class _VariantContent extends StatelessWidget {
     if (children.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: LayoutTokens.gr3,
-        vertical: LayoutTokens.gr2,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: LayoutTokens.gr2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,
@@ -331,12 +328,12 @@ class _VariantTile extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
-                    borderRadius: RadiusTokens.radiusXs,
+                    color: AppTheme.textSecondary.withValues(alpha: 0.22),
+                    borderRadius: RadiusTokens.radiusPill,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: LayoutTokens.gr3),
               if (card.imageUrl != null)
                 Center(
                   child: ClipRRect(

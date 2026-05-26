@@ -225,7 +225,12 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
                     final prev = widget.life - 1;
                     final next = widget.life + 1;
 
-                    return Stack(
+                    return Semantics(
+                      label: widget.isEliminated
+                          ? 'Eliminated at ${widget.life} life'
+                          : '${widget.life} life total',
+                      value: '${widget.life}',
+                      child: Stack(
                       clipBehavior: Clip.none,
                       children: [
                         Positioned(
@@ -233,13 +238,18 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
                           top: 0,
                           width: tapEdge,
                           height: hBody,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _change(-1),
-                            onLongPressStart: (_) => _startHold(-1),
-                            onLongPressEnd: (_) => _stopHold(),
-                            onLongPressCancel: _stopHold,
-                            child: const ColoredBox(color: Colors.transparent),
+                          child: Semantics(
+                            button: true,
+                            label: 'Decrease life',
+                            enabled: !widget.isEliminated,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _change(-1),
+                              onLongPressStart: (_) => _startHold(-1),
+                              onLongPressEnd: (_) => _stopHold(),
+                              onLongPressCancel: _stopHold,
+                              child: const ColoredBox(color: Colors.transparent),
+                            ),
                           ),
                         ),
                         Positioned(
@@ -247,13 +257,18 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
                           top: 0,
                           width: tapEdge,
                           height: hBody,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _change(1),
-                            onLongPressStart: (_) => _startHold(1),
-                            onLongPressEnd: (_) => _stopHold(),
-                            onLongPressCancel: _stopHold,
-                            child: const ColoredBox(color: Colors.transparent),
+                          child: Semantics(
+                            button: true,
+                            label: 'Increase life',
+                            enabled: !widget.isEliminated,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => _change(1),
+                              onLongPressStart: (_) => _startHold(1),
+                              onLongPressEnd: (_) => _stopHold(),
+                              onLongPressCancel: _stopHold,
+                              child: const ColoredBox(color: Colors.transparent),
+                            ),
                           ),
                         ),
                         Positioned(
@@ -402,6 +417,7 @@ class _LifeCounterWidgetState extends State<LifeCounterWidget>
                           ),
                         ),
                       ],
+                    ),
                     );
                   },
                 ),

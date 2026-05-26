@@ -8,6 +8,7 @@ import '../bluetooth/ble_protocol.dart';
 import '../bluetooth/ble_providers.dart';
 import '../persistence/providers.dart';
 import 'alliance.dart';
+import 'alliance_ui_events.dart';
 import 'game_log_entry.dart';
 import 'game_phase.dart';
 import 'stack_example_data.dart';
@@ -23,7 +24,9 @@ class GameStateNotifier extends StateNotifier<GameState> {
   StreamSubscription<BleMessage>? _messageSub;
   Timer? _timeoutTimer;
   Timer? _turnLimitTimer;
+  Timer? _allianceDeliveryTimer;
   int _seqNum = 0;
+  static const _uuid = Uuid();
 
   GameStateNotifier(this._ref) : super(GameState.empty());
 
@@ -104,15 +107,25 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final localPlayerId = profile?.username ?? '';
     final isHost = _ref.read(bleRoleProvider) == BleRole.host;
 
-    final players = lobby.players
+    var players = lobby.players
         .map((slot) => PlayerGameState.fromSlot(
               slot: slot,
               startingLife: lobby.config.startingLife,
             ))
         .toList();
 
-    final turnOrder = players.map((p) => p.playerId).toList();
     final singlePlayer = players.length == 1;
+    if (singlePlayer) {
+      players = mergeExamplePodPlayers(
+        current: players,
+        localPlayerId: localPlayerId,
+        startingLife: lobby.config.startingLife,
+      );
+    }
+
+    final turnOrder = singlePlayer
+        ? exampleTurnOrder(localPlayerId)
+        : players.map((p) => p.playerId).toList();
 
     state = GameState(
       players: players,
@@ -139,6 +152,15 @@ class GameStateNotifier extends StateNotifier<GameState> {
     );
 
     _listenToBle();
+    _startAllianceDeliveryTimer();
+  }
+
+  void _startAllianceDeliveryTimer() {
+    _allianceDeliveryTimer?.cancel();
+    _allianceDeliveryTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _processScheduledAllianceDeliveries(),
+    );
   }
 
   /// Submit local player's roll for first-player determination (d6).
@@ -291,18 +313,33 @@ class GameStateNotifier extends StateNotifier<GameState> {
   }
 
   /// Session-local custom dial metadata (labels). Values sync via normal state deltas.
-  void registerCustomGameplayDial(
+  /// Returns false when the custom or strip limit is reached.
+  bool registerCustomGameplayDial(
       String playerId, String rawKey, String rawLabel) {
-    if (state.timeoutActive) return;
+    if (state.timeoutActive) return false;
     final key = rawKey
         .trim()
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9_]'), '');
     final label = rawLabel.trim();
-    if (key.isEmpty || label.isEmpty) return;
+    if (key.isEmpty || label.isEmpty) return false;
 
     const core = {'life', 'poison', 'energy', 'experience', 'rad'};
-    if (core.contains(key) || GameplayDialIds.presets.contains(key)) return;
+    if (core.contains(key) || GameplayDialIds.presets.contains(key)) {
+      return false;
+    }
+
+    final player = _playerById(playerId);
+    if (player == null) return false;
+    final isNewCustom = !player.customDialLabels.containsKey(key);
+    final addsToStrip = !player.visibleGameplayDials.contains(key);
+    if (!GameplayDialLimits.canRegisterCustomDial(
+      player,
+      isNewKey: isNewCustom,
+      addsToStrip: addsToStrip,
+    )) {
+      return false;
+    }
 
     state = state.copyWith(
       players: state.players.map((p) {
@@ -314,6 +351,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
         return p.copyWith(customDialLabels: labels, visibleGameplayDials: vis);
       }).toList(),
     );
+    return true;
   }
 
   static const _coreDialFields = {'poison', 'energy', 'experience', 'rad'};
@@ -324,13 +362,18 @@ class GameStateNotifier extends StateNotifier<GameState> {
       p.customDialLabels.containsKey(field);
 
   /// Show a dial on this player's strip (values stay in counter maps).
-  void addGameplayDialToStrip(String playerId, String field) {
-    if (state.timeoutActive) return;
+  /// Returns false when the strip is full.
+  bool addGameplayDialToStrip(String playerId, String field) {
+    if (state.timeoutActive) return false;
     final f = field.trim().toLowerCase();
-    if (f.isEmpty) return;
+    if (f.isEmpty) return false;
     final player = _playerById(playerId);
-    if (player == null || player.isEliminated) return;
-    if (!_isKnownDialField(player, f)) return;
+    if (player == null || player.isEliminated) return false;
+    if (!_isKnownDialField(player, f)) return false;
+    if (player.visibleGameplayDials.contains(f)) return true;
+    if (!GameplayDialLimits.canAddDialToStrip(player)) {
+      return false;
+    }
 
     state = state.copyWith(
       players: state.players.map((p) {
@@ -339,9 +382,11 @@ class GameStateNotifier extends StateNotifier<GameState> {
         return p.copyWith(visibleGameplayDials: [...p.visibleGameplayDials, f]);
       }).toList(),
     );
+    return true;
   }
 
   /// Hide a dial from the strip without changing its value.
+  /// Custom dials are deleted entirely so the 4-slot custom limit can be reused.
   void removeGameplayDialFromStrip(String playerId, String field) {
     if (state.timeoutActive) return;
     final f = field.trim().toLowerCase();
@@ -350,7 +395,16 @@ class GameStateNotifier extends StateNotifier<GameState> {
         if (p.playerId != playerId) return p;
         final next =
             p.visibleGameplayDials.where((id) => id != f).toList(growable: false);
-        return p.copyWith(visibleGameplayDials: next);
+        if (!p.customDialLabels.containsKey(f)) {
+          return p.copyWith(visibleGameplayDials: next);
+        }
+        final labels = Map<String, String>.from(p.customDialLabels)..remove(f);
+        final extras = Map<String, int>.from(p.extraDials)..remove(f);
+        return p.copyWith(
+          visibleGameplayDials: next,
+          customDialLabels: labels,
+          extraDials: extras,
+        );
       }).toList(),
     );
   }
@@ -391,7 +445,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
   }) {
     if (state.timeoutActive) return;
     final victim = _playerById(toPlayerId);
-    if (victim == null || victim.isEliminated || delta <= 0) return;
+    if (victim == null || victim.isEliminated || delta == 0) return;
 
     final currentDamage =
         Map<String, List<int>>.from(victim.commanderDamage.map(
@@ -403,10 +457,14 @@ class GameStateNotifier extends StateNotifier<GameState> {
       fromDamage.add(0);
     }
 
+    final previousTrack = fromDamage[partnerIndex];
+    final nextTrack = (previousTrack + delta).clamp(0, 9999);
+    if (nextTrack == previousTrack) return;
+
     _pushUndo(UndoAction(
       playerId: toPlayerId,
       field: 'commanderDamage',
-      previousValue: fromDamage[partnerIndex],
+      previousValue: previousTrack,
       extra: {
         'fromId': fromPlayerId,
         'pi': partnerIndex,
@@ -414,14 +472,15 @@ class GameStateNotifier extends StateNotifier<GameState> {
       },
     ));
 
-    fromDamage[partnerIndex] += delta;
+    fromDamage[partnerIndex] = nextTrack;
     currentDamage[fromPlayerId] = fromDamage;
     final reducesLife = state.commanderDamageReducesLife;
-    final newLife = reducesLife ? victim.life - delta : victim.life;
+    final appliedDelta = nextTrack - previousTrack;
+    final newLife = reducesLife ? victim.life - appliedDelta : victim.life;
     List<LifeChange> newLog = victim.lifeChangeLog;
-    if (reducesLife) {
+    if (reducesLife && appliedDelta != 0) {
       newLog = List<LifeChange>.from(victim.lifeChangeLog)
-        ..add(LifeChange(delta: -delta, time: DateTime.now()));
+        ..add(LifeChange(delta: -appliedDelta, time: DateTime.now()));
       if (newLog.length > 10) newLog.removeAt(0);
     }
 
@@ -438,8 +497,9 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
     final fromP = _playerById(fromPlayerId);
     final toP = victim;
+    final logDelta = appliedDelta > 0 ? '+$appliedDelta' : '$appliedDelta';
     _appendGameLog(
-      '${fromP?.username ?? '?'} → ${toP.username}: Commander damage +$delta',
+      '${fromP?.username ?? '?'} → ${toP.username}: Commander damage $logDelta',
     );
 
     _send(BleMessage.commanderDamage(
@@ -447,15 +507,20 @@ class GameStateNotifier extends StateNotifier<GameState> {
       fromPlayerId: fromPlayerId,
       partnerIndex: partnerIndex,
       toPlayerId: toPlayerId,
-      amount: delta,
+      amount: appliedDelta,
       lifeAfter: newLife,
       totalPartnerDamage: fromDamage[partnerIndex],
     ));
 
     _checkLossConditions();
-  }
 
-  // ── Proliferate ───────────────────────────────────────────────────────────
+    if (appliedDelta > 0) {
+      _checkAllianceBetrayal(
+        fromPlayerId: fromPlayerId,
+        toPlayerId: toPlayerId,
+      );
+    }
+  }
 
   void proliferate(String initiatingPlayerId) {
     if (state.timeoutActive) return;
@@ -670,6 +735,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final newRound = nextIndex <= state.activePlayerIndex
         ? state.roundNumber + 1
         : state.roundNumber;
+    final roundAdvanced = newRound > state.roundNumber;
 
     // Expire end-of-round alliances on round change
     if (newRound > state.roundNumber) {
@@ -687,6 +753,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
     final now = DateTime.now();
     final ending = state.playerById(state.activePlayerId);
+    final endingTurnIndex = state.activePlayerIndex;
     final tn = state.sessionTurnCounter;
     final turnEndEntry = GameLogEntry(
       turnNumber: tn,
@@ -728,6 +795,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
       },
       seqNum: _nextSeq(),
     ));
+
+    _processScheduledAllianceDeliveries(
+      endedTurnIndex: endingTurnIndex,
+      newRound: newRound,
+      roundAdvanced: roundAdvanced,
+    );
 
     _startTurnLimitTimer();
   }
@@ -848,26 +921,61 @@ class GameStateNotifier extends StateNotifier<GameState> {
   // ── Alliance System ───────────────────────────────────────────────────────
 
   void proposeAlliance(
-      String fromId, String toId, AllianceDuration duration) {
+    String fromId,
+    String toId,
+    AllianceDuration duration, {
+    AllianceDeliveryTiming timing = AllianceDeliveryTiming.now,
+    int delaySeconds = 30,
+  }) {
     if (!state.alliancesEnabled) return;
-    // One alliance per player
+    if (fromId == toId) return;
     if (state.alliances.any((a) => a.involves(fromId))) return;
+    if (state.alliances.any((a) => a.involves(toId))) return;
+    if (state.scheduledProposals.any((p) => p.fromId == fromId)) return;
     if (state.pendingProposals.any((p) => p.fromId == fromId)) return;
 
-    final proposal =
-        AllianceProposal(fromId: fromId, toId: toId, duration: duration);
-    state = state.copyWith(
-        pendingProposals: [...state.pendingProposals, proposal]);
+    final id = _uuid.v4();
+    final deliverAt = switch (timing) {
+      AllianceDeliveryTiming.delaySeconds =>
+        DateTime.now().add(Duration(seconds: delaySeconds)),
+      _ => null,
+    };
+    final deliverNow = timing == AllianceDeliveryTiming.now;
+    final proposal = AllianceProposal(
+      id: id,
+      fromId: fromId,
+      toId: toId,
+      duration: duration,
+      deliveryTiming: timing,
+      deliverAt: deliverAt,
+      createdAtRound: state.roundNumber,
+      createdAtTurnIndex: state.activePlayerIndex,
+      delivered: deliverNow,
+    );
+
+    if (deliverNow) {
+      state = state.copyWith(
+        pendingProposals: [...state.pendingProposals, proposal],
+      );
+      _emitAllianceEvent(
+        AllianceUiEvent(
+          kind: AllianceUiEventKind.inviteReceived,
+          otherUsername: _playerById(fromId)?.username,
+          durationLabel: allianceDurationLabel(duration),
+        ),
+        forPlayerId: toId,
+      );
+    } else {
+      state = state.copyWith(
+        scheduledProposals: [...state.scheduledProposals, proposal],
+      );
+    }
 
     _send(BleMessage(
       type: BleMessageType.alliancePropose,
-      payload: {
-        'from': fromId,
-        'to': toId,
-        'duration': duration.name,
-      },
+      payload: proposal.toJson(),
       seqNum: _nextSeq(),
-      targetPlayerId: toId,
+      targetPlayerId: deliverNow ? toId : null,
     ));
   }
 
@@ -875,33 +983,27 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final proposal = state.pendingProposalFor(targetId);
     if (proposal == null) return;
 
-    final newProposals = state.pendingProposals
-        .where((p) => p.toId != targetId)
-        .toList();
+    final newProposals =
+        state.pendingProposals.where((p) => p.id != proposal.id).toList();
 
     if (accept) {
-      final alliance = Alliance(
-        proposerId: proposal.fromId,
-        targetId: targetId,
-        duration: proposal.duration,
-        formedAtRound: state.roundNumber,
-        formedAtTurnIndex: state.activePlayerIndex,
-      );
-      state = state.copyWith(
-        alliances: [...state.alliances, alliance],
-        pendingProposals: newProposals,
-        players: state.players.map((p) {
-          if (p.playerId == proposal.fromId) {
-            return p.copyWith(allyPlayerId: targetId);
-          }
-          if (p.playerId == targetId) {
-            return p.copyWith(allyPlayerId: proposal.fromId);
-          }
-          return p;
-        }).toList(),
-      );
+      _formAlliance(proposal);
     } else {
       state = state.copyWith(pendingProposals: newProposals);
+      _emitAllianceEvent(
+        const AllianceUiEvent(kind: AllianceUiEventKind.allianceDeclined),
+        forPlayerId: proposal.fromId,
+      );
+      _send(BleMessage(
+        type: BleMessageType.allianceDeclined,
+        payload: {
+          'from': proposal.fromId,
+          'to': targetId,
+          'proposalId': proposal.id,
+        },
+        seqNum: _nextSeq(),
+        targetPlayerId: proposal.fromId,
+      ));
     }
 
     _send(BleMessage(
@@ -910,26 +1012,152 @@ class GameStateNotifier extends StateNotifier<GameState> {
         'from': proposal.fromId,
         'to': targetId,
         'accept': accept,
+        'proposalId': proposal.id,
       },
+      seqNum: _nextSeq(),
+      targetPlayerId: accept ? null : proposal.fromId,
+    ));
+  }
+
+  void revealAlliance(String playerId) {
+    final alliance = state.allianceFor(playerId);
+    if (alliance == null || alliance.isRevealed) return;
+
+    final updated = alliance.copyWith(isRevealed: true);
+    state = state.copyWith(
+      alliances: state.alliances
+          .map((a) => a.id == alliance.id ? updated : a)
+          .toList(),
+    );
+
+    final aName = _playerById(alliance.proposerId)?.username ?? '?';
+    final bName = _playerById(alliance.targetId)?.username ?? '?';
+    _appendGameLog('Alliance revealed: $aName & $bName');
+    _emitAllianceEvent(
+      AllianceUiEvent(
+        kind: AllianceUiEventKind.allianceRevealed,
+        otherUsername: aName,
+        allyUsername: bName,
+      ),
+    );
+
+    _send(BleMessage(
+      type: BleMessageType.allianceReveal,
+      payload: {'allianceId': alliance.id},
       seqNum: _nextSeq(),
     ));
   }
 
-  void breakAlliance(String playerId) {
+  void breakAlliance(String playerId, {bool betrayal = false}) {
     final alliance = state.allianceFor(playerId);
     if (alliance == null) return;
+
+    if (betrayal && !alliance.isRevealed) {
+      final revealed = alliance.copyWith(isRevealed: true);
+      state = state.copyWith(
+        alliances: state.alliances
+            .map((a) => a.id == alliance.id ? revealed : a)
+            .toList(),
+      );
+      final aName = _playerById(alliance.proposerId)?.username ?? '?';
+      final bName = _playerById(alliance.targetId)?.username ?? '?';
+      _appendGameLog('Alliance broken — betrayal: $aName & $bName');
+      _emitAllianceEvent(
+        AllianceUiEvent(
+          kind: AllianceUiEventKind.allianceBroken,
+          betrayal: true,
+          otherUsername: aName,
+          allyUsername: bName,
+        ),
+      );
+    } else {
+      _appendGameLog('Alliance broken');
+      _emitAllianceEvent(
+        const AllianceUiEvent(kind: AllianceUiEventKind.allianceBroken),
+        forPlayerId: alliance.proposerId,
+      );
+      _emitAllianceEvent(
+        const AllianceUiEvent(kind: AllianceUiEventKind.allianceBroken),
+        forPlayerId: alliance.targetId,
+      );
+    }
+
     _removeAlliance(alliance);
     _send(BleMessage(
       type: BleMessageType.allianceBreak,
-      payload: {'pid': playerId},
+      payload: {'pid': playerId, 'betrayal': betrayal},
       seqNum: _nextSeq(),
     ));
+  }
+
+  void _formAlliance(AllianceProposal proposal) {
+    if (state.alliances.any((a) => a.involves(proposal.fromId))) {
+      state = state.copyWith(
+        pendingProposals:
+            state.pendingProposals.where((p) => p.id != proposal.id).toList(),
+        scheduledProposals: state.scheduledProposals
+            .where((p) => p.id != proposal.id)
+            .toList(),
+      );
+      return;
+    }
+    final alliance = Alliance(
+      id: _uuid.v4(),
+      proposerId: proposal.fromId,
+      targetId: proposal.toId,
+      duration: proposal.duration,
+      formedAtRound: state.roundNumber,
+      formedAtTurnIndex: state.activePlayerIndex,
+    );
+    final newProposals =
+        state.pendingProposals.where((p) => p.id != proposal.id).toList();
+    final newScheduled = state.scheduledProposals
+        .where((p) => p.id != proposal.id)
+        .toList();
+
+    state = state.copyWith(
+      alliances: [...state.alliances, alliance],
+      pendingProposals: newProposals,
+      scheduledProposals: newScheduled,
+      players: state.players.map((p) {
+        if (p.playerId == proposal.fromId) {
+          return p.copyWith(allyPlayerId: proposal.toId);
+        }
+        if (p.playerId == proposal.toId) {
+          return p.copyWith(allyPlayerId: proposal.fromId);
+        }
+        return p;
+      }).toList(),
+    );
+
+    final allyName = _playerById(proposal.toId)?.username;
+    final proposerName = _playerById(proposal.fromId)?.username;
+    _appendGameLog(
+      'Secret alliance formed: $proposerName & $allyName '
+      '(${allianceDurationLabel(proposal.duration)})',
+    );
+
+    _emitAllianceEvent(
+      AllianceUiEvent(
+        kind: AllianceUiEventKind.allianceFormed,
+        allyUsername: allyName,
+        durationLabel: allianceDurationLabel(proposal.duration),
+      ),
+      forPlayerId: proposal.fromId,
+    );
+    _emitAllianceEvent(
+      AllianceUiEvent(
+        kind: AllianceUiEventKind.allianceFormed,
+        allyUsername: proposerName,
+        durationLabel: allianceDurationLabel(proposal.duration),
+      ),
+      forPlayerId: proposal.toId,
+    );
   }
 
   void _removeAlliance(Alliance alliance) {
     state = state.copyWith(
-      alliances:
-          state.alliances.where((a) => !a.involves(alliance.proposerId)).toList(),
+      alliances: state.alliances.where((a) => a.id != alliance.id).toList(),
       players: state.players.map((p) {
         if (alliance.involves(p.playerId)) {
           return p.copyWith(allyPlayerId: null);
@@ -937,6 +1165,79 @@ class GameStateNotifier extends StateNotifier<GameState> {
         return p;
       }).toList(),
     );
+  }
+
+  void _checkAllianceBetrayal({
+    required String fromPlayerId,
+    required String toPlayerId,
+  }) {
+    final alliance = state.allianceFor(fromPlayerId);
+    if (alliance == null || !alliance.involves(toPlayerId)) return;
+    breakAlliance(fromPlayerId, betrayal: true);
+  }
+
+  void _processScheduledAllianceDeliveries({
+    int? endedTurnIndex,
+    int? newRound,
+    bool roundAdvanced = false,
+  }) {
+    if (state.scheduledProposals.isEmpty) return;
+    final now = DateTime.now();
+    final due = <AllianceProposal>[];
+    final remaining = <AllianceProposal>[];
+
+    for (final proposal in state.scheduledProposals) {
+      final shouldDeliver = switch (proposal.deliveryTiming) {
+        AllianceDeliveryTiming.delaySeconds =>
+          proposal.deliverAt != null && !proposal.deliverAt!.isAfter(now),
+        AllianceDeliveryTiming.endOfProposerTurn =>
+          endedTurnIndex != null &&
+              proposal.createdAtTurnIndex == endedTurnIndex,
+        AllianceDeliveryTiming.startOfNextRound => roundAdvanced,
+        AllianceDeliveryTiming.now => true,
+      };
+      if (shouldDeliver) {
+        due.add(proposal.copyWith(delivered: true));
+      } else {
+        remaining.add(proposal);
+      }
+    }
+
+    if (due.isEmpty) return;
+
+    state = state.copyWith(
+      scheduledProposals: remaining,
+      pendingProposals: [
+        ...state.pendingProposals,
+        ...due,
+      ],
+    );
+
+    for (final proposal in due) {
+      _emitAllianceEvent(
+        AllianceUiEvent(
+          kind: AllianceUiEventKind.inviteReceived,
+          otherUsername: _playerById(proposal.fromId)?.username,
+          durationLabel: allianceDurationLabel(proposal.duration),
+        ),
+        forPlayerId: proposal.toId,
+      );
+      _send(BleMessage(
+        type: BleMessageType.alliancePropose,
+        payload: proposal.toJson(),
+        seqNum: _nextSeq(),
+        targetPlayerId: proposal.toId,
+      ));
+    }
+  }
+
+  void _emitAllianceEvent(AllianceUiEvent event, {String? forPlayerId}) {
+    if (forPlayerId != null && forPlayerId != state.localPlayerId) return;
+    _ref.read(allianceUiEventProvider.notifier).state = event;
+  }
+
+  void clearAllianceUiEvent() {
+    _ref.read(allianceUiEventProvider.notifier).state = null;
   }
 
   // ── Monarch & Initiative ──────────────────────────────────────────────────
@@ -1444,8 +1745,60 @@ class GameStateNotifier extends StateNotifier<GameState> {
         _applyAllianceRespond(msg.payload);
       case BleMessageType.allianceBreak:
         final pid = msg.payload['pid'] as String? ?? '';
+        final betrayal = msg.payload['betrayal'] as bool? ?? false;
         final a = state.allianceFor(pid);
-        if (a != null) _removeAlliance(a);
+        if (a != null) {
+          if (betrayal && !a.isRevealed) {
+            state = state.copyWith(
+              alliances: state.alliances
+                  .map((x) => x.id == a.id ? x.copyWith(isRevealed: true) : x)
+                  .toList(),
+            );
+          }
+          _removeAlliance(a);
+        }
+      case BleMessageType.allianceReveal:
+        final allianceId = msg.payload['allianceId'] as String? ?? '';
+        state = state.copyWith(
+          alliances: state.alliances
+              .map(
+                (a) => a.id == allianceId ? a.copyWith(isRevealed: true) : a,
+              )
+              .toList(),
+        );
+        final revealed = state.alliances
+            .where((a) => a.id == allianceId)
+            .firstOrNull;
+        if (revealed != null) {
+          _emitAllianceEvent(
+            AllianceUiEvent(
+              kind: AllianceUiEventKind.allianceRevealed,
+              otherUsername:
+                  _playerById(revealed.proposerId)?.username,
+              allyUsername: _playerById(revealed.targetId)?.username,
+            ),
+          );
+        }
+      case BleMessageType.allianceDeclined:
+        final fromId = msg.payload['from'] as String? ?? '';
+        final toId = msg.payload['to'] as String? ?? '';
+        final proposalId = msg.payload['proposalId'] as String? ?? '';
+        state = state.copyWith(
+          pendingProposals: state.pendingProposals
+              .where((p) => p.id != proposalId)
+              .toList(),
+          scheduledProposals: state.scheduledProposals
+              .where((p) => p.id != proposalId)
+              .toList(),
+        );
+        if (fromId == state.localPlayerId) {
+          _emitAllianceEvent(
+            const AllianceUiEvent(kind: AllianceUiEventKind.allianceDeclined),
+          );
+        }
+        if (toId == state.localPlayerId && fromId != state.localPlayerId) {
+          // target-side cleanup only
+        }
       case BleMessageType.concede:
         final pid = msg.payload['pid'] as String? ?? '';
         _eliminatePlayer(pid, 'concede', null);
@@ -1499,10 +1852,14 @@ class GameStateNotifier extends StateNotifier<GameState> {
         break;
     }
 
-    // Host re-broadcasts client actions to all other clients.
-    // Skip firstPlayerRollSubmit (host collects, then broadcasts turn order).
-    if (state.isHost && msg.type != BleMessageType.firstPlayerRollSubmit) {
-      _ref.read(bleServiceProvider)?.send(msg);
+    // Host re-broadcasts client actions (respect targeted messages).
+    if (state.isHost &&
+        msg.type != BleMessageType.firstPlayerRollSubmit &&
+        msg.type != BleMessageType.allianceDeclined) {
+      _ref.read(bleServiceProvider)?.send(
+            msg,
+            targetPlayerId: msg.targetPlayerId,
+          );
     }
   }
 
@@ -1703,58 +2060,69 @@ class GameStateNotifier extends StateNotifier<GameState> {
   }
 
   void _applyAlliancePropose(Map<String, dynamic> payload) {
-    final fromId = payload['from'] as String? ?? '';
-    final toId = payload['to'] as String? ?? '';
-    final duration = AllianceDuration.values.firstWhere(
-      (d) => d.name == payload['duration'],
-      orElse: () => AllianceDuration.manual,
-    );
-    final proposal =
-        AllianceProposal(fromId: fromId, toId: toId, duration: duration);
-    if (!state.pendingProposals.any(
-        (p) => p.fromId == fromId && p.toId == toId)) {
+    final proposal = AllianceProposal.fromJson(payload);
+
+    if (!proposal.delivered) {
+      if (proposal.fromId != state.localPlayerId && !state.isHost) return;
+      if (state.scheduledProposals.any((p) => p.id == proposal.id)) return;
       state = state.copyWith(
-          pendingProposals: [...state.pendingProposals, proposal]);
+        scheduledProposals: [...state.scheduledProposals, proposal],
+      );
+      if (state.isHost) {
+        _processScheduledAllianceDeliveries();
+      }
+      return;
     }
+
+    if (proposal.toId != state.localPlayerId) return;
+    if (state.pendingProposals.any((p) => p.id == proposal.id)) return;
+
+    state = state.copyWith(
+      pendingProposals: [...state.pendingProposals, proposal],
+    );
+    _emitAllianceEvent(
+      AllianceUiEvent(
+        kind: AllianceUiEventKind.inviteReceived,
+        otherUsername: _playerById(proposal.fromId)?.username,
+        durationLabel: allianceDurationLabel(proposal.duration),
+      ),
+    );
   }
 
   void _applyAllianceRespond(Map<String, dynamic> payload) {
     final fromId = payload['from'] as String? ?? '';
     final toId = payload['to'] as String? ?? '';
     final accept = payload['accept'] as bool? ?? false;
-    final newProposals =
-        state.pendingProposals.where((p) => p.toId != toId).toList();
+    final proposalId = payload['proposalId'] as String? ?? '';
+
+    AllianceProposal? proposal;
+    for (final p in state.pendingProposals) {
+      if (p.id == proposalId ||
+          (p.fromId == fromId && p.toId == toId)) {
+        proposal = p;
+        break;
+      }
+    }
+    if (proposal == null) return;
 
     if (accept) {
-      final dur = state.pendingProposals
-          .where((p) => p.fromId == fromId && p.toId == toId)
-          .map((p) => p.duration)
-          .firstOrNull ?? AllianceDuration.manual;
-      final alliance = Alliance(
-        proposerId: fromId,
-        targetId: toId,
-        duration: dur,
-        formedAtRound: state.roundNumber,
-        formedAtTurnIndex: state.activePlayerIndex,
-      );
-      state = state.copyWith(
-        alliances: [...state.alliances, alliance],
-        pendingProposals: newProposals,
-        players: state.players.map((p) {
-          if (p.playerId == fromId) return p.copyWith(allyPlayerId: toId);
-          if (p.playerId == toId) return p.copyWith(allyPlayerId: fromId);
-          return p;
-        }).toList(),
-      );
+      if (state.alliances.any((a) => a.involves(fromId))) return;
+      _formAlliance(proposal);
     } else {
-      state = state.copyWith(pendingProposals: newProposals);
+      state = state.copyWith(
+        pendingProposals:
+            state.pendingProposals.where((p) => p.id != proposal!.id).toList(),
+      );
     }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   void _send(BleMessage msg) {
-    _ref.read(bleServiceProvider)?.send(msg);
+    _ref.read(bleServiceProvider)?.send(
+          msg,
+          targetPlayerId: msg.targetPlayerId,
+        );
   }
 
   int _nextSeq() => _seqNum++;
@@ -1772,6 +2140,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
     _messageSub?.cancel();
     _timeoutTimer?.cancel();
     _turnLimitTimer?.cancel();
+    _allianceDeliveryTimer?.cancel();
     super.dispose();
   }
 }

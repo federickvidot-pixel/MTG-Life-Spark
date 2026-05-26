@@ -111,33 +111,42 @@ class _StackTrackerTabState extends ConsumerState<StackTrackerTab> {
                         ),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Add spell or ability',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.all(LayoutTokens.gr0),
-                      constraints: const BoxConstraints(
-                        minWidth: LayoutTokens.minTapTarget,
-                        minHeight: LayoutTokens.minTapTarget,
+                    Semantics(
+                      button: true,
+                      label: 'Add spell or ability',
+                      child: IconButton(
+                        tooltip: 'Add spell or ability',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.all(LayoutTokens.gr0),
+                        constraints: const BoxConstraints(
+                          minWidth: LayoutTokens.minTapTarget,
+                          minHeight: LayoutTokens.minTapTarget,
+                        ),
+                        icon: Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: AppTheme.accent,
+                        ),
+                        onPressed: () =>
+                            _showAddDialog(context, parentId: null),
                       ),
-                      icon: Icon(
-                        Icons.add_circle_outline_rounded,
-                        color: AppTheme.accent,
-                      ),
-                      onPressed: () => _showAddDialog(context, parentId: null),
                     ),
-                    IconButton(
-                      tooltip: 'How the stack works',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.all(LayoutTokens.gr0),
-                      constraints: const BoxConstraints(
-                        minWidth: LayoutTokens.minTapTarget,
-                        minHeight: LayoutTokens.minTapTarget,
+                    Semantics(
+                      button: true,
+                      label: 'How the stack works',
+                      child: IconButton(
+                        tooltip: 'How the stack works',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.all(LayoutTokens.gr0),
+                        constraints: const BoxConstraints(
+                          minWidth: LayoutTokens.minTapTarget,
+                          minHeight: LayoutTokens.minTapTarget,
+                        ),
+                        icon: Icon(
+                          Icons.help_outline_rounded,
+                          color: AppTheme.textSecondary.withValues(alpha: 0.9),
+                        ),
+                        onPressed: () => StackHelpSheet.show(context),
                       ),
-                      icon: Icon(
-                        Icons.help_outline_rounded,
-                        color: AppTheme.textSecondary.withValues(alpha: 0.9),
-                      ),
-                      onPressed: () => StackHelpSheet.show(context),
                     ),
                   ],
                 ),
@@ -1357,11 +1366,14 @@ class _StackPillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: _StackPillMetrics.height,
-      width: double.infinity,
-      child: TextButton(
-        onPressed: onPressed,
+    return Semantics(
+      button: true,
+      label: label,
+      child: SizedBox(
+        height: _StackPillMetrics.height,
+        width: double.infinity,
+        child: TextButton(
+          onPressed: onPressed,
         style: TextButton.styleFrom(
           visualDensity: VisualDensity.standard,
           foregroundColor: foreground,
@@ -1393,6 +1405,7 @@ class _StackPillButton extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

@@ -26,17 +26,18 @@ import '../../../ui/tokens/opacity_tokens.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import '../../../ui/tokens/radius_tokens.dart';
 import '../../../shared/widgets/home_nav_bar.dart';
+import '../../../core/game/alliance_ui_events.dart';
+import '../widgets/alliance_overview_ui.dart';
 import '../widgets/commander_damage_panel.dart';
 import '../widgets/commander_info_bar.dart';
-import '../widgets/game_ui_tokens.dart';
 import '../widgets/variant_card_panel.dart';
-import '../widgets/gameplay_dials_strip_widget.dart';
-import '../widgets/phase_picker_sheet.dart';
+import '../widgets/game_hud_header.dart';
+import '../widgets/phase_nav_cluster.dart';
 import '../widgets/game_modal_chrome.dart';
 import '../widgets/political_row_widget.dart';
 import '../widgets/game_performance_widgets.dart';
 import '../widgets/stack_tracker_tab.dart';
-import '../widgets/team_panel_widget.dart' show teamColor;
+import '../widgets/team_colors.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
@@ -117,14 +118,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       );
     }
 
-    final gradientColors = ref.watch(
+    final gradientChrome = ref.watch(
       gameProvider.select((g) {
         final p = g.localPlayer!;
-        return CommanderIdentityColors.gameplayGradient(
-          p.commanderColorIdentity,
-          p.playerColor,
-        );
+        return (p.commanderColorIdentity, p.playerColor);
       }),
+    );
+    final gradientColors = CommanderIdentityColors.gameplayGradient(
+      gradientChrome.$1,
+      gradientChrome.$2,
     );
     final localPlayerId = ref.read(gameProvider).localPlayerId;
     final timeoutActive = ref.watch(
@@ -136,6 +138,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final timeoutDurationSeconds = ref.watch(
       gameProvider.select((g) => g.timeoutDurationSeconds),
     );
+    ref.listen<AllianceUiEvent?>(allianceUiEventProvider, (prev, next) {
+      if (next != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          handleAllianceUiEvent(context, ref, next);
+        });
+      }
+    });
 
     return Container(
       decoration: BoxDecoration(
@@ -150,10 +160,16 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         body: Stack(
           children: [
             if (_showOverview)
-              Consumer(
-                builder: (context, ref, _) => _OverviewView(
-                  game: ref.watch(gameProvider),
-                  onClose: () => setState(() => _showOverview = false),
+              PopScope(
+                canPop: false,
+                onPopInvokedWithResult: (didPop, result) {
+                  if (!didPop) setState(() => _showOverview = false);
+                },
+                child: Consumer(
+                  builder: (context, ref, _) => _OverviewView(
+                    game: ref.watch(gameProvider),
+                    onClose: () => setState(() => _showOverview = false),
+                  ),
                 ),
               )
             else
@@ -372,14 +388,15 @@ class _PersonalView extends ConsumerStatefulWidget {
 class _PersonalViewState extends ConsumerState<_PersonalView> {
   /// 0 = Play, 1 = Stack, 2 = History
   int _mainTabIndex = 0;
-  bool _commanderDamageExpanded = false;
-
   @override
   Widget build(BuildContext context) {
+    ref.watch(gameProvider.select(gameHudHeaderRebuildFingerprint));
     if (_mainTabIndex == 0) {
       ref.watch(gameProvider.select(playTabRebuildFingerprint));
+    } else if (_mainTabIndex == 1) {
+      ref.watch(gameProvider.select(stackTabRebuildFingerprint));
     } else {
-      ref.watch(gameProvider);
+      ref.watch(gameProvider.select((g) => g.sessionActionLog));
     }
 
     final game = ref.read(gameProvider);
@@ -409,30 +426,23 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
       notifier.adjustLife(local.playerId, delta);
     }
 
-    void onCommanderDamageChange({
-      required String fromPlayerId,
-      required int partnerIndex,
-      required int delta,
-    }) {
-      notifier.applyCommanderDamage(
-        fromPlayerId: fromPlayerId,
-        partnerIndex: partnerIndex,
-        toPlayerId: local.playerId,
-        delta: delta,
-      );
-    }
-
     final opponentsWithCommanders = opponents
         .where((o) => !o.isEliminated || o.commanderName != null)
         .toList();
+    final lobbyConfig = ref.read(lobbyProvider).config;
     final showCommanderDamage = isCommanderGameSession(
       local: local,
       allPlayers: game.players,
+      gameFormat: lobbyConfig.format,
+      startingLife: lobbyConfig.startingLife,
     );
     final maxCmdDamage = maxCommanderDamageTrack(
       local,
       opponentsWithCommanders,
     );
+
+    final activeColor =
+        game.playerById(game.activePlayerId)?.playerColor ?? AppTheme.accent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -442,489 +452,167 @@ class _PersonalViewState extends ConsumerState<_PersonalView> {
             horizontalInset,
             LayoutTokens.gr3,
             horizontalInset,
-            0,
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppTheme.card,
-              borderRadius: RadiusTokens.radiusMd,
-              border: Border.all(
-                color: AppTheme.textSecondary.withValues(alpha: 0.14),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: OpacityTokens.faint),
-                  blurRadius: LayoutTokens.gr2,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(
-                tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr2,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  CommanderInfoBar(
-                    player: local,
-                    onCastCommander:
-                        () => notifier.castCommanderFromZone(local.playerId),
-                    includeCastButton: false,
-                    embeddedInCard: true,
-                    roundNumber: game.roundNumber,
-                    statusTrailing: showCommanderDamage
-                        ? CommanderDamageBarButton(
-                            totalDamage: local.totalCommanderDamageReceived,
-                            maxTrackDamage: maxCmdDamage,
-                            expanded: _commanderDamageExpanded,
-                            enabled: !local.isEliminated,
-                            onTap: () => setState(
-                              () => _commanderDamageExpanded =
-                                  !_commanderDamageExpanded,
-                            ),
-                          )
-                        : null,
-                  ),
-                  CommanderDamagePanel(
-                    expanded: _commanderDamageExpanded,
-                    localPlayer: local,
-                    opponents: opponents,
-                    onDamageChange: onCommanderDamageChange,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalInset,
             tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr2,
-            horizontalInset,
-            0,
           ),
-          child: SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(
-                value: 0,
-                label: Text('Play'),
-                icon: Icon(Icons.sports_esports_rounded, size: 18),
-              ),
-              ButtonSegment(
-                value: 1,
-                label: Text('Stack'),
-                icon: Icon(Icons.layers_rounded, size: 18),
-              ),
-              ButtonSegment(
-                value: 2,
-                label: Text('History'),
-                icon: Icon(Icons.history_rounded, size: 18),
-              ),
-            ],
-            selected: {_mainTabIndex},
-            onSelectionChanged: (s) {
-              setState(() => _mainTabIndex = s.first);
-            },
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              textStyle: WidgetStatePropertyAll(
-                TextStyle(fontSize: FontTokens.hudSm, color: AppTheme.textPrimary),
-              ),
+          child: GameHudHeader(
+            tightVertical: tightVertical,
+            accentColor: activeColor,
+            selectedTabIndex: _mainTabIndex,
+            onTabSelected: (index) => setState(() => _mainTabIndex = index),
+            commander: CommanderInfoBar(
+              player: local,
+              onCastCommander:
+                  () => notifier.castCommanderFromZone(local.playerId),
+              embeddedInCard: true,
+              roundNumber: game.roundNumber,
+              allyUsername: local.allyPlayerId == null
+                  ? null
+                  : game.playerById(local.allyPlayerId!)?.username,
+              statusTrailing: showCommanderDamage
+                  ? CommanderDamageBarButton(
+                      totalDamage: local.totalCommanderDamageReceived,
+                      maxTrackDamage: maxCmdDamage,
+                      enabled: !local.isEliminated,
+                      onTap: () => showCommanderDamageSheet(context, ref),
+                    )
+                  : null,
             ),
           ),
         ),
-        SizedBox(height: tightVertical ? LayoutTokens.gr1 : LayoutTokens.gr2),
         Expanded(
           child: switch (_mainTabIndex) {
-            1 => StackTrackerTab(game: ref.watch(gameProvider)),
+            1 => StackTrackerTab(game: ref.read(gameProvider)),
             2 => _GameHistoryTab(
               entries: ref.watch(
                 gameProvider.select((g) => g.sessionActionLog),
               ),
             ),
-            _ => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: LayoutBuilder(
-                builder: (context, playViewport) {
-                  return ClipRect(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.topCenter,
-                      child: SizedBox(
-                        width: playViewport.maxWidth,
-                        height: playViewport.maxHeight,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: horizontalInset,
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, _) {
-                              final innerW = max(
-                                0.0,
-                                playViewport.maxWidth - 2 * horizontalInset,
-                              );
-                              final dialRows =
-                                  GameplayDialsStripWidget.wrapRowCountForWidth(
-                                    player: local,
-                                    rowContentWidth: innerW,
-                                  );
-                              final multiDialRows = dialRows >= 2;
-                              final phaseNavButtonStyle =
-                                  GameUiTokens.hostPhaseNavButton(
-                                    AppTheme.accent,
-                                  );
-                              final activeColor =
-                                  game
-                                      .playerById(game.activePlayerId)
-                                      ?.playerColor ??
-                                  AppTheme.accent;
-
-                              return Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: [
-                                  Center(
-                                    child: SizedBox(
-                                      width: innerW,
-                                      height: LayoutTokens.minTapTarget,
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          if (game.isHost)
-                                            Expanded(
-                                              child: Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: Tooltip(
-                                                  message: 'Previous phase',
-                                                  child: FittedBox(
-                                                    fit: BoxFit.scaleDown,
-                                                    alignment:
-                                                        Alignment.centerRight,
-                                                    child: OutlinedButton(
-                                                      style:
-                                                          phaseNavButtonStyle,
-                                                      onPressed:
-                                                          game.timeoutActive
-                                                              ? null
-                                                              : () => notifier
-                                                                  .previousPhase(),
-                                                      child: const Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            Icons
-                                                                .chevron_left_rounded,
-                                                            size: 24,
-                                                          ),
-                                                          SizedBox(
-                                                            width:
-                                                                LayoutTokens.gr0,
-                                                          ),
-                                                          Text('Back'),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          Expanded(
-                                            flex: game.isHost ? 2 : 1,
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal:
-                                                        LayoutTokens.gr1,
-                                                  ),
-                                              child: _PhaseSelectorLabel(
-                                                game: game,
-                                                activeColor: activeColor,
-                                                onPickPhase:
-                                                    game.timeoutActive
-                                                        ? null
-                                                        : (game.isHost ||
-                                                                game
-                                                                    .isLocalPlayersTurn)
-                                                            ? (phase) =>
-                                                                notifier
-                                                                    .setPhase(
-                                                                  phase,
-                                                                )
-                                                            : null,
-                                              ),
-                                            ),
-                                          ),
-                                          if (game.isHost)
-                                            Expanded(
-                                              child: Align(
-                                                alignment:
-                                                    Alignment.centerLeft,
-                                                child: Tooltip(
-                                                  message: 'Next phase',
-                                                  child: FittedBox(
-                                                    fit: BoxFit.scaleDown,
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    child: OutlinedButton(
-                                                      style:
-                                                          phaseNavButtonStyle,
-                                                      onPressed:
-                                                          game.timeoutActive
-                                                              ? null
-                                                              : () => notifier
-                                                                  .advancePhase(),
-                                                      child: const Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Text('Next'),
-                                                          SizedBox(
-                                                            width:
-                                                                LayoutTokens.gr0,
-                                                          ),
-                                                          Icon(
-                                                            Icons
-                                                                .chevron_right_rounded,
-                                                            size: 24,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    height:
-                                        tightVertical
-                                            ? LayoutTokens.gr1
-                                            : LayoutTokens.gr2,
-                                  ),
-                                  if (multiDialRows)
-                                    Center(
-                                      child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: lifeBandMaxW,
-                                        ),
-                                        child: ScopedLifeCounter(
-                                          playerId: local.playerId,
-                                          height: lifeBandH,
-                                          onLifeChange: adjustLife,
-                                        ),
-                                      ),
-                                    )
-                                  else
-                                    Expanded(
-                                      child: Center(
-                                        child: ConstrainedBox(
-                                          constraints: BoxConstraints(
-                                            maxWidth: lifeBandMaxW,
-                                          ),
-                                          child: ScopedLifeCounter(
-                                            playerId: local.playerId,
-                                            height: lifeBandH,
-                                            onLifeChange: adjustLife,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  SizedBox(
-                                    height:
-                                        tightVertical
-                                            ? LayoutTokens.gr2
-                                            : LayoutTokens.gr3,
-                                  ),
-                                  const VariantCardPanel(),
-                                  SizedBox(
-                                    height:
-                                        tightVertical
-                                            ? LayoutTokens.gr1
-                                            : LayoutTokens.gr2,
-                                  ),
-                                  if (game.pendingProposalFor(
-                                        local.playerId,
-                                      ) !=
-                                      null)
-                                    _AllianceProposalBanner(
-                                      game: game,
-                                      local: local,
-                                    ),
-                                  if (game.pendingProposalFor(
-                                        local.playerId,
-                                      ) !=
-                                      null)
-                                    SizedBox(height: LayoutTokens.gr0),
-                                  if (game.monarchPlayerId == local.playerId)
-                                    _GameMarkerBanner(
-                                      icon: '👑',
-                                      label: 'You have the Monarch',
-                                    ),
-                                  if (game.initiativePlayerId == local.playerId)
-                                    _GameMarkerBanner(
-                                      icon: '⚔️',
-                                      label: 'You have the Initiative',
-                                    ),
-                                  if ((game.trackTurnDuration ||
-                                          game.turnTimeLimitSeconds != null) &&
-                                      game.turnStartTime != null)
-                                    _TurnDurationBanner(
-                                      turnStartTime: game.turnStartTime!,
-                                      limitSeconds: game.turnTimeLimitSeconds,
-                                      isActiveTurn: game.isLocalPlayersTurn,
-                                      activePlayerName:
-                                          game.playerById(game.activePlayerId)
-                                              ?.username ??
-                                          'Player',
-                                    ),
-                                  SizedBox(
-                                    height:
-                                        tightVertical
-                                            ? LayoutTokens.gr2
-                                            : LayoutTokens.gr3,
-                                  ),
-                                  ScopedGameplayDials(
-                                    playerId: local.playerId,
-                                    onAdjustCounter: (field, delta) =>
-                                        notifier.adjustCounter(
-                                          local.playerId,
-                                          field,
-                                          delta,
-                                        ),
-                                    onSetCounterAbsolute: (field, v) =>
-                                        notifier.setGameplayDialAbsolute(
-                                          local.playerId,
-                                          field,
-                                          v,
-                                        ),
-                                    onRegisterCustomDial: (key, label) =>
-                                        notifier.registerCustomGameplayDial(
-                                          local.playerId,
-                                          key,
-                                          label,
-                                        ),
-                                    onAddDialToStrip: (field) =>
-                                        notifier.addGameplayDialToStrip(
-                                          local.playerId,
-                                          field,
-                                        ),
-                                    onRemoveDialFromStrip: (field) =>
-                                        notifier.removeGameplayDialFromStrip(
-                                          local.playerId,
-                                          field,
-                                        ),
-                                  ),
-                                ],
-                              );
-                            },
+            _ => LayoutBuilder(
+              builder: (context, playViewport) {
+                return SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalInset),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: playViewport.maxHeight,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: lifeBandMaxW),
+                            child: PhaseNavCluster(
+                              game: game,
+                              accentColor: activeColor,
+                              onBack: game.isHost && !game.timeoutActive
+                                  ? notifier.previousPhase
+                                  : null,
+                              onNext: game.isHost && !game.timeoutActive
+                                  ? notifier.advancePhase
+                                  : null,
+                              onPickPhase: game.timeoutActive
+                                  ? null
+                                  : (game.isHost || game.isLocalPlayersTurn)
+                                      ? notifier.setPhase
+                                      : null,
+                            ),
                           ),
                         ),
-                      ),
+                        SizedBox(
+                          height: tightVertical
+                              ? LayoutTokens.gr1
+                              : LayoutTokens.gr2,
+                        ),
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: lifeBandMaxW,
+                              minHeight: lifeBandH,
+                            ),
+                            child: ScopedLifeCounter(
+                              playerId: local.playerId,
+                              height: lifeBandH,
+                              onLifeChange: adjustLife,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: tightVertical
+                              ? LayoutTokens.gr2
+                              : LayoutTokens.gr3,
+                        ),
+                        const VariantCardPanel(),
+                        SizedBox(
+                          height: tightVertical
+                              ? LayoutTokens.gr1
+                              : LayoutTokens.gr2,
+                        ),
+                        if (game.pendingProposalFor(local.playerId) != null)
+                          SizedBox(height: LayoutTokens.gr0),
+                        if ((game.trackTurnDuration ||
+                                game.turnTimeLimitSeconds != null) &&
+                            game.turnStartTime != null)
+                          _TurnDurationBanner(
+                            turnStartTime: game.turnStartTime!,
+                            limitSeconds: game.turnTimeLimitSeconds,
+                            isActiveTurn: game.isLocalPlayersTurn,
+                            activePlayerName:
+                                game.playerById(game.activePlayerId)
+                                    ?.username ??
+                                'Player',
+                          ),
+                        SizedBox(
+                          height: tightVertical
+                              ? LayoutTokens.gr2
+                              : LayoutTokens.gr3,
+                        ),
+                        ScopedGameplayDials(
+                          playerId: local.playerId,
+                          onAdjustCounter: (field, delta) =>
+                              notifier.adjustCounter(
+                            local.playerId,
+                            field,
+                            delta,
+                          ),
+                          onSetCounterAbsolute: (field, v) =>
+                              notifier.setGameplayDialAbsolute(
+                            local.playerId,
+                            field,
+                            v,
+                          ),
+                          onRegisterCustomDial: (key, label) =>
+                              notifier.registerCustomGameplayDial(
+                            local.playerId,
+                            key,
+                            label,
+                          ),
+                          onAddDialToStrip: (field) =>
+                              notifier.addGameplayDialToStrip(
+                            local.playerId,
+                            field,
+                          ),
+                          onRemoveDialFromStrip: (field) =>
+                              notifier.removeGameplayDialFromStrip(
+                            local.playerId,
+                            field,
+                          ),
+                        ),
+                        SizedBox(height: LayoutTokens.gr2),
+                      ],
                     ),
-                  );
-                },
-              ),
-                ),
-                _BottomBar(
-                  game: game,
-                  local: local,
-                  onToggleOverview: widget.onToggleOverview,
-                  compact: tightVertical,
-                ),
-              ],
+                  ),
+                );
+              },
             ),
           },
         ),
-      ],
-    );
-  }
-}
-
-/// Current phase label; tap opens scrollable picker when [onPickPhase] is set.
-class _PhaseSelectorLabel extends StatelessWidget {
-  final GameState game;
-  final Color activeColor;
-  final void Function(GamePhase phase)? onPickPhase;
-
-  const _PhaseSelectorLabel({
-    required this.game,
-    required this.activeColor,
-    this.onPickPhase,
-  });
-
-  bool get _canPick => onPickPhase != null;
-
-  @override
-  Widget build(BuildContext context) {
-    final phaseColor =
-        game.isLocalPlayersTurn ? AppTheme.accent : AppTheme.textSecondary;
-
-    final label = FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            game.currentPhase.displayName,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: FontTokens.title,
-              letterSpacing: 0.2,
-              color: phaseColor,
-            ),
-          ),
-          if (_canPick) ...[
-            const SizedBox(width: LayoutTokens.gr0),
-            Icon(
-              Icons.unfold_more_rounded,
-              size: 18,
-              color: phaseColor.withValues(alpha: OpacityTokens.nearOpaque),
-            ),
-          ],
-        ],
-      ),
-    );
-
-    if (!_canPick) {
-      return Center(child: label);
-    }
-
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap:
-              () => showPhasePickerSheet(
-                context,
-                currentPhase: game.currentPhase,
-                accentColor: activeColor,
-                onSelected: onPickPhase!,
-              ),
-          borderRadius: RadiusTokens.radiusMd,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: LayoutTokens.gr2,
-              vertical: LayoutTokens.gr1,
-            ),
-            child: Tooltip(
-              message: 'Choose phase',
-              child: label,
-            ),
-          ),
+        _BottomBar(
+          game: game,
+          local: local,
+          onToggleOverview: widget.onToggleOverview,
+          compact: tightVertical,
         ),
-      ),
+      ],
     );
   }
 }
@@ -1119,20 +807,19 @@ class _BottomBar extends ConsumerWidget {
                     ),
                   ),
                 ),
-              Expanded(
-                child: Center(
-                  child: _BarButton(
-                    icon: Icons.skip_next,
-                    label: 'End Turn',
-                    iconSize: iconSize,
-                    enabled:
-                        game.isHost &&
-                        game.isLocalPlayersTurn &&
-                        !game.timeoutActive,
-                    onTap: () => notifier.endTurn(),
+              if (game.isHost)
+                Expanded(
+                  child: Center(
+                    child: _BarButton(
+                      icon: Icons.skip_next,
+                      label: 'End Turn',
+                      iconSize: iconSize,
+                      enabled:
+                          game.isLocalPlayersTurn && !game.timeoutActive,
+                      onTap: () => notifier.endTurn(),
+                    ),
                   ),
                 ),
-              ),
               Expanded(
                 child: Center(
                   child: _BarButton(
@@ -1491,24 +1178,23 @@ class _ConcedeVoteDropdown extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          DropdownButtonFormField<String>(
+          DropdownButton<String?>(
             value: selectedId,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(
+            isExpanded: true,
+            hint: Text(
+              hint,
+              style: const TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: 12,
-              ),
-              filled: true,
-              fillColor: AppTheme.surface,
-              border: OutlineInputBorder(
-                borderRadius: RadiusTokens.radiusPill,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
+                fontSize: FontTokens.hudSm,
               ),
             ),
+            dropdownColor: AppTheme.card,
+            style: const TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: FontTokens.hudSm,
+            ),
+            underline: const SizedBox.shrink(),
+            borderRadius: RadiusTokens.radiusPill,
             items: [
               const DropdownMenuItem<String>(
                 value: null,
@@ -1677,129 +1363,6 @@ class _TimeoutOption extends StatelessWidget {
 
 // ── Banners ────────────────────────────────────────────────────────────────
 
-class _AllianceProposalBanner extends ConsumerWidget {
-  final GameState game;
-  final PlayerGameState local;
-
-  const _AllianceProposalBanner({required this.game, required this.local});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final proposal = game.pendingProposalFor(local.playerId);
-    if (proposal == null) return const SizedBox.shrink();
-
-    final from = game.playerById(proposal.fromId);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.accentGold.withValues(alpha: 0.1),
-        borderRadius: RadiusTokens.radiusControlSm,
-        border: Border.all(color: AppTheme.accentGold.withValues(alpha: 0.6)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.handshake, color: AppTheme.accentGold, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${from?.username ?? proposal.fromId} proposes an alliance!',
-                  style: const TextStyle(
-                    color: AppTheme.accentGold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final narrow = constraints.maxWidth < 280;
-              return Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: narrow ? 12 : 16,
-                      ),
-                    ),
-                    onPressed:
-                        () => ref
-                            .read(gameProvider.notifier)
-                            .respondToAlliance(local.playerId, true),
-                    child: const Text(
-                      'Accept',
-                      style: TextStyle(color: AppTheme.success, fontSize: 13),
-                    ),
-                  ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: narrow ? 12 : 16,
-                      ),
-                    ),
-                    onPressed:
-                        () => ref
-                            .read(gameProvider.notifier)
-                            .respondToAlliance(local.playerId, false),
-                    child: const Text(
-                      'Decline',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: FontTokens.hudSm,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GameMarkerBanner extends StatelessWidget {
-  final String icon;
-  final String label;
-
-  const _GameMarkerBanner({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.accentGold.withValues(alpha: OpacityTokens.faint),
-        borderRadius: RadiusTokens.radiusControlSm,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(color: AppTheme.accentGold, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Full-screen overlay when timeout is active. Blocks all interaction so
 /// players cannot change life or counters. X button minimizes to small timer.
 class _TimeoutOverlay extends StatefulWidget {
@@ -1849,50 +1412,78 @@ class _TimeoutOverlayState extends State<_TimeoutOverlay> {
   @override
   Widget build(BuildContext context) {
     if (_minimized) {
-      return Positioned(
-        bottom: 0,
-        left: 0,
-        right: 0,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Center(
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => setState(() => _minimized = false),
+              behavior: HitTestBehavior.opaque,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                color: Colors.black.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: LayoutTokens.gr3,
+                  vertical: LayoutTokens.gr1,
                 ),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface.withValues(alpha: 0.95),
-                  borderRadius: RadiusTokens.radiusLg,
-                  border: Border.all(
-                    color: AppTheme.accentGold.withValues(alpha: 0.6),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.timer, size: 18, color: AppTheme.accentGold),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.durationSeconds != null
-                          ? '$_timeStr left'
-                          : _timeStr,
-                      style: const TextStyle(
-                        color: AppTheme.accentGold,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFeatures: [FontFeature.tabularFigures()],
+                child: Center(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => setState(() => _minimized = false),
+                      borderRadius: RadiusTokens.radiusLg,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: LayoutTokens.gr3,
+                          vertical: LayoutTokens.gr1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface.withValues(alpha: 0.95),
+                          borderRadius: RadiusTokens.radiusLg,
+                          border: Border.all(
+                            color: AppTheme.accentGold.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.timer,
+                              size: 18,
+                              color: AppTheme.accentGold,
+                            ),
+                            SizedBox(width: LayoutTokens.gr1),
+                            Text(
+                              widget.durationSeconds != null
+                                  ? '$_timeStr left — tap to expand'
+                                  : '$_timeStr elapsed — tap to expand',
+                              style: TextStyle(
+                                color: AppTheme.accentGold,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       );
     }
 
@@ -2031,24 +1622,31 @@ class _TimeoutBannerState extends State<_TimeoutBanner> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      width: double.infinity,
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.symmetric(
+        horizontal: LayoutTokens.gr2,
+        vertical: LayoutTokens.gr1 + 2,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.accentGold.withValues(alpha: OpacityTokens.subtle),
         borderRadius: RadiusTokens.radiusControlSm,
         border: Border.all(color: AppTheme.accentGold.withValues(alpha: OpacityTokens.half)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.timer, color: AppTheme.accentGold, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            'TIMEOUT — $_timeStr',
-            style: const TextStyle(
-              color: AppTheme.accentGold,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+          const Icon(Icons.timer, color: AppTheme.accentGold, size: 16),
+          SizedBox(width: LayoutTokens.gr1),
+          Expanded(
+            child: Text(
+              'Timeout — $_timeStr',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppTheme.accentGold,
+                fontSize: FontTokens.caption,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -2113,8 +1711,11 @@ class _TurnDurationBannerState extends State<_TurnDurationBanner> {
     }
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: LayoutTokens.gr0),
+      padding: EdgeInsets.symmetric(
+        horizontal: LayoutTokens.gr2,
+        vertical: LayoutTokens.gr1,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.accent.withValues(alpha: OpacityTokens.subtle),
         borderRadius: RadiusTokens.radiusControlSm,
@@ -2158,105 +1759,294 @@ class _OverviewView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(gameProvider.notifier);
+    final activePlayer = game.playerById(game.activePlayerId);
+    final activeName = activePlayer?.username ?? '—';
+    final phaseLabel = game.currentPhase.streamlinedShortLabel;
+    final aliveCount = game.activePlayers.length;
 
-    return SizedBox.expand(
-      child: CustomScrollView(
-        slivers: [
-          // Header: [X] ROUND 1 [End]
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: AppTheme.primary,
-            toolbarHeight: 48,
-            title: Text(
-              'ROUND ${game.roundNumber}',
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-            centerTitle: true,
-            leading: IconButton(
-              icon: const Icon(
-                Icons.close,
-                color: AppTheme.textSecondary,
-                size: 22,
-              ),
-              onPressed: onClose,
-              style: IconButton.styleFrom(
-                padding: const EdgeInsets.all(8),
-                minimumSize: const Size(40, 40),
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8, top: 6, bottom: 6),
-                child: TextButton(
-                  onPressed:
-                      game.isHost &&
-                              game.isLocalPlayersTurn &&
-                              !game.timeoutActive
-                          ? () => notifier.endTurn()
-                          : null,
-                  style: TextButton.styleFrom(
-                    backgroundColor: AppTheme.accent.withValues(alpha: OpacityTokens.soft),
-                    foregroundColor: AppTheme.accent,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: RadiusTokens.radiusControlSm,
+    return ColoredBox(
+      color: AppTheme.primary,
+      child: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: AppTheme.primary,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              toolbarHeight: 56,
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Round ${game.roundNumber}',
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: FontTokens.body,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                      height: 1.1,
                     ),
                   ),
-                  child: const Text(
-                    'End',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  SizedBox(height: LayoutTokens.gr0 - 1),
+                  Text(
+                    '$activeName · $phaseLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: FontTokens.hudXs,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              centerTitle: true,
+              leading: IconButton(
+                icon: const Icon(
+                  Icons.close,
+                  color: AppTheme.textSecondary,
+                  size: 22,
+                ),
+                onPressed: onClose,
+                tooltip: 'Close overview',
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(
+                    LayoutTokens.minTapTarget,
+                    LayoutTokens.minTapTarget,
                   ),
                 ),
               ),
-            ],
-          ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                LayoutTokens.gr3,
-                LayoutTokens.gr2,
-                LayoutTokens.gr3,
-                LayoutTokens.gr1,
-              ),
-              child: PoliticalRowWidget(game: game, overviewStyle: true),
+              actions: [
+                Padding(
+                  padding: EdgeInsets.only(
+                    right: LayoutTokens.gr1,
+                    top: LayoutTokens.gr1,
+                    bottom: LayoutTokens.gr1,
+                  ),
+                  child: TextButton(
+                    onPressed:
+                        game.isHost &&
+                                game.isLocalPlayersTurn &&
+                                !game.timeoutActive
+                            ? () => notifier.endTurn()
+                            : null,
+                    style: TextButton.styleFrom(
+                      backgroundColor:
+                          AppTheme.accent.withValues(alpha: OpacityTokens.soft),
+                      foregroundColor: AppTheme.accent,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: LayoutTokens.gr2,
+                        vertical: LayoutTokens.gr1,
+                      ),
+                      minimumSize: const Size(0, LayoutTokens.minTapTarget - 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: RadiusTokens.radiusControlSm,
+                      ),
+                    ),
+                    child: const Text(
+                      'End turn',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: FontTokens.caption,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
 
-          // Timeout banner
-          if (game.timeoutActive)
             SliverToBoxAdapter(
-              child: _TimeoutBanner(
-                startTime: game.timeoutStartTime,
-                durationSeconds: game.timeoutDurationSeconds,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  LayoutTokens.gr3,
+                  LayoutTokens.gr1,
+                  LayoutTokens.gr3,
+                  LayoutTokens.gr2,
+                ),
+                child: PoliticalRowWidget(game: game),
               ),
             ),
 
-          // Player cards list
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              LayoutTokens.gr3,
-              0,
-              LayoutTokens.gr3,
-              LayoutTokens.gr3,
-            ),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                ...game.players.map(
-                  (p) => _OverviewPlayerCard(p: p, game: game),
+            if (game.timeoutActive)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    LayoutTokens.gr3,
+                    0,
+                    LayoutTokens.gr3,
+                    LayoutTokens.gr2,
+                  ),
+                  child: _TimeoutBanner(
+                    startTime: game.timeoutStartTime,
+                    durationSeconds: game.timeoutDurationSeconds,
+                  ),
                 ),
-              ]),
+              ),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  LayoutTokens.gr3,
+                  0,
+                  LayoutTokens.gr3,
+                  LayoutTokens.gr1,
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Players',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: FontTokens.caption,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    SizedBox(width: LayoutTokens.gr1),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: LayoutTokens.gr1,
+                        vertical: LayoutTokens.gr0 - 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface.withValues(
+                          alpha: OpacityTokens.soft,
+                        ),
+                        borderRadius: RadiusTokens.radiusControlSm,
+                      ),
+                      child: Text(
+                        '$aliveCount',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: FontTokens.hudXs,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                LayoutTokens.gr3,
+                0,
+                LayoutTokens.gr3,
+                LayoutTokens.gr4,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  ...game.players.map(
+                    (p) => _OverviewPlayerCard(p: p, game: game),
+                  ),
+                ]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OverviewLifeBadge extends StatelessWidget {
+  const _OverviewLifeBadge({
+    required this.life,
+    required this.eliminated,
+    required this.isActive,
+    required this.accent,
+  });
+
+  final int life;
+  final bool eliminated;
+  final bool isActive;
+  final Color accent;
+
+  Color get _textColor {
+    if (eliminated) return AppTheme.textSecondary;
+    if (life <= 5) return AppTheme.danger;
+    if (life <= 10) return AppTheme.accentGold;
+    return AppTheme.textPrimary;
+  }
+
+  Color get _borderColor {
+    if (eliminated) {
+      return AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft);
+    }
+    if (isActive) return accent.withValues(alpha: OpacityTokens.moderate);
+    return AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
+      padding: EdgeInsets.symmetric(
+        horizontal: LayoutTokens.gr1 + 2,
+        vertical: LayoutTokens.gr0 + 2,
+      ),
+      decoration: BoxDecoration(
+        color: isActive && !eliminated
+            ? accent.withValues(alpha: OpacityTokens.subtle)
+            : AppTheme.surface.withValues(alpha: OpacityTokens.half),
+        borderRadius: RadiusTokens.radiusControlSm,
+        border: Border.all(color: _borderColor),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        eliminated ? 'OUT' : '$life',
+        style: TextStyle(
+          color: _textColor,
+          fontWeight: FontWeight.w800,
+          fontSize: FontTokens.body,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _OverviewStatusChip extends StatelessWidget {
+  const _OverviewStatusChip({
+    required this.label,
+    required this.isActive,
+    required this.accent,
+  });
+
+  final String label;
+  final bool isActive;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: LayoutTokens.gr1,
+        vertical: LayoutTokens.gr0 - 1,
+      ),
+      decoration: BoxDecoration(
+        color: isActive
+            ? accent.withValues(alpha: OpacityTokens.soft)
+            : AppTheme.surface.withValues(alpha: OpacityTokens.half),
+        borderRadius: RadiusTokens.radiusControlSm,
+        border: Border.all(
+          color: isActive
+              ? accent.withValues(alpha: OpacityTokens.half)
+              : AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isActive ? accent : AppTheme.textSecondary,
+          fontSize: FontTokens.hudXs,
+          fontWeight: FontWeight.w600,
+          height: 1.1,
+        ),
       ),
     );
   }
@@ -2273,117 +2063,275 @@ class _OverviewPlayerCard extends ConsumerWidget {
     final isActive = p.playerId == game.activePlayerId;
     final isLocal = p.playerId == game.localPlayerId;
     final teamIdx = game.teamAssignments[p.playerId] ?? 0;
+    final local = game.localPlayer;
+    final notifier = ref.read(gameProvider.notifier);
+    final pendingLabel = pendingAllianceLabel(game, p.playerId);
+    final isMonarch = game.isMonarch(p.playerId);
+    final hasInit = game.hasInitiative(p.playerId);
 
     final borderColor = teamIdx > 0 ? teamColor(teamIdx) : p.playerColor;
-    final borderColorResolved =
+    var borderColorResolved =
         isActive ? borderColor : borderColor.withValues(alpha: 0.25);
+    if (isMonarch || hasInit) {
+      borderColorResolved = AppTheme.accentGold.withValues(
+        alpha: isActive ? 0.95 : 0.55,
+      );
+    }
 
-    final actionLabel = isActive
-        ? game.currentPhase.displayName
-        : 'Waiting';
+    final statusLabel =
+        isActive ? game.currentPhase.shortName : 'Wait';
+    final myAlliance =
+        local != null ? game.allianceFor(local.playerId) : null;
+    final hasAllianceMenu = game.alliancesEnabled &&
+        ((!isLocal &&
+                myAlliance == null &&
+                game.allianceFor(p.playerId) == null) ||
+            (myAlliance != null &&
+                (isLocal || myAlliance.involves(p.playerId))));
+    final showMenu =
+        !p.isEliminated && local != null && (isLocal || hasAllianceMenu);
 
-    final card = AnimatedContainer(
+    Widget card = AnimatedContainer(
       duration: MotionTokens.slow,
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: EdgeInsets.only(bottom: LayoutTokens.gr2),
       decoration: BoxDecoration(
-        color:
-            p.isEliminated
-                ? AppTheme.surface.withValues(alpha: OpacityTokens.half)
+        color: p.isEliminated
+            ? AppTheme.surface.withValues(alpha: OpacityTokens.half)
+            : isActive
+                ? borderColor.withValues(alpha: OpacityTokens.faint)
                 : isLocal
-                ? AppTheme.card.withValues(alpha: OpacityTokens.nearOpaque)
-                : AppTheme.card,
+                    ? AppTheme.card.withValues(alpha: OpacityTokens.nearOpaque)
+                    : AppTheme.card,
         borderRadius: RadiusTokens.radiusSm,
-        border: Border.all(color: borderColorResolved, width: isActive ? 2 : 1),
+        border: Border.all(
+          color: borderColorResolved,
+          width: isActive || isMonarch || hasInit ? 2 : 1,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
+      child: ClipRRect(
+        borderRadius: RadiusTokens.radiusSm,
+        child: Stack(
           children: [
-            // Avatar
-            CircleAvatar(
-              radius: 20,
-              backgroundColor:
-                  p.isEliminated
-                      ? AppTheme.textSecondary.withValues(alpha: 0.4)
-                      : p.playerColor,
-              child: Text(
-                p.username.isNotEmpty ? p.username[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  color: ColorTokens.onAccent,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            if (isActive && !p.isEliminated)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 3,
+                  color: borderColor,
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            // Player name
-            Expanded(
-              child: Text(
-                p.username + (isLocal ? ' (you)' : ''),
-                style: TextStyle(
-                  color:
-                      p.isEliminated
-                          ? AppTheme.textSecondary
-                          : AppTheme.textPrimary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                isActive && !p.isEliminated
+                    ? LayoutTokens.gr1
+                    : LayoutTokens.gr2,
+                LayoutTokens.gr2,
+                LayoutTokens.gr2,
+                LayoutTokens.gr2,
               ),
-            ),
-            // Action chip (Untap / phase name / Waiting)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color:
-                    isActive
-                        ? borderColor.withValues(alpha: OpacityTokens.soft)
-                        : AppTheme.surface.withValues(alpha: OpacityTokens.half),
-                borderRadius: RadiusTokens.radiusControlSm,
-                border: Border.all(
-                  color:
-                      isActive
-                          ? borderColor.withValues(alpha: OpacityTokens.half)
-                          : AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft),
-                ),
-              ),
-              child: Text(
-                p.isEliminated ? 'OUT' : actionLabel,
-                style: TextStyle(
-                  color:
-                      p.isEliminated
-                          ? AppTheme.textSecondary
-                          : isActive
-                          ? borderColor
-                          : AppTheme.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Life total box
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppTheme.surface.withValues(alpha: OpacityTokens.half),
-                borderRadius: RadiusTokens.radiusControlSm,
-                border: Border.all(
-                  color: AppTheme.textSecondary.withValues(alpha: OpacityTokens.soft),
-                ),
-              ),
-              child: Text(
-                p.isEliminated ? 'OUT' : '${p.life}',
-                style: TextStyle(
-                  color:
-                      p.isEliminated
-                          ? AppTheme.textSecondary
-                          : p.life <= 10
-                          ? AppTheme.textSecondary
-                          : AppTheme.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: p.isEliminated
+                            ? AppTheme.textSecondary.withValues(alpha: 0.4)
+                            : p.playerColor,
+                        child: Text(
+                          p.username.isNotEmpty
+                              ? p.username[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: ColorTokens.onAccent,
+                            fontSize: FontTokens.sm,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (isMonarch)
+                        Positioned(
+                          right: -2,
+                          top: -4,
+                          child: Text('👑', style: TextStyle(fontSize: 13)),
+                        ),
+                      if (hasInit)
+                        Positioned(
+                          right: -2,
+                          bottom: -4,
+                          child: Text('⚔️', style: TextStyle(fontSize: 11)),
+                        ),
+                    ],
+                  ),
+                  SizedBox(width: LayoutTokens.gr2),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: p.username,
+                                style: TextStyle(
+                                  color: p.isEliminated
+                                      ? AppTheme.textSecondary
+                                      : AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: FontTokens.hudSm,
+                                  height: 1.3,
+                                ),
+                              ),
+                              if (isLocal)
+                                TextSpan(
+                                  text: ' · you',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: FontTokens.hudXs,
+                                    height: 1.3,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: LayoutTokens.gr0 + 1),
+                        Wrap(
+                          spacing: LayoutTokens.gr0 + 2,
+                          runSpacing: LayoutTokens.gr0,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            OverviewPlayerMarkerBadges(
+                              game: game,
+                              playerId: p.playerId,
+                            ),
+                            if (!p.isEliminated)
+                              _OverviewStatusChip(
+                                label: statusLabel,
+                                isActive: isActive,
+                                accent: borderColor,
+                              ),
+                          ],
+                        ),
+                        if (pendingLabel != null) ...[
+                          SizedBox(height: LayoutTokens.gr0 + 1),
+                          Text(
+                            pendingLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppTheme.accentGold,
+                              fontSize: FontTokens.hudXs,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: LayoutTokens.gr1),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _OverviewLifeBadge(
+                        life: p.life,
+                        eliminated: p.isEliminated,
+                        isActive: isActive,
+                        accent: borderColor,
+                      ),
+                      if (showMenu)
+                        PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: AppTheme.textSecondary,
+                            size: 20,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: LayoutTokens.minTapTarget,
+                            minHeight: LayoutTokens.minTapTarget,
+                          ),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'propose':
+                                showProposeAllianceSheet(
+                                  context: context,
+                                  ref: ref,
+                                  target: p,
+                                );
+                              case 'reveal':
+                                notifier.revealAlliance(local.playerId);
+                              case 'break':
+                                notifier.breakAlliance(local.playerId);
+                              case 'team':
+                                _showTeamSelectorSheet(
+                                  context,
+                                  ref,
+                                  p.playerId,
+                                  teamIdx,
+                                );
+                            }
+                          },
+                          itemBuilder: (context) {
+                            final items = <PopupMenuEntry<String>>[];
+                            if (isLocal) {
+                              items.add(
+                                const PopupMenuItem(
+                                  value: 'team',
+                                  child: Text('Assign team color'),
+                                ),
+                              );
+                            }
+                            if (game.alliancesEnabled &&
+                                !isLocal &&
+                                game.allianceFor(local.playerId) == null &&
+                                game.allianceFor(p.playerId) == null) {
+                              items.add(
+                                const PopupMenuItem(
+                                  value: 'propose',
+                                  child: Text('Propose secret alliance'),
+                                ),
+                              );
+                            }
+                            final menuAlliance =
+                                game.allianceFor(local.playerId);
+                            if (game.alliancesEnabled &&
+                                menuAlliance != null &&
+                                (isLocal ||
+                                    menuAlliance.involves(p.playerId)) &&
+                                !menuAlliance.isRevealed) {
+                              items.add(
+                                const PopupMenuItem(
+                                  value: 'reveal',
+                                  child: Text('Reveal alliance to table'),
+                                ),
+                              );
+                            }
+                            if (game.alliancesEnabled &&
+                                menuAlliance != null &&
+                                (isLocal ||
+                                    menuAlliance.involves(p.playerId))) {
+                              items.add(
+                                const PopupMenuItem(
+                                  value: 'break',
+                                  child: Text('Break secret alliance'),
+                                ),
+                              );
+                            }
+                            return items;
+                          },
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
@@ -2391,18 +2339,6 @@ class _OverviewPlayerCard extends ConsumerWidget {
       ),
     );
 
-    if (isLocal) {
-      return GestureDetector(
-        onTap:
-            () => _OverviewPlayerCard._showTeamSelectorSheet(
-              context,
-              ref,
-              p.playerId,
-              teamIdx,
-            ),
-        child: card,
-      );
-    }
     return card;
   }
 

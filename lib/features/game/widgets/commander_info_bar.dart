@@ -2,96 +2,32 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../ui/tokens/color_tokens.dart';
 
-import '../../../core/game/game_phase.dart';
 import '../../../core/game/player_game_state.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../../ui/tokens/layout_tokens.dart';
 import '../../../ui/tokens/radius_tokens.dart';
 
-/// Cast Commander button; can be used inline or in the top-right corner.
-class CastCommanderButton extends StatelessWidget {
-  final PlayerGameState player;
-  final VoidCallback onCastCommander;
-
-  const CastCommanderButton({
-    super.key,
-    required this.player,
-    required this.onCastCommander,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: player.isEliminated ? null : onCastCommander,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: LayoutTokens.gr3,
-          vertical: LayoutTokens.gr1,
-        ),
-        decoration: BoxDecoration(
-          color: AppTheme.accent.withValues(alpha: 0.15),
-          borderRadius: RadiusTokens.radiusControlMd,
-          border: Border.all(
-            color: player.isEliminated
-                ? AppTheme.textSecondary.withValues(alpha: 0.3)
-                : AppTheme.accent.withValues(alpha: 0.7),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.bolt,
-              size: LayoutTokens.gr3,
-              color: player.isEliminated
-                  ? AppTheme.textSecondary
-                  : AppTheme.accent,
-            ),
-            Text(
-              'Cast',
-              style: TextStyle(
-                fontSize: LayoutTokens.gr2,
-                color: player.isEliminated
-                    ? AppTheme.textSecondary
-                    : AppTheme.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Top bar of the personal view: commander avatar, name, tax badge, and
-/// optionally a "Cast Commander" button (can be placed inline or separately).
+/// Top bar of the personal view: commander avatar (tap to cast), tax, round.
 class CommanderInfoBar extends StatelessWidget {
   final PlayerGameState player;
   final VoidCallback onCastCommander;
-  /// When false, the cast button is not shown (use CastCommanderButton separately).
-  final bool includeCastButton;
   /// When true, use tighter padding for embedding inside a parent card.
   final bool embeddedInCard;
   /// Optional round number to show under tax (extra info).
   final int? roundNumber;
-  /// Current table phase (shown in the info column when set).
-  final GamePhase? gamePhase;
-  /// When true, phase label uses stronger styling (e.g. it is your turn).
-  final bool phaseEmphasized;
   /// Optional trailing control (e.g. commander damage status).
   final Widget? statusTrailing;
+  /// Resolved ally display name when [player.allyPlayerId] is set.
+  final String? allyUsername;
 
   const CommanderInfoBar({
     super.key,
     required this.player,
     required this.onCastCommander,
-    this.includeCastButton = true,
     this.embeddedInCard = false,
     this.roundNumber,
-    this.gamePhase,
-    this.phaseEmphasized = false,
     this.statusTrailing,
+    this.allyUsername,
   });
 
   @override
@@ -99,14 +35,11 @@ class CommanderInfoBar extends StatelessWidget {
     final w = MediaQuery.sizeOf(context).width;
     final isCompact = w < GameLayoutBreakpoints.compact;
     final isVeryNarrow = w < GameLayoutBreakpoints.narrow;
-    final phase = gamePhase;
     final avatarSize = isVeryNarrow ? 36.0 : (isCompact ? 40.0 : LayoutTokens.gr6);
     final partnerSize = isVeryNarrow ? 28.0 : 40.0;
     final gap = isVeryNarrow
         ? LayoutTokens.gr0
         : (isCompact ? LayoutTokens.gr1 : LayoutTokens.gr3);
-
-    final avatarAsCast = !includeCastButton;
 
     return Container(
       padding:
@@ -120,24 +53,15 @@ class CommanderInfoBar extends StatelessWidget {
               ),
       child: Row(
         children: [
-          // Commander avatar (primary); tap = cast when [avatarAsCast].
-          avatarAsCast
-              ? _CastableCommanderAvatar(
-                  imageUrl: player.commanderImageUrl,
-                  name: player.commanderName,
-                  playerColor: player.playerColor,
-                  size: avatarSize,
-                  enabled: !player.isEliminated,
-                  onCast: onCastCommander,
-                )
-              : _CommanderAvatar(
-                  imageUrl: player.commanderImageUrl,
-                  name: player.commanderName,
-                  playerColor: player.playerColor,
-                  size: avatarSize,
-                ),
+          _CastableCommanderAvatar(
+            imageUrl: player.commanderImageUrl,
+            name: player.commanderName,
+            playerColor: player.playerColor,
+            size: avatarSize,
+            enabled: !player.isEliminated,
+            onCast: onCastCommander,
+          ),
 
-          // Partner avatar (if applicable)
           if (player.hasPartner && player.partnerCommanderName != null) ...[
             SizedBox(width: gap),
             _CommanderAvatar(
@@ -150,7 +74,6 @@ class CommanderInfoBar extends StatelessWidget {
 
           SizedBox(width: gap),
 
-          // Name + tax info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,7 +87,7 @@ class CommanderInfoBar extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     fontSize: isVeryNarrow
                         ? LayoutTokens.gr2
-                        : (isCompact ? 14.0 : (phase != null ? 16.0 : LayoutTokens.gr3)),
+                        : (isCompact ? 14.0 : LayoutTokens.gr3),
                   ),
                 ),
                 if (player.hasPartner && player.partnerCommanderName != null)
@@ -183,28 +106,6 @@ class CommanderInfoBar extends StatelessWidget {
                   tax: player.commanderTax,
                   compact: isVeryNarrow || isCompact,
                 ),
-                if (phase != null) ...[
-                  SizedBox(height: LayoutTokens.gr0),
-                  Text(
-                    isVeryNarrow
-                        ? phase.streamlinedShortLabel
-                        : phase.streamlinedDisplayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color:
-                          phaseEmphasized
-                              ? AppTheme.accent
-                              : AppTheme.textSecondary,
-                      fontSize: LayoutTokens.gr2,
-                      fontWeight:
-                          phaseEmphasized
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
                 if (roundNumber != null) ...[
                   SizedBox(height: LayoutTokens.gr0),
                   Text(
@@ -219,22 +120,16 @@ class CommanderInfoBar extends StatelessWidget {
             ),
           ),
 
-          if (includeCastButton)
-            CastCommanderButton(
-              player: player,
-              onCastCommander: onCastCommander,
-            ),
-
           if (statusTrailing != null) ...[
             SizedBox(width: isVeryNarrow ? LayoutTokens.gr0 : LayoutTokens.gr1),
             statusTrailing!,
           ],
 
-          // Alliance indicator
           if (player.allyPlayerId != null) ...[
             const SizedBox(width: LayoutTokens.gr1),
             Tooltip(
-              message: 'Allied with ${player.allyPlayerId}',
+              message:
+                  'Allied with ${allyUsername ?? player.allyPlayerId}',
               child: Container(
                 padding: const EdgeInsets.all(LayoutTokens.gr1),
                 decoration: BoxDecoration(
@@ -274,60 +169,65 @@ class _CastableCommanderAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: enabled ? 'Cast commander' : 'Eliminated',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: enabled ? onCast : null,
-          borderRadius: RadiusTokens.radiusControlMd,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned.fill(
-                  child: _CommanderAvatar(
-                    imageUrl: imageUrl,
-                    name: name,
-                    playerColor: playerColor,
-                    size: size,
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: enabled ? 'Cast commander' : 'Eliminated',
+      child: Tooltip(
+        message: enabled ? 'Cast commander' : 'Eliminated',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: enabled ? onCast : null,
+            borderRadius: RadiusTokens.radiusControlMd,
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: _CommanderAvatar(
+                      imageUrl: imageUrl,
+                      name: name,
+                      playerColor: playerColor,
+                      size: size,
+                    ),
                   ),
-                ),
-                if (enabled)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: IgnorePointer(
-                      child: Container(
-                        padding: const EdgeInsets.all(LayoutTokens.gr0),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppTheme.card,
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: LayoutTokens.gr0,
-                              offset: Offset(0, LayoutTokens.gr0),
+                  if (enabled)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        child: Container(
+                          padding: const EdgeInsets.all(LayoutTokens.gr0),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppTheme.card,
+                              width: 2,
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.bolt_rounded,
-                          size: size >= LayoutTokens.minTapTarget
-                              ? LayoutTokens.gr2
-                              : LayoutTokens.gr0 * 2,
-                          color: ColorTokens.onAccent,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: LayoutTokens.gr0,
+                                offset: Offset(0, LayoutTokens.gr0),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.bolt_rounded,
+                            size: size >= LayoutTokens.minTapTarget
+                                ? LayoutTokens.gr2
+                                : LayoutTokens.gr0 * 2,
+                            color: ColorTokens.onAccent,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

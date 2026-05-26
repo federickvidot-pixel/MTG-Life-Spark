@@ -12,7 +12,7 @@ import '../../../ui/tokens/layout_tokens.dart';
 import '../../../ui/tokens/radius_tokens.dart';
 import 'counter_adjust_sheet.dart';
 
-const int _kDialWheelMax = 60;
+const int _kDialWheelMax = 999;
 
 /// Max counter pills per row on phones (fits ~4 columns with gutters).
 const int _kPillsPerRow = 4;
@@ -20,10 +20,14 @@ const int _kPillsPerRow = 4;
 /// Counter dial / action tiles — modest rounding (not stadium pills).
 const double _kDialPillCornerRadius = RadiusTokens.controlSm;
 
+/// Corner-badge remove control (~30% outside the pill top-right corner).
+const double _kDialRemoveButtonSize = 20;
+const double _kDialRemoveBadgeOverlap = 6;
+
 /// Responsive pill geometry — scales down on narrow phones so the strip doesn’t dominate the Play tab.
 class _DialMetrics {
   const _DialMetrics({
-    required this.iconBarHeight,
+    required this.pillHeaderHeight,
     required this.stepTapHeight,
     required this.wheelHeight,
     required this.itemExtent,
@@ -33,8 +37,8 @@ class _DialMetrics {
     required this.addIconSize,
   });
 
-  /// Icon-only header above each counter pill (48dp touch lane).
-  final double iconBarHeight;
+  /// Icon row inside the pill top edge.
+  final double pillHeaderHeight;
   final double stepTapHeight;
   final double wheelHeight;
   final double itemExtent;
@@ -43,12 +47,11 @@ class _DialMetrics {
   final double wheelFontSize;
   final double addIconSize;
 
-  /// Rounded pill body only (steppers + wheel).
+  /// Steppers + wheel below the in-pill header.
   double get pillBodyHeight => stepTapHeight + wheelHeight + stepTapHeight;
 
-  /// Counter column: icon row + gap + pill.
-  double get tileStackHeight =>
-      iconBarHeight + LayoutTokens.gr0 + pillBodyHeight;
+  /// Full counter tile height (single bordered pill).
+  double get tileStackHeight => pillHeaderHeight + pillBodyHeight;
 
   /// [shortestSide] = `MediaQuery.sizeOf(context).shortestSide`
   factory _DialMetrics.scale(double shortestSide) {
@@ -56,7 +59,7 @@ class _DialMetrics {
     double lerp(double a, double b) => a + (b - a) * t;
     double r4(double x) => (x / 4).round() * 4.0;
     return _DialMetrics(
-      iconBarHeight: LayoutTokens.gr6,
+      pillHeaderHeight: r4(lerp(32, 36)),
       stepTapHeight: r4(lerp(28, 32)),
       wheelHeight: r4(lerp(48, 64)),
       itemExtent: r4(lerp(18, 22)),
@@ -73,17 +76,17 @@ class _DialMetrics {
 /// Only dials listed on [PlayerGameState.visibleGameplayDials] render on the
 /// strip; use **Add** to pick core/preset/custom trackers as needed.
 class GameplayDialsStripWidget extends StatelessWidget {
-  final PlayerGameState player;
+  final PlayerGameState Function() getPlayer;
   final bool isEliminated;
   final void Function(String field, int delta) onAdjustCounter;
   final void Function(String field, int absoluteValue) onSetCounterAbsolute;
-  final void Function(String dialKey, String label) onRegisterCustomDial;
-  final void Function(String field) onAddDialToStrip;
+  final bool Function(String dialKey, String label) onRegisterCustomDial;
+  final bool Function(String field) onAddDialToStrip;
   final void Function(String field) onRemoveDialFromStrip;
 
   const GameplayDialsStripWidget({
     super.key,
-    required this.player,
+    required this.getPlayer,
     required this.isEliminated,
     required this.onAdjustCounter,
     required this.onSetCounterAbsolute,
@@ -134,6 +137,23 @@ class GameplayDialsStripWidget extends StatelessWidget {
         color: AppTheme.textSecondary.withValues(alpha: 0.95),
       ),
     };
+  }
+
+  PlayerGameState get player => getPlayer();
+
+  static void _showStripLimitSnack(BuildContext context, {bool custom = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          custom
+              ? 'You can have up to ${GameplayDialIds.maxCustomDials} custom counters '
+                  'and ${GameplayDialIds.maxStripDials} counters total on your strip. '
+                  'Remove one to add another.'
+              : 'Your strip holds up to ${GameplayDialIds.maxStripDials} counters. '
+                  'Remove one to add another.',
+        ),
+      ),
+    );
   }
 
   static String _labelFor(PlayerGameState p, String field) {
@@ -187,26 +207,8 @@ class GameplayDialsStripWidget extends StatelessWidget {
     return n;
   }
 
-  /// How many [Wrap] rows the dial strip uses at this width (includes Add tile).
-  static int wrapRowCountForWidth({
-    required PlayerGameState player,
-    required double rowContentWidth,
-  }) {
-    final fields = orderedStripFieldCount(player);
-    final gap = LayoutTokens.gr1;
-    final totalSlots = fields + 1;
-    var cols = _kPillsPerRow;
-    late double pillW;
-    while (true) {
-      pillW = (rowContentWidth - gap * (cols - 1)) / cols;
-      if (pillW >= 46 || cols <= 2) {
-        pillW = math.max(pillW, 40.0);
-        break;
-      }
-      cols--;
-    }
-    return math.max(1, (totalSlots / cols).ceil());
-  }
+  /// Dial strip is always a single row (max 4 pills + optional Add).
+  static int dialStripRowCount() => 1;
 
   List<String> _orderedStripFields() {
     final seen = <String>{};
@@ -236,6 +238,10 @@ class GameplayDialsStripWidget extends StatelessWidget {
 
   Future<void> _promptCustomDial(BuildContext context) async {
     if (isEliminated) return;
+    if (!GameplayDialLimits.canAddCustomDial(getPlayer())) {
+      _showStripLimitSnack(context, custom: true);
+      return;
+    }
     final keyCtl = TextEditingController();
     final labelCtl = TextEditingController();
     final ok = await showGameChoiceDialog(
@@ -266,7 +272,10 @@ class GameplayDialsStripWidget extends StatelessWidget {
       primaryLabel: 'Add',
     );
     if (ok == true && context.mounted) {
-      onRegisterCustomDial(keyCtl.text, labelCtl.text);
+      final added = onRegisterCustomDial(keyCtl.text, labelCtl.text);
+      if (!added && context.mounted) {
+        _showStripLimitSnack(context, custom: true);
+      }
     }
     keyCtl.dispose();
     labelCtl.dispose();
@@ -274,15 +283,22 @@ class GameplayDialsStripWidget extends StatelessWidget {
 
   Future<void> _showAddChooser(BuildContext context) async {
     if (isEliminated) return;
-    final visible = player.visibleGameplayDials.toSet();
+    if (!GameplayDialLimits.canAddDialToStrip(getPlayer())) {
+      _showStripLimitSnack(context);
+      return;
+    }
+    final visible = getPlayer().visibleGameplayDials.toSet();
     final coreOrdered = ['poison', 'energy', 'experience', 'rad'];
 
     await showGameBottomSheet<void>(
       context: context,
       builder: (sheetCtx) {
         void pick(String field) {
+          final added = onAddDialToStrip(field);
           Navigator.pop(sheetCtx);
-          onAddDialToStrip(field);
+          if (!added && context.mounted) {
+            _showStripLimitSnack(context);
+          }
         }
 
         final bottomPad = MediaQuery.paddingOf(sheetCtx).bottom;
@@ -336,6 +352,8 @@ class GameplayDialsStripWidget extends StatelessWidget {
               ...coreOrdered,
               ...GameplayDialIds.presets,
             ].where((id) => !visible.contains(id)).length;
+        final livePlayer = getPlayer();
+        final canAddCustom = GameplayDialLimits.canAddCustomDial(livePlayer);
 
         return SafeArea(
           child: Padding(
@@ -360,7 +378,8 @@ class GameplayDialsStripWidget extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: LayoutTokens.gr3),
                     child: Text(
-                      'Pick trackers for your strip. Long-press a counter icon to remove it from the strip.',
+                      'Pick trackers for your strip (max ${GameplayDialIds.maxStripDials}). '
+                      'Tap X on a counter to remove it from the strip.',
                       style: TextStyle(
                         fontSize: FontTokens.hudSm,
                         height: 1.35,
@@ -379,23 +398,50 @@ class GameplayDialsStripWidget extends StatelessWidget {
                       0,
                     ),
                     child: OutlinedButton.icon(
-                      onPressed: () async {
-                        Navigator.pop(sheetCtx);
-                        await _promptCustomDial(context);
-                      },
+                      onPressed: canAddCustom
+                          ? () async {
+                            Navigator.pop(sheetCtx);
+                            await _promptCustomDial(context);
+                          }
+                          : null,
                       icon: Icon(
                         Icons.edit_note_rounded,
-                        color: AppTheme.accent,
+                        color: canAddCustom
+                            ? AppTheme.accent
+                            : AppTheme.textSecondary,
                       ),
                       label: Text(
-                        'Custom dial…',
+                        canAddCustom
+                            ? 'Custom dial…'
+                            : 'Custom dial (max ${GameplayDialIds.maxCustomDials})',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: AppTheme.accent,
+                          color: canAddCustom
+                              ? AppTheme.accent
+                              : AppTheme.textSecondary,
                         ),
                       ),
                     ),
                   ),
+                  if (!canAddCustom)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        LayoutTokens.gr3,
+                        LayoutTokens.gr1,
+                        LayoutTokens.gr3,
+                        0,
+                      ),
+                      child: Text(
+                        'You already have ${GameplayDialIds.maxCustomDials} custom counters '
+                        'or your strip is full (${GameplayDialIds.maxStripDials} max). '
+                        'Remove one from your strip before adding another.',
+                        style: TextStyle(
+                          fontSize: FontTokens.hudSm,
+                          height: 1.35,
+                          color: AppTheme.textSecondary.withValues(alpha: 0.88),
+                        ),
+                      ),
+                    ),
                   if (addableBuiltIn == 0)
                     Padding(
                       padding: EdgeInsets.all(LayoutTokens.gr3),
@@ -446,141 +492,106 @@ class GameplayDialsStripWidget extends StatelessWidget {
         final metrics = _DialMetrics.scale(shortest);
 
         return Padding(
-          padding: EdgeInsets.symmetric(vertical: LayoutTokens.gr0),
+          padding: EdgeInsets.fromLTRB(
+            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0,
+            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0,
+            fields.isNotEmpty && !isEliminated ? _kDialRemoveBadgeOverlap : 0,
+            LayoutTokens.gr0,
+          ),
           child: LayoutBuilder(
             builder: (context, innerConstraints) {
               final gap = LayoutTokens.gr1;
               final rowContentW = innerConstraints.maxWidth;
 
-              var cols = _kPillsPerRow;
-              late double pillW;
-              while (true) {
-                pillW = (rowContentW - gap * (cols - 1)) / cols;
-                if (pillW >= 46 || cols <= 2) {
-                  pillW = math.max(pillW, 40.0);
-                  break;
-                }
-                cols--;
-              }
+              final livePlayer = getPlayer();
+              final showAddButton = GameplayDialLimits.showAddCounterTile(
+                livePlayer,
+                isEliminated: isEliminated,
+              );
+              final slotCount = fields.length + (showAddButton ? 1 : 0);
+              final slots = math.max(1, math.min(slotCount, _kPillsPerRow));
+              var pillW = (rowContentW - gap * (slots - 1)) / slots;
+              pillW = math.max(pillW, 40.0);
 
-              final children = <Widget>[
-                for (final field in fields)
+              final rowChildren = <Widget>[
+                for (var i = 0; i < fields.length; i++) ...[
+                  if (i > 0) SizedBox(width: gap),
                   SizedBox(
                     width: pillW,
                     height: metrics.tileStackHeight,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                    child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        SizedBox(
-                          height: metrics.iconBarHeight,
-                          child: Stack(
-                            clipBehavior: Clip.hardEdge,
-                            children: [
-                              Positioned.fill(
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap:
-                                      isEliminated
-                                          ? null
-                                          : () => _showAdjust(
-                                            context,
-                                            field,
-                                            '${_labelFor(player, field)} counters',
-                                            _valueOf(player, field),
-                                          ),
-                                  onLongPress:
-                                      isEliminated
-                                          ? null
-                                          : () =>
-                                              _confirmRemove(context, field),
-                                  child: Tooltip(
-                                    message:
-                                        '${_labelFor(player, field)} — tap to adjust, long-press to remove',
-                                    child: Center(
-                                      child: _leadingGlyph(
-                                        field,
-                                        metrics.leadingSize,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              if (!isEliminated)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(
-                                      minWidth: 32,
-                                      minHeight: 32,
-                                    ),
-                                    tooltip: 'Remove from strip',
-                                    icon: Icon(
-                                      Icons.close_rounded,
-                                      size: 16,
-                                      color: AppTheme.textSecondary.withValues(
-                                        alpha: 0.85,
-                                      ),
-                                    ),
-                                    onPressed:
-                                        () => _confirmRemove(context, field),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: LayoutTokens.gr0),
-                        SizedBox(
-                          height: metrics.pillBodyHeight,
-                          width: pillW,
+                        Positioned.fill(
                           child: _GameplayDialPill(
                             metrics: metrics,
-                            value: _valueOf(player, field).clamp(0, 9999),
+                            value: _valueOf(livePlayer, fields[i]).clamp(
+                              0,
+                              9999,
+                            ),
                             width: pillW,
                             isEliminated: isEliminated,
-                            onStep: (d) => onAdjustCounter(field, d),
+                            tooltip:
+                                '${_labelFor(livePlayer, fields[i])} — tap to adjust, X to remove',
+                            headerLeading: _leadingGlyph(
+                              fields[i],
+                              metrics.leadingSize,
+                            ),
+                            onHeaderTap:
+                                isEliminated
+                                    ? null
+                                    : () => _showAdjust(
+                                      context,
+                                      fields[i],
+                                      '${_labelFor(livePlayer, fields[i])} counters',
+                                      _valueOf(livePlayer, fields[i]),
+                                    ),
+                            onHeaderLongPress:
+                                isEliminated
+                                    ? null
+                                    : () => _confirmRemove(context, fields[i]),
+                            onStep: (d) => onAdjustCounter(fields[i], d),
                             onSetAbsolute:
-                                (v) =>
-                                    onSetCounterAbsolute(field, v.clamp(0, 9999)),
+                                (v) => onSetCounterAbsolute(
+                                  fields[i],
+                                  v.clamp(0, 9999),
+                                ),
                           ),
                         ),
+                        if (!isEliminated)
+                          Positioned(
+                            top: -_kDialRemoveBadgeOverlap,
+                            right: -_kDialRemoveBadgeOverlap,
+                            child: _DialStripRemoveButton(
+                              onPressed:
+                                  () => _confirmRemove(context, fields[i]),
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                SizedBox(
-                  width: pillW,
-                  height: metrics.tileStackHeight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(height: metrics.iconBarHeight),
-                      SizedBox(height: LayoutTokens.gr0),
-                      SizedBox(
-                        height: metrics.pillBodyHeight,
-                        child: _AddCounterPillTile(
-                          metrics: metrics,
-                          width: pillW,
-                          isEliminated: isEliminated,
-                          onTap: () => _showAddChooser(context),
-                        ),
-                      ),
-                    ],
+                ],
+                if (showAddButton) ...[
+                  if (fields.isNotEmpty) SizedBox(width: gap),
+                  SizedBox(
+                    width: pillW,
+                    height: metrics.tileStackHeight,
+                    child: _AddCounterPillTile(
+                      metrics: metrics,
+                      width: pillW,
+                      isEliminated: isEliminated,
+                      onTap: () => _showAddChooser(context),
+                    ),
                   ),
-                ),
+                ],
               ];
 
-              return SingleChildScrollView(
-                child: SizedBox(
-                  width: rowContentW,
-                  child: Wrap(
-                    spacing: gap,
-                    runSpacing: gap,
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.end,
-                    children: children,
-                  ),
+              return SizedBox(
+                width: rowContentW,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: rowChildren,
                 ),
               );
             },
@@ -615,7 +626,7 @@ class _AddCounterPillTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
           child: Ink(
             width: width,
-            height: metrics.pillBodyHeight,
+            height: metrics.tileStackHeight,
             decoration: BoxDecoration(
               color: AppTheme.card.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
@@ -637,11 +648,67 @@ class _AddCounterPillTile extends StatelessWidget {
   }
 }
 
+class _DialStripRemoveButton extends StatelessWidget {
+  const _DialStripRemoveButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Remove from strip',
+      child: Tooltip(
+        message: 'Remove from strip',
+        child: SizedBox(
+          width: LayoutTokens.minTapTarget,
+          height: LayoutTokens.minTapTarget,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topRight,
+            children: [
+              Material(
+                color: AppTheme.card,
+                elevation: 2,
+                shadowColor: Colors.black.withValues(alpha: 0.22),
+                shape: CircleBorder(
+                  side: BorderSide(
+                    color: AppTheme.surface.withValues(alpha: 0.95),
+                    width: 1.5,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onPressed,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: _kDialRemoveButtonSize,
+                    height: _kDialRemoveButtonSize,
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 13,
+                      color: AppTheme.textSecondary.withValues(alpha: 0.98),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _GameplayDialPill extends StatefulWidget {
   final _DialMetrics metrics;
   final int value;
   final double width;
   final bool isEliminated;
+  final String tooltip;
+  final Widget headerLeading;
+  final VoidCallback? onHeaderTap;
+  final VoidCallback? onHeaderLongPress;
   final void Function(int delta) onStep;
   final void Function(int absolute) onSetAbsolute;
 
@@ -650,6 +717,10 @@ class _GameplayDialPill extends StatefulWidget {
     required this.value,
     required this.width,
     required this.isEliminated,
+    required this.tooltip,
+    required this.headerLeading,
+    this.onHeaderTap,
+    this.onHeaderLongPress,
     required this.onStep,
     required this.onSetAbsolute,
   });
@@ -700,124 +771,159 @@ class _GameplayDialPillState extends State<_GameplayDialPill> {
 
     return Material(
       color: Colors.transparent,
-      child: Container(
-        width: widget.width,
-        height: widget.metrics.pillBodyHeight,
-        decoration: BoxDecoration(
-          color: AppTheme.card.withValues(alpha: dim ? 0.55 : 0.92),
-          borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
-          border: Border.all(color: borderColor),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final hStep = widget.metrics.stepTapHeight;
-              final wheelH = math.max(
-                0.0,
-                constraints.maxHeight - 2 * hStep,
-              );
-
-              return Column(
-                children: [
-                  _stepButton(
-                    dim: dim,
-                    icon: Icons.add_rounded,
-                    onTap:
-                        widget.isEliminated
-                            ? null
-                            : () {
-                              HapticFeedback.lightImpact();
-                              widget.onStep(1);
-                            },
+      child: Semantics(
+        button: true,
+        label: widget.tooltip,
+        enabled: !widget.isEliminated,
+        child: Tooltip(
+          message: widget.tooltip,
+          child: Container(
+          width: widget.width,
+          height: widget.metrics.tileStackHeight,
+          decoration: BoxDecoration(
+            color: AppTheme.card.withValues(alpha: dim ? 0.55 : 0.92),
+            borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(_kDialPillCornerRadius),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: widget.metrics.pillHeaderHeight,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onHeaderTap,
+                    onLongPress: widget.onHeaderLongPress,
+                    child: Center(child: widget.headerLeading),
                   ),
-                  SizedBox(
-                    height: wheelH,
-                    width: double.infinity,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.12),
-                      ),
-                      child: IgnorePointer(
-                        ignoring: widget.isEliminated,
-                        child: NotificationListener<ScrollNotification>(
-                          onNotification: (n) {
-                            if (widget.isEliminated) return false;
-                            if (n is ScrollStartNotification) {
-                              _dragging = true;
-                            } else if (n is ScrollEndNotification) {
-                              _dragging = false;
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (!mounted || !_ctrl.hasClients) return;
-                                final t = _valueFromWheelIndex(
-                                  _ctrl.selectedItem,
-                                );
-                                if (t != _clampedValue) {
-                                  HapticFeedback.selectionClick();
-                                  widget.onSetAbsolute(t);
-                                }
-                              });
-                            }
-                            return false;
-                          },
-                          child: ListWheelScrollView.useDelegate(
-                            controller: _ctrl,
-                            itemExtent: widget.metrics.itemExtent,
-                            physics: const FixedExtentScrollPhysics(),
-                            perspective: 0.003,
-                            diameterRatio: 1.45,
-                            useMagnifier: true,
-                            magnification: 1.14,
-                            overAndUnderCenterOpacity: 0.4,
-                            onSelectedItemChanged: (_) {},
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: _kDialWheelMax + 1,
-                              builder: (c, i) {
-                                return Center(
-                                  child: Text(
-                                    '${_valueFromWheelIndex(i)}',
-                                    style: TextStyle(
-                                      fontSize: widget.metrics.wheelFontSize,
-                                      fontWeight: FontWeight.w700,
-                                      color:
-                                          dim
-                                              ? AppTheme.textSecondary
-                                              : AppTheme.textPrimary.withValues(
-                                                alpha: 0.88,
-                                              ),
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppTheme.textSecondary.withValues(alpha: 0.12),
+                ),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final hStep = widget.metrics.stepTapHeight;
+                      final wheelH = math.max(
+                        0.0,
+                        constraints.maxHeight - 2 * hStep,
+                      );
+
+                      return Column(
+                        children: [
+                          _stepButton(
+                            dim: dim,
+                            icon: Icons.add_rounded,
+                            onTap:
+                                widget.isEliminated
+                                    ? null
+                                    : () {
+                                      HapticFeedback.lightImpact();
+                                      widget.onStep(1);
+                                    },
+                          ),
+                          SizedBox(
+                            height: wheelH,
+                            width: double.infinity,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.12),
+                              ),
+                              child: IgnorePointer(
+                                ignoring: widget.isEliminated,
+                                child: NotificationListener<ScrollNotification>(
+                                  onNotification: (n) {
+                                    if (widget.isEliminated) return false;
+                                    if (n is ScrollStartNotification) {
+                                      _dragging = true;
+                                    } else if (n is ScrollEndNotification) {
+                                      _dragging = false;
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) {
+                                        if (!mounted || !_ctrl.hasClients) {
+                                          return;
+                                        }
+                                        final t = _valueFromWheelIndex(
+                                          _ctrl.selectedItem,
+                                        );
+                                        if (t != _clampedValue) {
+                                          HapticFeedback.selectionClick();
+                                          widget.onSetAbsolute(t);
+                                        }
+                                      });
+                                    }
+                                    return false;
+                                  },
+                                  child: ListWheelScrollView.useDelegate(
+                                    controller: _ctrl,
+                                    itemExtent: widget.metrics.itemExtent,
+                                    physics: const FixedExtentScrollPhysics(),
+                                    perspective: 0.003,
+                                    diameterRatio: 1.45,
+                                    useMagnifier: true,
+                                    magnification: 1.14,
+                                    overAndUnderCenterOpacity: 0.4,
+                                    onSelectedItemChanged: (_) {},
+                                    childDelegate:
+                                        ListWheelChildBuilderDelegate(
+                                      childCount: _kDialWheelMax + 1,
+                                      builder: (c, i) {
+                                        return Center(
+                                          child: Text(
+                                            '${_valueFromWheelIndex(i)}',
+                                            style: TextStyle(
+                                              fontSize:
+                                                  widget.metrics.wheelFontSize,
+                                              fontWeight: FontWeight.w700,
+                                              color:
+                                                  dim
+                                                      ? AppTheme.textSecondary
+                                                      : AppTheme.textPrimary
+                                                          .withValues(
+                                                        alpha: 0.88,
+                                                      ),
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
+                          _stepButton(
+                            dim: dim,
+                            icon: Icons.remove_rounded,
+                            onTap:
+                                widget.isEliminated
+                                    ? null
+                                    : () {
+                                      HapticFeedback.lightImpact();
+                                      widget.onStep(-1);
+                                    },
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                  _stepButton(
-                    dim: dim,
-                    icon: Icons.remove_rounded,
-                    onTap:
-                        widget.isEliminated
-                            ? null
-                            : () {
-                              HapticFeedback.lightImpact();
-                              widget.onStep(-1);
-                            },
-                  ),
-                ],
-              );
-            },
+                ),
+              ],
+            ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -30,6 +30,7 @@ class GameState {
   // Political
   final List<Alliance> alliances;
   final List<AllianceProposal> pendingProposals;
+  final List<AllianceProposal> scheduledProposals;
   final bool alliancesEnabled;
 
   // Game result
@@ -92,6 +93,7 @@ class GameState {
     this.dayNight = DayNightState.none,
     this.alliances = const [],
     this.pendingProposals = const [],
+    this.scheduledProposals = const [],
     this.alliancesEnabled = true,
     this.gameOver = false,
     this.winnerPlayerId,
@@ -139,6 +141,7 @@ class GameState {
     DayNightState? dayNight,
     List<Alliance>? alliances,
     List<AllianceProposal>? pendingProposals,
+    List<AllianceProposal>? scheduledProposals,
     bool? alliancesEnabled,
     bool? gameOver,
     Object? winnerPlayerId = _sentinel,
@@ -191,6 +194,7 @@ class GameState {
       dayNight: dayNight ?? this.dayNight,
       alliances: alliances ?? this.alliances,
       pendingProposals: pendingProposals ?? this.pendingProposals,
+      scheduledProposals: scheduledProposals ?? this.scheduledProposals,
       alliancesEnabled: alliancesEnabled ?? this.alliancesEnabled,
       gameOver: gameOver ?? this.gameOver,
       winnerPlayerId: identical(winnerPlayerId, _sentinel)
@@ -265,11 +269,35 @@ class GameState {
 
   AllianceProposal? pendingProposalFor(String targetId) {
     try {
-      return pendingProposals.firstWhere((p) => p.toId == targetId);
+      return pendingProposals.firstWhere(
+        (p) => p.toId == targetId && p.delivered,
+      );
     } catch (_) {
       return null;
     }
   }
+
+  List<AllianceProposal> scheduledProposalsFrom(String fromId) =>
+      scheduledProposals.where((p) => p.fromId == fromId).toList();
+
+  List<AllianceProposal> scheduledProposalsTo(String toId) =>
+      scheduledProposals.where((p) => p.toId == toId).toList();
+
+  List<Alliance> get revealedAlliances =>
+      alliances.where((a) => a.isRevealed).toList();
+
+  /// Secret alliance visible to [viewerId], or any revealed alliance.
+  Alliance? visibleAllianceFor(String viewerId, String subjectId) {
+    try {
+      final alliance = alliances.firstWhere((a) => a.involves(subjectId));
+      if (alliance.isRevealed || alliance.involves(viewerId)) return alliance;
+    } catch (_) {}
+    return null;
+  }
+
+  bool isMonarch(String playerId) => monarchPlayerId == playerId;
+
+  bool hasInitiative(String playerId) => initiativePlayerId == playerId;
 
   List<PlayerGameState> get activePlayers =>
       players.where((p) => !p.isEliminated).toList();
@@ -288,6 +316,10 @@ class GameState {
         'initiativePlayerId': initiativePlayerId,
         'dayNight': dayNight.name,
         'alliances': alliances.map((a) => a.toJson()).toList(),
+        'pendingProposals':
+            pendingProposals.map((p) => p.toJson()).toList(),
+        'scheduledProposals':
+            scheduledProposals.map((p) => p.toJson()).toList(),
         'alliancesEnabled': alliancesEnabled,
         'gameOver': gameOver,
         'winnerPlayerId': winnerPlayerId,
@@ -340,6 +372,14 @@ class GameState {
       ),
       alliances: (json['alliances'] as List<dynamic>?)
               ?.map((e) => Alliance.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      pendingProposals: (json['pendingProposals'] as List<dynamic>?)
+              ?.map((e) => AllianceProposal.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      scheduledProposals: (json['scheduledProposals'] as List<dynamic>?)
+              ?.map((e) => AllianceProposal.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       alliancesEnabled: json['alliancesEnabled'] as bool? ?? true,

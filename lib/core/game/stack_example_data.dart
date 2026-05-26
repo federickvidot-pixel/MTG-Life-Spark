@@ -7,6 +7,16 @@ const examplePlayer2Id = 'example-p2';
 const examplePlayer3Id = 'example-p3';
 const examplePlayer4Id = 'example-p4';
 
+/// Stable Scryfall art crops for the solo demo pod.
+const _nekusarArtUrl =
+    'https://cards.scryfall.io/art_crop/front/4/a/4afdc65d-3c97-47af-83fa-df340389802e.jpg?1689999186';
+const _atraxaArtUrl =
+    'https://cards.scryfall.io/art_crop/front/d/0/d0d33d52-3d28-4635-b985-51e126289259.jpg?1599707796';
+const _thrasiosArtUrl =
+    'https://cards.scryfall.io/art_crop/front/2/1/21e27b91-c7f1-4709-aa0d-8b5d81b22a0a.jpg?1721690845';
+const _tymnaArtUrl =
+    'https://cards.scryfall.io/art_crop/front/b/c/bc7cbe9b-324e-42b8-94e2-36e91cb32163.jpg?1644853048';
+
 /// Ensures four [PlayerGameState] entries for the example pod (keeps existing players).
 List<PlayerGameState> mergeExamplePodPlayers({
   required List<PlayerGameState> current,
@@ -15,7 +25,17 @@ List<PlayerGameState> mergeExamplePodPlayers({
 }) {
   final result = List<PlayerGameState>.from(current);
 
-  void addDemo(String id, String username, int colorIndex) {
+  void addDemo(
+    String id,
+    String username,
+    int colorIndex, {
+    required String commanderName,
+    required String commanderImageUrl,
+    List<String> commanderColorIdentity = const [],
+    String? partnerCommanderName,
+    String? partnerCommanderImageUrl,
+    bool hasPartner = false,
+  }) {
     if (result.any((p) => p.playerId == id)) return;
     result.add(
       PlayerGameState(
@@ -23,14 +43,43 @@ List<PlayerGameState> mergeExamplePodPlayers({
         username: username,
         playerColor: AppTheme.playerColor(colorIndex),
         life: startingLife,
-        commanderName: 'Demo deck',
+        commanderName: commanderName,
+        commanderImageUrl: commanderImageUrl,
+        commanderColorIdentity: commanderColorIdentity,
+        partnerCommanderName: partnerCommanderName,
+        partnerCommanderImageUrl: partnerCommanderImageUrl,
+        hasPartner: hasPartner,
       ),
     );
   }
 
-  addDemo(examplePlayer2Id, 'Jordan', 1);
-  addDemo(examplePlayer3Id, 'Sam', 2);
-  addDemo(examplePlayer4Id, 'Riley', 3);
+  addDemo(
+    examplePlayer2Id,
+    'Jordan',
+    1,
+    commanderName: 'Nekusar, the Mindrazer',
+    commanderImageUrl: _nekusarArtUrl,
+    commanderColorIdentity: const ['U', 'B', 'R'],
+  );
+  addDemo(
+    examplePlayer3Id,
+    'Sam',
+    2,
+    commanderName: 'Atraxa, Praetors\' Voice',
+    commanderImageUrl: _atraxaArtUrl,
+    commanderColorIdentity: const ['W', 'U', 'B', 'G'],
+  );
+  addDemo(
+    examplePlayer4Id,
+    'Riley',
+    3,
+    commanderName: 'Thrasios, Triton Hero',
+    commanderImageUrl: _thrasiosArtUrl,
+    partnerCommanderName: 'Tymna the Weaver',
+    partnerCommanderImageUrl: _tymnaArtUrl,
+    hasPartner: true,
+    commanderColorIdentity: const ['U', 'G', 'W', 'B'],
+  );
 
   return result;
 }

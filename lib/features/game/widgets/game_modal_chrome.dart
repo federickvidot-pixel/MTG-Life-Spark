@@ -47,21 +47,28 @@ class GameDialogCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.surface.withValues(alpha: 0.92),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(
-          Icons.close_rounded,
-          size: 20,
-          color: AppTheme.textSecondary.withValues(alpha: 0.9),
+    return Semantics(
+      button: true,
+      label: 'Close',
+      child: Material(
+        color: AppTheme.surface.withValues(alpha: 0.92),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: IconButton(
+          onPressed: onPressed,
+          icon: Icon(
+            Icons.close_rounded,
+            size: 20,
+            color: AppTheme.textSecondary.withValues(alpha: 0.9),
+          ),
+          tooltip: 'Close',
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(
+            minWidth: LayoutTokens.minTapTarget,
+            minHeight: LayoutTokens.minTapTarget,
+          ),
         ),
-        tooltip: 'Close',
-        padding: EdgeInsets.zero,
-        visualDensity: VisualDensity.compact,
-        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
       ),
     );
   }
